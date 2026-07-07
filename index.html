@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,23 +10,24 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="mobile-style.css?v=20260706" />
+    <link rel="stylesheet" href="desktop.css?v=20260706" />
   </head>
   <body>
     <div class="app-shell">
       <header class="hero">
         <div>
           <h1>NutriTrack</h1>
-          <p>Your complete health &amp; wellness companion</p>
+          <p>Il tuo alleato completo per benessere e alimentazione</p>
         </div>
 
         <div class="goal-panel">
-          <span>Today's Goal</span>
-          <strong>2000 kcal</strong>
+          <span>Obiettivo di oggi</span>
+          <strong data-calorie-goal-display>2000 kcal</strong>
         </div>
       </header>
 
-      <nav class="tabs" aria-label="Main navigation">
+      <nav class="tabs" aria-label="Navigazione principale">
         <button class="tab is-active" type="button" data-tab-target="nutrition">
           <span class="icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -85,524 +86,514 @@
         </button>
       </nav>
 
+      <!-- Nutrition -->
       <main class="content">
         <section class="app-section is-active" data-tab-panel="nutrition">
           <div class="stats-grid">
             <article class="stat-card">
-              <h2>Calories</h2>
-              <div class="metric">770 <span>kcal</span></div>
-              <p>of 2000 kcal</p>
-              <div class="progress-track"><span class="progress-fill blue" style="width: 39%"></span></div>
+              <h2>Calorie</h2>
+              <div class="metric"><span data-nutrition-total="calories">0</span> <span>kcal</span></div>
+              <p><span data-nutrition-total="calories">0</span> su <span data-nutrition-goal="calories">2000</span> kcal</p>
+              <div class="progress-track"><span class="progress-fill blue" data-nutrition-progress="calories" style="width: 0%"></span></div>
             </article>
             <article class="stat-card">
-              <h2>Protein</h2>
-              <div class="metric">47 <span>g</span></div>
-              <p>of 150 g</p>
-              <div class="progress-track"><span class="progress-fill red" style="width: 31%"></span></div>
+              <h2>Proteine</h2>
+              <div class="metric"><span data-nutrition-total="protein">0</span> <span>g</span></div>
+              <p><span data-nutrition-total="protein">0</span> su <span data-nutrition-goal="protein">150</span> g</p>
+              <div class="progress-track"><span class="progress-fill red" data-nutrition-progress="protein" style="width: 0%"></span></div>
             </article>
             <article class="stat-card">
-              <h2>Carbs</h2>
-              <div class="metric">79 <span>g</span></div>
-              <p>of 250 g</p>
-              <div class="progress-track"><span class="progress-fill yellow" style="width: 32%"></span></div>
+              <h2>Carboidrati</h2>
+              <div class="metric"><span data-nutrition-total="carbs">0</span> <span>g</span></div>
+              <p><span data-nutrition-total="carbs">0</span> su <span data-nutrition-goal="carbs">250</span> g</p>
+              <div class="progress-track"><span class="progress-fill yellow" data-nutrition-progress="carbs" style="width: 0%"></span></div>
             </article>
             <article class="stat-card">
-              <h2>Fats</h2>
-              <div class="metric">24 <span>g</span></div>
-              <p>of 65 g</p>
-              <div class="progress-track"><span class="progress-fill green" style="width: 37%"></span></div>
+              <h2>Grassi</h2>
+              <div class="metric"><span data-nutrition-total="fats">0</span> <span>g</span></div>
+              <p><span data-nutrition-total="fats">0</span> su <span data-nutrition-goal="fats">65</span> g</p>
+              <div class="progress-track"><span class="progress-fill green" data-nutrition-progress="fats" style="width: 0%"></span></div>
             </article>
           </div>
 
           <section class="meals-section">
             <div class="section-head">
-              <h2>Today's Meals</h2>
-              <button class="primary-btn primary-btn-blue" type="button"><span>+</span>Add Food</button>
+              <h2>Pasti di oggi</h2>
             </div>
 
-            <div class="card-stack">
-              <article class="meal-card">
-                <div class="meal-copy">
-                  <h3>Oatmeal with berries</h3>
-                  <div class="meal-macros">
-                    <span>Calories: <strong>320</strong></span>
-                    <span>Protein: <strong>12g</strong></span>
-                    <span>Carbs: <strong>54g</strong></span>
-                    <span>Fats: <strong>6g</strong></span>
+            <div class="nutrition-layout">
+              <article class="panel">
+                <h3>Aggiungi un pasto</h3>
+                <form class="form-grid nutrition-form-grid" data-nutrition-form novalidate>
+                  <div class="field field-full">
+                    <p class="lookup-hint">Calorie e macronutrienti vengono stimati automaticamente e puoi correggerli dopo il salvataggio.</p>
                   </div>
-                </div>
-                <div class="meal-meta">
-                  <time datetime="08:30">08:30 AM</time>
-                  <button class="delete-btn" type="button" aria-label="Delete meal">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
-                    </svg>
-                  </button>
-                </div>
-              </article>
-              <article class="meal-card">
-                <div class="meal-copy">
-                  <h3>Grilled chicken salad</h3>
-                  <div class="meal-macros">
-                    <span>Calories: <strong>450</strong></span>
-                    <span>Protein: <strong>35g</strong></span>
-                    <span>Carbs: <strong>25g</strong></span>
-                    <span>Fats: <strong>18g</strong></span>
+                  <label class="field field-full">
+                    <span>Nome pasto</span>
+                    <input type="text" name="name" placeholder="Es. Yogurt con frutta" required />
+                  </label>
+                  <label class="field">
+                    <span>Orario</span>
+                    <input type="time" name="time" required />
+                  </label>
+                  <div class="field field-full nutrition-form-row">
+                    <button class="primary-btn primary-btn-blue" type="submit">Aggiungi</button>
+                    <p class="save-hint" data-nutrition-feedback aria-live="polite"></p>
                   </div>
-                </div>
-                <div class="meal-meta">
-                  <time datetime="12:45">12:45 PM</time>
-                  <button class="delete-btn" type="button" aria-label="Delete meal">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
-                    </svg>
-                  </button>
-                </div>
+                </form>
               </article>
+
+              <div class="card-stack" data-meals-list></div>
             </div>
           </section>
         </section>
 
         <section class="app-section" data-tab-panel="recipes">
           <div class="mode-switch">
-            <button class="mode-pill mode-pill-active" type="button" data-recipe-target="generator">Quick Recipe Generator</button>
-            <button class="mode-pill" type="button" data-recipe-target="chat">Chat with AI Assistant</button>
+            <button class="mode-pill mode-pill-active" type="button" data-recipe-target="generator">Generatore rapido di ricette</button>
+            <button class="mode-pill" type="button" data-recipe-target="chat">Chat con AI Assistant</button>
           </div>
 
           <div class="recipe-view is-active" data-recipe-panel="generator">
             <article class="gradient-panel recipe-generator">
               <div class="panel-heading">
-                <h2>AI Recipe Generator</h2>
-                <p>Let AI create personalized recipes based on your preferences</p>
+                <h2>Generatore di ricette AI</h2>
+                <p>Genera ricette variate in base a tipo di pasto, obiettivo calorico, preferenze e ingredienti già disponibili.</p>
               </div>
-              <div class="form-grid three-cols">
+              <form class="form-grid three-cols recipe-generator-grid" data-recipe-generator-form novalidate>
                 <label class="field">
-                  <span>Diet Type</span>
-                  <select><option>Balanced</option></select>
+                  <span>Tipo di dieta</span>
+                  <select name="dietType">
+                    <option value="balanced">Onnivora</option>
+                    <option value="high-protein">High protein</option>
+                    <option value="vegetarian">Vegetariana</option>
+                    <option value="vegan">Vegana</option>
+                  </select>
                 </label>
                 <label class="field">
-                  <span>Target Calories</span>
-                  <select><option>500 kcal</option></select>
+                  <span>Calorie target</span>
+                  <select name="caloriesTarget">
+                    <option value="350">350 kcal</option>
+                    <option value="500">500 kcal</option>
+                    <option value="650">650 kcal</option>
+                    <option value="800">800 kcal</option>
+                  </select>
                 </label>
                 <label class="field">
-                  <span>Meal Type</span>
-                  <select><option>Dinner</option></select>
+                  <span>Tipo di pasto</span>
+                  <select name="mealType">
+                    <option value="breakfast">Colazione</option>
+                    <option value="lunch">Pranzo</option>
+                    <option value="dinner">Cena</option>
+                    <option value="snack">Snack</option>
+                  </select>
                 </label>
-              </div>
-              <button class="wide-white-btn" type="button">Generate Recipe with AI</button>
+                <label class="field field-full">
+                  <span>Vincoli o preferenze</span>
+                  <input
+                    type="text"
+                    name="prompt"
+                    placeholder="Es. usa ingredienti già in dispensa, senza lattosio, pronto in 20 minuti"
+                  />
+                </label>
+                <div class="field field-full recipe-form-row">
+                  <button class="wide-white-btn" type="submit">Genera ricetta</button>
+                  <p class="save-hint recipe-feedback" data-recipe-feedback aria-live="polite"></p>
+                </div>
+              </form>
             </article>
 
-            <article class="panel recipe-result">
-              <div class="result-head">
-                <div>
-                  <h3>Mediterranean Quinoa Bowl</h3>
-                  <p>A nutritious bowl packed with protein and fresh vegetables</p>
-                  <div class="inline-meta">
-                    <span>25 min</span>
-                    <span>2 servings</span>
-                    <span>Easy</span>
+            <div class="recipe-results-grid">
+              <article class="panel recipe-result" data-recipe-result></article>
+              <article class="panel recipe-sidebar">
+                <div class="recipe-sidebar-section">
+                  <div class="section-head recipe-sidebar-head">
+                    <h2>Storico generazioni</h2>
                   </div>
+                  <div class="recipe-history-list" data-recipe-history></div>
                 </div>
-                <div class="calorie-badge">
-                  <strong>420</strong>
-                  <span>calories</span>
+                <div class="recipe-sidebar-section">
+                  <div class="section-head recipe-sidebar-head">
+                    <h2>Salvate</h2>
+                  </div>
+                  <div class="recipe-saved-list" data-saved-recipes></div>
                 </div>
-              </div>
-              <div class="two-col-copy">
-                <div>
-                  <h4>Ingredients</h4>
-                  <ul>
-                    <li>1 cup quinoa</li>
-                    <li>2 cups vegetable broth</li>
-                    <li>1 can chickpeas, drained</li>
-                    <li>2 cups cherry tomatoes, halved</li>
-                    <li>1 cucumber, diced</li>
-                    <li>1/4 red onion, sliced</li>
-                    <li>1/4 cup feta cheese</li>
-                    <li>2 tbsp olive oil</li>
-                    <li>Lemon juice and herbs</li>
-                  </ul>
-                </div>
-                <div>
-                  <h4>Instructions</h4>
-                  <ol>
-                    <li>Cook quinoa in vegetable broth according to package directions</li>
-                    <li>Roast chickpeas with olive oil at 400°F for 20 minutes</li>
-                    <li>Chop all vegetables and prepare toppings</li>
-                    <li>Assemble bowls with quinoa as base</li>
-                    <li>Top with roasted chickpeas, vegetables, and feta</li>
-                    <li>Drizzle with olive oil and lemon juice</li>
-                  </ol>
-                </div>
-              </div>
-            </article>
+              </article>
+            </div>
           </div>
 
-          <div class="recipe-view" data-recipe-panel="chat">
-            <article class="panel chat-panel">
+          <article class="recipe-view panel chat-panel" data-recipe-panel="chat">
               <div class="chat-header">
-                <h2>AI Recipe Assistant</h2>
-                <p>Ask me anything about cooking and recipes!</p>
+                <div>
+                  <h2>AI Recipe Assistant</h2>
+                </div>
+                <button class="chat-reset-btn" type="button" data-recipe-chat-reset>Reset chat</button>
               </div>
-              <div class="chat-body">
-                <article class="message-card">
-                  <p>Hi! I'm your AI recipe assistant. Ask me anything about recipes, ingredients, cooking techniques, or meal planning. How can I help you today?</p>
-                  <time datetime="16:24">16:24</time>
-                </article>
-              </div>
+              <div class="chat-body" data-recipe-chat-messages></div>
               <div class="chat-footer">
-                <div class="chat-input-row">
-                  <input type="text" placeholder="Ask about recipes, ingredients, cooking tips..." />
-                  <button class="send-btn" type="button" aria-label="Send message">↗</button>
-                </div>
-                <div class="prompt-row">
-                  <button type="button">Quick dinner ideas</button>
-                  <button type="button">Meal prep tips</button>
-                  <button type="button">Healthy breakfast</button>
-                </div>
+                <form class="chat-input-row" data-recipe-chat-form novalidate>
+                  <input
+                    type="text"
+                    name="message"
+                    placeholder="Chiedimi qualcosa..."
+                  />
+                  <button class="send-btn" type="submit" aria-label="Invia messaggio">↗</button>
+                </form>
               </div>
             </article>
-          </div>
         </section>
 
         <section class="app-section" data-tab-panel="grocery">
           <section class="grocery-summary">
             <div>
               <div class="summary-title"><h2>Shopping List</h2></div>
-              <div class="progress-track grocery-track"><span class="progress-fill grocery-fill" style="width: 20%"></span></div>
+              <div class="progress-track grocery-track"><span class="progress-fill grocery-fill" data-grocery-progress style="width: 0%"></span></div>
             </div>
             <div class="summary-count">
-              <strong>1/5</strong>
-              <span>items collected</span>
+              <strong data-grocery-count>0/0</strong>
+              <span>prodotti acquistati</span>
             </div>
           </section>
 
           <section class="grocery-section">
-            <div class="section-head">
-              <h2>Your Items</h2>
-              <div class="inline-actions">
-                <button class="soft-btn" type="button">Clear Completed</button>
-                <button class="primary-btn primary-btn-green" type="button"><span>+</span>Add Item</button>
+            <div class="card-stack" data-grocery-list></div>
+
+            <div class="inline-actions">
+              <button class="soft-btn" type="button" data-clear-completed>Rimuovi completati</button>
+            </div>
+
+            <div class="grocery-layout">
+              <article class="panel">
+                <h3>Aggiungi prodotto alla lista della spesa</h3>
+                <form class="form-grid grocery-form-grid" data-grocery-form novalidate>
+                  <div class="field field-full lookup-block">
+                    <div class="lookup-head">
+                      <button class="grocery-action-btn" type="button" data-open-barcode-scanner="grocery">Scansiona prodotto</button>
+                    </div>
+                    <input type="hidden" name="barcode" />
+                    <div class="lookup-result" data-off-grocery-result></div>
+                  </div>
+                  <label class="field field-full">
+                    <span>Nome prodotto</span>
+                    <input type="text" name="name" placeholder="Es. Pomodori pelati" required />
+                  </label>
+                  <label class="field">
+                    <span>Quantità</span>
+                    <input type="text" name="quantity" placeholder="2 confezioni" required />
+                  </label>
+                  <label class="field">
+                    <span>Categoria</span>
+                    <select name="category">
+                      <option value="Frutta e verdura">Frutta e verdura</option>
+                      <option value="Latticini">Latticini</option>
+                      <option value="Carne e pesce">Carne e pesce</option>
+                      <option value="Cereali">Cereali</option>
+                      <option value="Dispensa">Dispensa</option>
+                      <option value="Surgelati">Surgelati</option>
+                      <option value="Bevande">Bevande</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Scadenza</span>
+                    <input type="date" name="expiryDate" />
+                  </label>
+                  <div class="field field-full grocery-form-row">
+                    <button class="primary-btn primary-btn-green" type="submit">Aggiungi</button>
+                    <p class="save-hint" data-grocery-feedback aria-live="polite"></p>
+                  </div>
+                </form>
+              </article>
+            </div>
+
+            <article class="panel pantry-panel">
+              <div class="section-head pantry-head">
+                <h2>La tua dispensa</h2>
               </div>
-            </div>
+              <div class="pantry-list" data-pantry-list></div>
+            </article>
 
-            <div class="category-block">
-              <h3>Produce</h3>
-              <article class="grocery-item">
-                <label class="check-row"><input type="checkbox" /><span class="checkbox-ui"></span><span><strong>Apples</strong><small>6</small></span></label>
-                <button class="delete-btn" type="button" aria-label="Delete item">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
-                </button>
-              </article>
-              <article class="grocery-item">
-                <label class="check-row"><input type="checkbox" /><span class="checkbox-ui"></span><span><strong>Spinach</strong><small>1 bunch</small></span></label>
-                <button class="delete-btn" type="button" aria-label="Delete item">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
-                </button>
-              </article>
-            </div>
+            <article class="panel grocery-ar-panel">
+              <div class="section-head grocery-ar-head">
+                <div>
+                  <h2>Compara due prodotti</h2>
+                </div>
+                <div class="inline-actions grocery-ar-actions">
+                  <button class="grocery-action-btn grocery-icon-btn" type="button" data-grocery-ar-toggle aria-label="Avvia camera">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M4.5 7.5h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+                      <path d="m16.5 10 4-2.5v11l-4-2.5" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+                    </svg>
+                  </button>
+                  <button class="grocery-neutral-btn grocery-icon-btn" type="button" data-grocery-ar-clear aria-label="Reset confronto">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M9 7 4 12l5 5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                      <path d="M5 12h8a5 5 0 0 1 5 5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
 
-            <div class="category-block">
-              <h3>Dairy</h3>
-              <article class="grocery-item is-complete">
-                <label class="check-row"><input type="checkbox" checked /><span class="checkbox-ui"></span><span><strong>Greek yogurt</strong><small>2</small></span></label>
-                <button class="delete-btn" type="button" aria-label="Delete item">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
-                </button>
-              </article>
-            </div>
+              <div class="grocery-ar-layout">
+                <div class="grocery-ar-stage">
+                  <video class="grocery-ar-video" data-grocery-ar-video playsinline muted></video>
+                  <div class="grocery-ar-placeholder" data-grocery-ar-placeholder>
+                    <strong>Scansiona barcode</strong>
+                  </div>
+                  <div class="grocery-ar-overlay" data-grocery-ar-overlay></div>
+                </div>
 
-            <div class="category-block">
-              <h3>Meat</h3>
-              <article class="grocery-item">
-                <label class="check-row"><input type="checkbox" /><span class="checkbox-ui"></span><span><strong>Chicken breast</strong><small>1 lb</small></span></label>
-                <button class="delete-btn" type="button" aria-label="Delete item">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
-                </button>
-              </article>
-            </div>
-
-            <div class="category-block">
-              <h3>Grains</h3>
-              <article class="grocery-item">
-                <label class="check-row"><input type="checkbox" /><span class="checkbox-ui"></span><span><strong>Brown rice</strong><small>1 bag</small></span></label>
-                <button class="delete-btn" type="button" aria-label="Delete item">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
-                </button>
-              </article>
-            </div>
+                <aside class="grocery-ar-sidebar">
+                  <div class="grocery-ar-comparison" data-grocery-ar-comparison></div>
+                </aside>
+              </div>
+            </article>
           </section>
         </section>
 
         <section class="app-section" data-tab-panel="progress">
           <div class="section-head">
-            <h2>Your Progress</h2>
+            <h2>I tuoi progressi</h2>
             <div class="range-switch">
-              <button class="range-btn range-btn-active" type="button">Week</button>
-              <button class="range-btn" type="button">Month</button>
+              <button class="range-btn range-btn-active" type="button" data-progress-range="week">Settimana</button>
+              <button class="range-btn" type="button" data-progress-range="month">Mese</button>
             </div>
           </div>
 
-          <div class="progress-stats">
-            <article class="mini-stat-card"><h3>Weight Change</h3><strong>-0.8 kg</strong></article>
-            <article class="mini-stat-card"><h3>Current Weight</h3><strong>74.7 kg</strong></article>
-            <article class="mini-stat-card"><h3>Avg Calories</h3><strong>1993 kcal</strong></article>
-            <article class="mini-stat-card"><h3>Avg Protein</h3><strong>154 g</strong></article>
+          <div class="progress-stats" data-progress-stats></div>
+
+          <div class="progress-layout">
+            <article class="panel">
+              <h3>Log giornaliero</h3>
+              <p class="progress-panel-copy">I dati di oggi si aggiornano in automatico da Nutrition e Profile. Qui puoi aggiungere o correggere manualmente la tua giornata.</p>
+              <form class="form-grid progress-form-grid" data-progress-log-form novalidate>
+                <label class="field">
+                  <span>Data</span>
+                  <input type="date" name="date" required />
+                </label>
+                <label class="field">
+                  <span>Peso (kg)</span>
+                  <input type="number" name="weightKg" min="20" max="300" step="0.1" placeholder="74.7" />
+                </label>
+                <label class="field">
+                  <span>Acqua (bicchieri)</span>
+                  <input type="number" name="waterGlasses" min="0" step="1" placeholder="8" />
+                </label>
+                <label class="field">
+                  <span>Calorie manuali</span>
+                  <input type="number" name="calories" min="0" step="1" placeholder="Lascia vuoto per usare Nutrition" />
+                </label>
+                <label class="field">
+                  <span>Proteine manuali (g)</span>
+                  <input type="number" name="protein" min="0" step="1" placeholder="Lascia vuoto per usare Nutrition" />
+                </label>
+                <div class="field field-full progress-form-row">
+                  <button class="primary-btn primary-btn-blue" type="submit">Salva</button>
+                  <button class="soft-btn progress-soft-btn" type="button" data-progress-delete-log>Reset</button>
+                  <p class="save-hint" data-progress-feedback aria-live="polite"></p>
+                </div>
+              </form>
+            </article>
           </div>
 
           <article class="panel chart-panel">
-            <div class="chart-head"><h3>Calorie Intake Trend</h3><span>kcal / day</span></div>
-            <svg class="line-chart" viewBox="0 0 760 250" aria-hidden="true">
-              <defs><linearGradient id="calorieFillMain" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#14a16d" stop-opacity="0.16" /><stop offset="100%" stop-color="#14a16d" stop-opacity="0" /></linearGradient></defs>
-              <g class="grid"><line x1="85" y1="50" x2="690" y2="50"></line><line x1="85" y1="90" x2="690" y2="90"></line><line x1="85" y1="130" x2="690" y2="130"></line><line x1="85" y1="170" x2="690" y2="170"></line><line x1="85" y1="210" x2="690" y2="210"></line></g>
-              <path class="area area-green" d="M85 210 L171 95 L257 178 L343 118 L429 194 L515 50 L601 165 L690 165 L690 210 L85 210 Z"></path>
-              <path class="line line-green" d="M85 210 L171 95 L257 178 L343 118 L429 194 L515 50 L601 165"></path>
-              <g class="points point-green"><circle cx="85" cy="210" r="5"></circle><circle cx="171" cy="95" r="5"></circle><circle cx="257" cy="178" r="5"></circle><circle cx="343" cy="118" r="5"></circle><circle cx="429" cy="194" r="5"></circle><circle cx="515" cy="50" r="5"></circle><circle cx="601" cy="165" r="5"></circle></g>
-            </svg>
+            <div class="chart-head"><h3>Andamento calorie</h3><span>kcal / giorno</span></div>
+            <div class="chart-scroll-shell">
+              <div class="chart-scroll-track">
+                <svg class="line-chart" viewBox="0 0 760 250" aria-hidden="true" data-progress-calorie-chart></svg>
+              </div>
+            </div>
           </article>
 
           <div class="chart-split">
             <article class="panel chart-panel">
-              <div class="chart-head"><h3>Protein Intake</h3><span>g / day</span></div>
-              <div class="bar-chart bars-red">
-                <span style="height:88px"></span><span style="height:96px"></span><span style="height:91px"></span><span style="height:93px"></span><span style="height:90px"></span><span style="height:99px"></span><span style="height:92px"></span>
+              <div class="chart-head"><h3>Andamento peso</h3><span>kg</span></div>
+              <div class="chart-scroll-shell">
+                <div class="chart-scroll-track">
+                  <svg class="line-chart compact" viewBox="0 0 560 230" aria-hidden="true" data-progress-weight-chart></svg>
+                </div>
               </div>
-              <div class="day-labels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
-            </article>
-            <article class="panel chart-panel">
-              <div class="chart-head"><h3>Weight Progress</h3><span>kg</span></div>
-              <svg class="line-chart compact" viewBox="0 0 560 230" aria-hidden="true">
-                <defs><linearGradient id="weightFillMain" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#7d58ff" stop-opacity="0.12" /><stop offset="100%" stop-color="#7d58ff" stop-opacity="0" /></linearGradient></defs>
-                <g class="grid"><line x1="55" y1="45" x2="510" y2="45"></line><line x1="55" y1="82" x2="510" y2="82"></line><line x1="55" y1="119" x2="510" y2="119"></line><line x1="55" y1="156" x2="510" y2="156"></line><line x1="55" y1="193" x2="510" y2="193"></line></g>
-                <path class="area area-purple" d="M55 45 L120 75 L185 104 L250 133 L315 160 L380 133 L445 184 L445 195 L55 195 Z"></path>
-                <path class="line line-purple" d="M55 45 L120 75 L185 104 L250 133 L315 160 L380 133 L445 184"></path>
-                <g class="points point-purple"><circle cx="55" cy="45" r="4.5"></circle><circle cx="120" cy="75" r="4.5"></circle><circle cx="185" cy="104" r="4.5"></circle><circle cx="250" cy="133" r="4.5"></circle><circle cx="315" cy="160" r="4.5"></circle><circle cx="380" cy="133" r="4.5"></circle><circle cx="445" cy="184" r="4.5"></circle></g>
-              </svg>
             </article>
           </div>
 
           <article class="panel chart-panel">
-            <div class="chart-head"><h3>Water Intake (glasses / day)</h3><span>glasses</span></div>
-            <div class="bar-chart bars-cyan">
-              <span style="height:80px"></span><span style="height:70px"></span><span style="height:90px"></span><span style="height:80px"></span><span style="height:100px"></span><span style="height:60px"></span><span style="height:90px"></span>
+            <div class="chart-head"><h3>Assunzione acqua</h3><span>bicchieri / giorno</span></div>
+            <div class="chart-scroll-shell">
+              <div class="chart-scroll-track">
+                <div class="bar-chart bars-cyan" data-progress-water-bars></div>
+                <div class="day-labels" data-progress-water-labels></div>
+              </div>
             </div>
-            <div class="day-labels"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
           </article>
         </section>
 
         <section class="app-section" data-tab-panel="profile">
-          <section class="account-banner">
-            <div class="panel-heading">
-              <h2>Account Type</h2>
-              <p>Choose your dietary preference to personalize your experience</p>
-            </div>
-            <div class="account-grid">
-              <button class="account-option active" type="button"><strong>Regular</strong><span>All food types</span></button>
-              <button class="account-option" type="button"><strong>Vegetarian</strong><span>No meat or fish</span></button>
-              <button class="account-option" type="button"><strong>Vegan</strong><span>Plant-based only</span></button>
-            </div>
-          </section>
+          <form data-profile-form novalidate>
+            <section class="account-banner">
+              <div class="panel-heading">
+                <h2>Account Type</h2>
+                <p>Scegli la tua preferenza alimentare</p>
+              </div>
+              <div class="account-grid">
+                <button class="account-option" type="button" data-diet-type="regular"><strong>Omnivorous</strong><span>Tutti i tipi di alimenti</span></button>
+                <button class="account-option" type="button" data-diet-type="vegetarian"><strong>Vegetarian</strong><span>Senza carne e pesce</span></button>
+                <button class="account-option" type="button" data-diet-type="vegan"><strong>Vegan</strong><span>Solo alimenti vegetali</span></button>
+              </div>
+            </section>
 
-          <div class="profile-grid">
+            <div class="profile-grid">
+              <article class="panel">
+                <h3>Informazioni personali</h3>
+                <div class="form-grid">
+                  <label class="field field-full"><span>Nome e cognome</span><input type="text" name="fullName" placeholder="Nome e cognome" required /></label>
+                  <label class="field"><span>Età</span><input type="number" name="age" min="1" max="120" placeholder="Es. 30" required /></label>
+                  <label class="field"><span>Genere</span>
+                    <select name="gender">
+                      <option value="">Seleziona</option>
+                      <option value="female">Donna</option>
+                      <option value="male">Uomo</option>
+                      <option value="other">Altro</option>
+                    </select>
+                  </label>
+                </div>
+              </article>
+              <article class="panel">
+                <h3>Dati fisici</h3>
+                <div class="form-grid">
+                  <label class="field"><span>Altezza (cm)</span><input type="number" name="heightCm" min="100" max="250" step="1" placeholder="Es. 175" required /></label>
+                  <label class="field"><span>Peso attuale (kg)</span><input type="number" name="currentWeightKg" min="20" max="300" step="0.1" placeholder="Es. 74.7" required /></label>
+                  <label class="field"><span>Peso obiettivo (kg)</span><input type="number" name="targetWeightKg" min="20" max="300" step="0.1" placeholder="Es. 70" required /></label>
+                  <label class="field"><span>Livello di attività</span>
+                    <select name="activityLevel" required>
+                      <option value="">Seleziona</option>
+                      <option value="sedentary">Sedentario</option>
+                      <option value="light">Poco attivo</option>
+                      <option value="moderate">Moderato</option>
+                      <option value="active">Attivo</option>
+                      <option value="very-active">Molto attivo</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="bmi-box"><span>Il tuo BMI</span><strong data-bmi-display>-- <em>Profilo incompleto</em></strong></div>
+              </article>
+            </div>
+
             <article class="panel">
-              <h3>Personal Information</h3>
+              <h3>Informazioni mediche</h3>
               <div class="form-grid">
-                <label class="field field-full"><span>Full Name</span><input type="text" value="John Doe" /></label>
-                <label class="field"><span>Age</span><input type="text" value="30" /></label>
-                <label class="field"><span>Gender</span><select><option>Male</option></select></label>
+                <label class="field"><span>Allergie</span><textarea name="allergies" rows="4" placeholder="Es. frutta secca, lattosio"></textarea></label>
+                <label class="field"><span>Farmaci attuali</span><textarea name="medications" rows="4" placeholder="Indica eventuali farmaci che stai assumendo..."></textarea></label>
+                <label class="field"><span>Condizioni mediche</span><textarea name="medicalConditions" rows="4" placeholder="Indica eventuali condizioni mediche (diabete, ipertensione, ecc.)..."></textarea></label>
+                <label class="field"><span>Gruppo sanguigno</span>
+                  <select name="bloodType">
+                    <option value="">Seleziona</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="unknown">Unknown</option>
+                  </select>
+                </label>
               </div>
             </article>
-            <article class="panel">
-              <h3>Physical Data</h3>
-              <div class="form-grid">
-                <label class="field"><span>Height (cm)</span><input type="text" value="175" /></label>
-                <label class="field"><span>Current Weight (kg)</span><input type="text" value="74,7" /></label>
-                <label class="field"><span>Target Weight (kg)</span><input type="text" value="70" /></label>
-                <label class="field"><span>Activity Level</span><select><option>Moderate</option></select></label>
+
+            <article class="ai-profile-panel">
+              <div class="panel-heading">
+                <h3>AI-Powered Recommendations</h3>
+                <p>In base al tuo profilo, ecco obiettivi nutrizionali personalizzati</p> <!-- calcolati con l'equazione di Mifflin-St Jeor -->
               </div>
-              <div class="bmi-box"><span>Your BMI</span><strong>24.4 <em>Normal</em></strong></div>
+              <div class="recommend-top">
+                <article class="recommend-card"><span>Il tuo TDEE (dispendio energetico giornaliero)</span><strong data-profile-recommendation="tdee">--</strong><small data-profile-recommendation-note>Completa altezza, peso ed età per ottenere obiettivi personalizzati.</small></article>
+                <article class="recommend-card"><span>Calorie giornaliere consigliate</span><strong data-profile-recommendation="calories">--</strong><small data-profile-goal-note>Le raccomandazioni appariranno dopo aver completato il profilo.</small></article>
+              </div>
+              <div class="recommend-bottom">
+                <article class="recommend-mini"><span>Proteine</span><strong data-profile-recommendation="protein">--</strong></article>
+                <article class="recommend-mini"><span>Carboidrati</span><strong data-profile-recommendation="carbs">--</strong></article>
+                <article class="recommend-mini"><span>Grassi</span><strong data-profile-recommendation="fats">--</strong></article>
+              </div>
+              <button class="apply-btn" type="button" data-apply-profile-recommendations>Applica raccomandazioni AI</button>
             </article>
-          </div>
 
-          <article class="panel">
-            <h3>Medical Information</h3>
-            <div class="form-grid">
-              <label class="field"><span>Allergies</span><textarea rows="4">None</textarea></label>
-              <label class="field"><span>Current Medications</span><textarea rows="4" placeholder="List any medications you're taking..."></textarea></label>
-              <label class="field"><span>Medical Conditions</span><textarea rows="4" placeholder="List any medical conditions (diabetes, hypertension, etc.)..."></textarea></label>
-              <label class="field"><span>Blood Type</span><select><option>O+</option></select></label>
-            </div>
-          </article>
+            <article class="panel">
+              <h3>Obiettivi nutrizionali giornalieri</h3>
+              <div class="form-grid three-cols">
+                <label class="field"><span>Calorie (kcal)</span><input type="number" name="goalCalories" min="0" step="1" required /></label>
+                <label class="field"><span>Proteine (g)</span><input type="number" name="goalProtein" min="0" step="1" required /></label>
+                <label class="field"><span>Carboidrati (g)</span><input type="number" name="goalCarbs" min="0" step="1" required /></label>
+                <label class="field"><span>Grassi (g)</span><input type="number" name="goalFats" min="0" step="1" required /></label>
+                <label class="field"><span>Acqua (bicchieri)</span><input type="number" name="goalWater" min="0" step="1" required /></label>
+              </div>
+            </article>
 
-          <article class="ai-profile-panel">
-            <div class="panel-heading">
-              <h3>AI-Powered Recommendations</h3>
-              <p>Based on your profile, here are personalized nutrition goals calculated using the Mifflin-St Jeor equation</p>
+            <div class="save-row">
+              <p class="save-hint profile-feedback" data-profile-feedback aria-live="polite"></p>
+              <button class="primary-btn primary-btn-blue save-btn" type="submit">Salva</button>
             </div>
-            <div class="recommend-top">
-              <article class="recommend-card"><span>Your TDEE (Total Daily Energy Expenditure)</span><strong>2628 kcal</strong><small>Based on moderate activity level</small></article>
-              <article class="recommend-card"><span>Recommended Daily Calories</span><strong>2128 kcal</strong><small>Deficit for weight loss</small></article>
-            </div>
-            <div class="recommend-bottom">
-              <article class="recommend-mini"><span>Protein</span><strong>149g</strong></article>
-              <article class="recommend-mini"><span>Carbs</span><strong>250g</strong></article>
-              <article class="recommend-mini"><span>Fats</span><strong>59g</strong></article>
-            </div>
-            <button class="apply-btn" type="button">Apply AI Recommendations</button>
-          </article>
-
-          <article class="panel">
-            <h3>Daily Nutrition Goals</h3>
-            <div class="form-grid three-cols">
-              <label class="field"><span>Calories (kcal)</span><input type="text" value="2000" /></label>
-              <label class="field"><span>Protein (g)</span><input type="text" value="150" /></label>
-              <label class="field"><span>Carbs (g)</span><input type="text" value="250" /></label>
-              <label class="field"><span>Fats (g)</span><input type="text" value="65" /></label>
-              <label class="field"><span>Water Intake (glasses)</span><input type="text" value="8" /></label>
-            </div>
-          </article>
-
-          <div class="save-row">
-            <button class="primary-btn primary-btn-blue save-btn" type="button">Save Profile</button>
-          </div>
+          </form>
         </section>
 
         <section class="app-section" data-tab-panel="devices">
           <section class="devices-hero">
             <div class="panel-heading">
-              <h2>Connected Devices</h2>
-              <p>Link wearables, smart scales and fitness apps to keep your nutrition and progress data updated automatically.</p>
+              <h2>Dispositivi connessi</h2>
+              <p>Collega wearable, bilance smart e fitness app per mantenere aggiornati automaticamente i tuoi dati</p>
             </div>
-            <div class="devices-summary">
-              <article>
-                <strong>4</strong>
-                <span>available integrations</span>
-              </article>
-              <article>
-                <strong>2</strong>
-                <span>active connections</span>
-              </article>
-              <article>
-                <strong>Today</strong>
-                <span>last sync</span>
-              </article>
-            </div>
+            <div class="devices-summary" data-devices-summary></div>
           </section>
 
           <section class="section-head">
-            <h2>Your Integrations</h2>
+            <h2>Le tue integrazioni</h2>
             <div class="inline-actions">
-              <button class="soft-btn devices-soft" type="button">Manage Permissions</button>
-              <button class="primary-btn primary-btn-blue" type="button"><span>+</span>Add Device</button>
+              <button class="primary-btn primary-btn-blue" type="button" data-devices-add><span>+</span>Aggiungi dispositivo</button>
             </div>
           </section>
 
-          <div class="devices-grid">
-            <article class="device-card is-connected">
-              <div class="device-top">
-                <div>
-                  <span class="device-badge badge-watch">Wearable</span>
-                  <h3>Smartwatch</h3>
-                  <p>Track daily steps, calories burned, heart rate and activity sessions.</p>
-                </div>
-                <span class="status-pill connected">Connected</span>
-              </div>
-              <div class="device-meta">
-                <span>Last sync: 22:14</span>
-                <span>Data: steps, workouts, calories</span>
-              </div>
-              <div class="device-actions">
-                <button class="ghost-btn" type="button">Sync Now</button>
-                <button class="ghost-btn danger" type="button">Disconnect</button>
-              </div>
-            </article>
+          <p class="save-hint" data-devices-feedback aria-live="polite"></p>
 
-            <article class="device-card is-connected">
-              <div class="device-top">
-                <div>
-                  <span class="device-badge badge-scale">Body Metrics</span>
-                  <h3>Digital Scale</h3>
-                  <p>Import weight, body fat and body composition readings into Progress.</p>
-                </div>
-                <span class="status-pill connected">Connected</span>
-              </div>
-              <div class="device-meta">
-                <span>Last sync: Yesterday</span>
-                <span>Data: weight, BMI, body fat</span>
-              </div>
-              <div class="device-actions">
-                <button class="ghost-btn" type="button">Sync Now</button>
-                <button class="ghost-btn danger" type="button">Disconnect</button>
-              </div>
-            </article>
-
-            <article class="device-card">
-              <div class="device-top">
-                <div>
-                  <span class="device-badge badge-app">Fitness App</span>
-                  <h3>Strava</h3>
-                  <p>Bring running, cycling and training sessions into your calorie expenditure data.</p>
-                </div>
-                <span class="status-pill">Available</span>
-              </div>
-              <div class="device-meta">
-                <span>Syncs with endurance activities</span>
-                <span>Data: workouts, duration, distance</span>
-              </div>
-              <div class="device-actions">
-                <button class="ghost-btn primary" type="button">Connect Strava</button>
-              </div>
-            </article>
-
-            <article class="device-card">
-              <div class="device-top">
-                <div>
-                  <span class="device-badge badge-health">Health Hub</span>
-                  <h3>Google Fit / Apple Health</h3>
-                  <p>Centralize health metrics from multiple apps and devices in one connection.</p>
-                </div>
-                <span class="status-pill">Available</span>
-              </div>
-              <div class="device-meta">
-                <span>Recommended for multi-device sync</span>
-                <span>Data: activity, steps, weight, sleep</span>
-              </div>
-              <div class="device-actions">
-                <button class="ghost-btn primary" type="button">Connect Health App</button>
-              </div>
-            </article>
-          </div>
+          <div class="devices-grid" data-devices-grid></div>
 
           <article class="panel sync-panel">
             <div class="section-head compact">
-              <h2>Sync Preferences</h2>
+              <h2>Preferenze sync</h2>
             </div>
-            <div class="sync-options">
-              <label class="sync-row">
-                <span>
-                  <strong>Auto-sync every day</strong>
-                  <small>Refresh connected health and nutrition data automatically.</small>
-                </span>
-                <input type="checkbox" checked />
-              </label>
-              <label class="sync-row">
-                <span>
-                  <strong>Import workout calories into Progress</strong>
-                  <small>Use external activity data to update calorie burn estimates.</small>
-                </span>
-                <input type="checkbox" checked />
-              </label>
-              <label class="sync-row">
-                <span>
-                  <strong>Use connected weight data in Profile</strong>
-                  <small>Update body metrics from smart scale measurements.</small>
-                </span>
-                <input type="checkbox" />
-              </label>
-            </div>
+            <div class="sync-options" data-devices-sync-options></div>
           </article>
+
+          <section class="devices-permissions-section">
+            <section class="section-head compact">
+              <h2>Permessi integrazioni</h2>
+              <div class="inline-actions">
+                <button class="soft-btn devices-soft" type="button" data-devices-manage-permissions>Gestisci permessi ↓</button>
+              </div>
+            </section>
+
+            <article class="panel devices-permissions-panel" data-devices-permissions-panel hidden></article>
+          </section>
         </section>
       </main>
+    </div>
+
+    <div class="scanner-modal" data-barcode-scanner-modal hidden>
+      <div class="scanner-dialog" role="dialog" aria-modal="true" aria-labelledby="scanner-modal-title">
+        <div class="scanner-head">
+          <div>
+            <h2 id="scanner-modal-title">Scansiona prodotto</h2>
+          </div>
+          <button class="delete-btn" type="button" aria-label="Chiudi scanner" data-close-barcode-scanner>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+            </svg>
+          </button>
+        </div>
+        <div class="scanner-stage">
+          <video class="scanner-video" data-barcode-scanner-video playsinline muted></video>
+          <div class="scanner-frame" aria-hidden="true"></div>
+        </div>
+        <p class="scanner-status" data-barcode-scanner-status aria-live="polite">Attiva la camera e centra il bar-code nel riquadro.</p>
+      </div>
     </div>
 
     <script src="app.js"></script>

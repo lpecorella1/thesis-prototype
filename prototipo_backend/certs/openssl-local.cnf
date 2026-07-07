@@ -1,0 +1,23 @@
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+x509_extensions = v3_req
+distinguished_name = req_distinguished_name
+
+[req_distinguished_name]
+C = IT
+ST = Rome
+L = Rome
+O = NutriTrack Local
+OU = Prototype
+CN = 192.168.43.210
+
+[v3_req]
+subjectAltName = @alt_names
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+[alt_names]
+IP.1 = 192.168.43.210
+DNS.1 = localhost

@@ -1,0 +1,236 @@
+/* Desktop enhancements:
+   `mobile-style.css` resta la base mobile-first.
+   Qui riattiviamo progressivamente tipografia, griglie e spacing piu ampi
+   solo quando lo schermo supera i breakpoint tablet/desktop. */
+
+@media (min-width: 841px) {
+  .hero {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 24px;
+    padding: 20px 14px 14px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 2.6vw, 2.7rem);
+  }
+
+  .hero p {
+    font-size: clamp(1.08rem, 1.45vw, 1.35rem);
+  }
+
+  .goal-panel {
+    text-align: right;
+  }
+
+  .goal-panel span {
+    font-size: 1rem;
+  }
+
+  .goal-panel strong {
+    font-size: clamp(1.7rem, 2vw, 2.3rem);
+  }
+
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 14px 14px 18px;
+  }
+
+  .tab {
+    width: auto;
+    min-height: 0;
+    gap: 10px;
+    padding: 14px 20px;
+    font-size: 0.95rem;
+    line-height: 1.2;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .icon,
+  .tab svg,
+  .delete-btn svg {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+  }
+
+  .content {
+    padding: 34px 14px 40px;
+  }
+
+  .section-head {
+    gap: 20px;
+    margin: 42px 0 24px;
+  }
+
+  .section-head h2 {
+    font-size: 2rem;
+  }
+
+  .primary-btn,
+  .soft-btn,
+  .range-btn,
+  .mode-pill {
+    min-height: 48px;
+    padding: 0 22px;
+  }
+
+  .primary-btn span {
+    font-size: 1.32em;
+  }
+
+  .mode-switch {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 26px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+
+  .field span {
+    margin-bottom: 8px;
+  }
+
+  .field input,
+  .field select {
+    height: 48px;
+    padding: 0 14px;
+  }
+
+  .field textarea {
+    min-height: 102px;
+    padding: 12px 14px;
+  }
+
+  .wide-white-btn,
+  .apply-btn {
+    min-height: 52px;
+    margin-top: 20px;
+    font-size: 1rem;
+  }
+
+  .panel {
+    padding: 26px;
+  }
+
+  .chat-panel {
+    padding: 0;
+  }
+
+  .recipe-results-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  .calorie-badge strong {
+    font-size: 2rem;
+  }
+
+  .recipe-sidebar-head h2 {
+    font-size: 1.2rem;
+  }
+
+  .chat-header h2 {
+    font-size: 1.45rem;
+  }
+
+  .chat-body {
+    min-height: 360px;
+    padding: 18px;
+    gap: 12px;
+  }
+
+  .message-card {
+    max-width: 72%;
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .chat-footer {
+    padding: 20px;
+  }
+
+  .chat-input-row {
+    grid-template-columns: 1fr 78px;
+    gap: 10px;
+  }
+
+  .chat-input-row input {
+    height: 56px;
+    padding: 0 18px;
+  }
+
+  .grocery-summary {
+    gap: 28px;
+    padding: 28px;
+  }
+
+  .grocery-track {
+    margin-top: 26px;
+  }
+
+  .summary-count {
+    min-width: 130px;
+  }
+
+  .summary-count strong {
+    font-size: 2rem;
+  }
+
+  .category-panel {
+    padding: 24px;
+  }
+
+  .grocery-ar-panel {
+    padding: 24px;
+  }
+
+  .grocery-ar-head {
+    margin: 0 0 20px;
+  }
+
+  .grocery-ar-layout {
+    grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
+    gap: 18px;
+  }
+}
+
+@media (min-width: 841px) and (max-width: 1100px) {
+  .three-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1101px) {
+  .stats-grid,
+  .progress-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .stat-card,
+  .mini-stat-card {
+    padding: 24px 20px;
+  }
+
+  .nutrition-layout {
+    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .section-note {
+    text-align: right;
+  }
+
+  .three-cols {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
