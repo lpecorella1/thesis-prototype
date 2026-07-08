@@ -1,976 +1,47 @@
-if (!String.prototype.replaceAll) {
-  String.prototype.replaceAll = function replaceAllCompat(pattern, replacement) {
-    if (pattern instanceof RegExp) {
-      if (!pattern.global) {
-        throw new TypeError("replaceAll richiede una RegExp globale.");
-      }
+const bootstrap = window.NutriTrackBootstrap;
 
-      return this.replace(pattern, replacement);
-    }
-
-    return this.split(pattern).join(replacement);
-  };
+if (!bootstrap) {
+  throw new Error("Bootstrap frontend non caricato: impossibile inizializzare NutriTrack.");
 }
 
-const crypto =
-  globalThis.crypto && typeof globalThis.crypto.randomUUID === "function"
-    ? globalThis.crypto
-    : {
-        randomUUID() {
-          return `nt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
-        },
-      };
-
-const structuredClone =
-  typeof globalThis.structuredClone === "function"
-    ? (value) => globalThis.structuredClone(value)
-    : (value) => JSON.parse(JSON.stringify(value));
-
-const tabs = document.querySelectorAll("[data-tab-target]");
-const panels = document.querySelectorAll("[data-tab-panel]");
-
-const recipeSwitches = document.querySelectorAll("[data-recipe-target]");
-const recipePanels = document.querySelectorAll("[data-recipe-panel]");
-
-const NUTRITRACK_LOCAL_STATE_CACHE_KEY = "nutriTrackPrototypeState";
-const NUTRITRACK_STATE_API_PATH = "/api/nutritrack/state";
-const NUTRITRACK_SYNC_DEBOUNCE_MS = 450;
-const defaultRecipeTimestamp = "2026-06-23T16:24:00.000Z";
-const RECIPE_NUTRITION_SOURCE_LABEL = "Importato da Recipes";
-const RECIPE_TOKEN_STOPWORDS = new Set(["di", "e", "con", "al", "ai", "a", "da", "del", "della", "dei", "degli", "delle", "per", "su", "in", "o"]);
-const RECIPE_GENERIC_TOKENS = new Set(["integrale", "greco", "fresco", "fresca", "croccante", "light", "leggero", "leggera", "classico", "classica", "grigliato", "grigliata", "forno", "arrosto", "arrostita", "saltato", "saltata", "compatto", "misto", "mista"]);
-const groceryArStartIcon = `
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M4.5 7.5h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
-    <path d="m16.5 10 4-2.5v11l-4-2.5" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
-  </svg>
-`;
-const groceryArStopIcon = `
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8" />
-    <rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor" />
-  </svg>
-`;
-
-function setGroceryArToggleButtonState(isActive) {
-  const toggleButton = document.querySelector("[data-grocery-ar-toggle]");
-
-  if (!toggleButton) {
-    return;
-  }
-
-  toggleButton.innerHTML = isActive ? groceryArStopIcon : groceryArStartIcon;
-  toggleButton.setAttribute("aria-label", isActive ? "Ferma camera" : "Avvia camera");
-}
-
-const nutritrackSyncRuntime = {
-  hydrationStarted: false,
-  isHydrating: false,
-  isSaving: false,
-  hasPendingWrite: false,
-  saveTimeoutId: null,
-};
-
-const recipeLibrary = [
-  {
-    id: "mediterranean-quinoa-bowl",
-    title: "Mediterranean Quinoa Bowl",
-    description: "Bowl fresca e saziante con quinoa, ceci croccanti e verdure mediterranee.",
-    calories: 420,
-    protein: 19,
-    carbs: 46,
-    fats: 16,
-    duration: 25,
-    servings: 2,
-    difficulty: "Facile",
-    dietTypes: ["balanced", "vegetarian"],
-    mealTypes: ["lunch", "dinner"],
-    ingredients: [
-      "150 g di quinoa",
-      "240 g di ceci gia cotti",
-      "200 g di pomodorini",
-      "1 cetriolo",
-      "1/4 di cipolla rossa",
-      "40 g di feta",
-      "2 cucchiai di olio extravergine",
-      "Succo di limone, origano e prezzemolo",
-    ],
-    instructions: [
-      "Cuoci la quinoa in acqua o brodo leggero e lasciala intiepidire.",
-      "Salta o arrostisci i ceci con poco olio finche diventano dorati.",
-      "Taglia pomodorini, cetriolo e cipolla e condiscili con limone ed erbe.",
-      "Distribuisci quinoa, ceci e verdure nelle bowl.",
-      "Completa con feta sbriciolata e un filo di olio.",
-    ],
-  },
-  {
-    id: "protein-omelette-wrap",
-    title: "Protein Omelette Wrap",
-    description: "Wrap proteico con uova, spinaci e yogurt greco, pensato per un pranzo rapido.",
-    calories: 510,
-    protein: 34,
-    carbs: 29,
-    fats: 26,
-    duration: 15,
-    servings: 1,
-    difficulty: "Facile",
-    dietTypes: ["balanced", "high-protein", "vegetarian"],
-    mealTypes: ["breakfast", "lunch"],
-    ingredients: [
-      "3 uova",
-      "1 tortilla integrale",
-      "80 g di spinaci",
-      "60 g di yogurt greco",
-      "1 cucchiaino di senape",
-      "Pomodorini a piacere",
-      "Pepe nero e paprika",
-    ],
-    instructions: [
-      "Sbatti le uova con pepe e paprika.",
-      "Cuoci una frittata sottile in padella con gli spinaci.",
-      "Mescola yogurt greco e senape per creare la salsa.",
-      "Farcisci la tortilla con omelette, pomodorini e salsa.",
-      "Arrotola e servi subito oppure conserva per il meal prep.",
-    ],
-  },
-  {
-    id: "overnight-oats-berries",
-    title: "Overnight Oats ai Frutti Rossi",
-    description: "Colazione pronta dal giorno prima, bilanciata e adatta a mattine veloci.",
-    calories: 360,
-    protein: 18,
-    carbs: 43,
-    fats: 12,
-    duration: 10,
-    servings: 1,
-    difficulty: "Facile",
-    dietTypes: ["balanced", "vegetarian"],
-    mealTypes: ["breakfast", "snack"],
-    ingredients: [
-      "50 g di fiocchi d'avena",
-      "150 g di yogurt greco",
-      "100 ml di latte o bevanda vegetale",
-      "80 g di frutti rossi",
-      "1 cucchiaino di semi di chia",
-      "Cannella q.b.",
-    ],
-    instructions: [
-      "Mescola avena, yogurt, latte e semi di chia in un barattolo.",
-      "Aggiungi la cannella e meta dei frutti rossi.",
-      "Lascia riposare in frigo per almeno 6 ore.",
-      "Completa con i frutti rossi rimasti prima di servire.",
-    ],
-  },
-  {
-    id: "tofu-rice-stir-fry",
-    title: "Tofu Stir Fry con Riso Integrale",
-    description: "Piatto unico vegano con tofu croccante, riso integrale e verdure saltate.",
-    calories: 640,
-    protein: 28,
-    carbs: 71,
-    fats: 24,
-    duration: 30,
-    servings: 2,
-    difficulty: "Media",
-    dietTypes: ["balanced", "vegan"],
-    mealTypes: ["lunch", "dinner"],
-    ingredients: [
-      "180 g di tofu compatto",
-      "140 g di riso integrale",
-      "1 zucchina",
-      "1 carota",
-      "1 peperone",
-      "2 cucchiai di salsa di soia",
-      "1 cucchiaio di olio di sesamo",
-      "Zenzero e semi di sesamo",
-    ],
-    instructions: [
-      "Cuoci il riso integrale secondo le istruzioni.",
-      "Rosola il tofu a cubetti finché diventa croccante.",
-      "Salta le verdure con zenzero e olio di sesamo.",
-      "Unisci riso, tofu e salsa di soia e manteca per 2 minuti.",
-      "Completa con semi di sesamo.",
-    ],
-  },
-  {
-    id: "yogurt-apple-crunch",
-    title: "Yogurt Apple Crunch",
-    description: "Snack ad alto contenuto proteico con mela, yogurt e topping croccante.",
-    calories: 340,
-    protein: 21,
-    carbs: 31,
-    fats: 13,
-    duration: 8,
-    servings: 1,
-    difficulty: "Facile",
-    dietTypes: ["balanced", "high-protein", "vegetarian"],
-    mealTypes: ["snack", "breakfast"],
-    ingredients: [
-      "170 g di yogurt greco",
-      "1 mela",
-      "20 g di granola",
-      "10 g di noci",
-      "Cannella q.b.",
-    ],
-    instructions: [
-      "Taglia la mela a cubetti sottili.",
-      "Versa lo yogurt in una bowl e aggiungi la cannella.",
-      "Completa con mela, granola e noci tritate.",
-    ],
-  },
-  {
-    id: "chicken-rice-power-bowl",
-    title: "Chicken Rice Power Bowl",
-    description: "Bowl completa con pollo, riso integrale e verdure per giornate ad alta energia.",
-    calories: 760,
-    protein: 48,
-    carbs: 68,
-    fats: 24,
-    duration: 35,
-    servings: 2,
-    difficulty: "Media",
-    dietTypes: ["balanced", "high-protein"],
-    mealTypes: ["lunch", "dinner"],
-    ingredients: [
-      "300 g di petto di pollo",
-      "160 g di riso integrale",
-      "150 g di broccoli",
-      "1 carota",
-      "1 cucchiaio di olio extravergine",
-      "Paprika, aglio in polvere e limone",
-    ],
-    instructions: [
-      "Cuoci il riso integrale e tienilo da parte.",
-      "Condisci il pollo con paprika e aglio, poi cuocilo in padella.",
-      "Sbollenta o salta broccoli e carota.",
-      "Componi la bowl con riso, pollo e verdure e termina con limone.",
-    ],
-  },
+const requiredBootstrapKeys = [
+  "crypto",
+  "structuredClone",
+  "tabs",
+  "panels",
+  "homeCards",
+  "sectionLinks",
+  "homeButtons",
+  "mobileHomeMediaQuery",
+  "recipeSwitches",
+  "recipePanels",
+  "NUTRITRACK_LOCAL_STATE_CACHE_KEY",
+  "NUTRITRACK_STATE_API_PATH",
+  "NUTRITRACK_SYNC_DEBOUNCE_MS",
+  "defaultRecipeTimestamp",
+  "RECIPE_NUTRITION_SOURCE_LABEL",
+  "RECIPE_TOKEN_STOPWORDS",
+  "RECIPE_GENERIC_TOKENS",
+  "nutritrackSyncRuntime",
+  "recipeLibrary",
+  "groceryComparisonCatalog",
+  "groceryNameToCatalogId",
+  "groceryArRuntime",
+  "openFoodFactsRuntime",
+  "barcodeScannerRuntime",
+  "recipeChatRuntime",
+  "OPEN_FOOD_FACTS_FIELDS",
+  "defaultState",
+  "setGroceryArToggleButtonState",
 ];
 
-const groceryComparisonCatalog = [
-  {
-    id: "greek-yogurt-pro",
-    barcode: "800100000001",
-    name: "Yogurt greco 0%",
-    brand: "NutriTrack Foods",
-    category: "Latticini",
-    serving: "170 g",
-    calories: 97,
-    protein: 17,
-    sugar: 3.8,
-    fiber: 0,
-    highlights: "Molto proteico, zuccheri bassi, ottimo per colazione o snack.",
-  },
-  {
-    id: "protein-muesli",
-    barcode: "800100000002",
-    name: "Muesli proteico",
-    brand: "NutriTrack Foods",
-    category: "Cereali",
-    serving: "50 g",
-    calories: 188,
-    protein: 11,
-    sugar: 8.2,
-    fiber: 6.1,
-    highlights: "Buon apporto di fibre, ma più zuccheri rispetto ad altre opzioni breakfast.",
-  },
-  {
-    id: "oat-drink-unsweetened",
-    barcode: "800100000003",
-    name: "Bevanda d'avena senza zuccheri",
-    brand: "NutriTrack Foods",
-    category: "Bevande",
-    serving: "200 ml",
-    calories: 74,
-    protein: 1.4,
-    sugar: 2.4,
-    fiber: 1.6,
-    highlights: "Alternativa vegetale leggera, poco proteica ma facile da inserire nella routine.",
-  },
-  {
-    id: "brown-rice-classic",
-    barcode: "800100000004",
-    name: "Riso integrale classico",
-    brand: "NutriTrack Foods",
-    category: "Cereali",
-    serving: "80 g",
-    calories: 284,
-    protein: 6.2,
-    sugar: 0.6,
-    fiber: 2.8,
-    highlights: "Base saziante e molto neutra, utile per pasti completi e meal prep.",
-  },
-  {
-    id: "wholegrain-biscuits",
-    barcode: "800100000005",
-    name: "Biscotti integrali",
-    brand: "NutriTrack Foods",
-    category: "Dispensa",
-    serving: "30 g",
-    calories: 132,
-    protein: 2.8,
-    sugar: 7.1,
-    fiber: 2.7,
-    highlights: "Comodi da portare con te, ma meno interessanti se stai cercando un profilo high-protein.",
-  },
-];
+const missingBootstrapKeys = requiredBootstrapKeys.filter((key) => !(key in bootstrap));
 
-const groceryNameToCatalogId = {
-  "yogurt greco": "greek-yogurt-pro",
-  "riso integrale": "brown-rice-classic",
-};
-
-const groceryArRuntime = {
-  stream: null,
-  detector: null,
-  detectionLoopId: null,
-  isStarting: false,
-};
-
-const openFoodFactsRuntime = {
-  nutritionLookup: null,
-  nutritionDraft: null,
-  groceryLookup: null,
-};
-
-const barcodeScannerRuntime = {
-  stream: null,
-  detector: null,
-  detectionLoopId: null,
-  isStarting: false,
-  isResolving: false,
-  target: "",
-  lastDetectedBarcode: "",
-};
-
-const recipeChatRuntime = {
-  isWaiting: false,
-};
-
-const OPEN_FOOD_FACTS_FIELDS = [
-  "code",
-  "product_name",
-  "product_name_it",
-  "brands",
-  "quantity",
-  "serving_size",
-  "categories",
-  "categories_tags",
-  "nutriscore_grade",
-  "nutriscore_score",
-  "nutriments",
-  "image_front_small_url",
-  "image_url",
-].join(",");
-
-function getDefaultRecipeState() {
-  return {
-    generator: {
-      dietType: "balanced",
-      caloriesTarget: "500",
-      mealType: "dinner",
-      prompt: "",
-    },
-    currentRecipe: null,
-    history: [],
-    savedRecipeIds: [],
-    generatedRecipesById: {},
-    chatMessages: getDefaultRecipeChatMessages(),
-  };
-}
-
-function getDefaultRecipeChatMessages() {
-  return [
-    {
-      id: crypto.randomUUID(),
-      role: "assistant",
-      content:
-        "Ciao! Sono il tuo AI Recipe Assistant.\n\nPosso aiutarti con **ricette**, meal prep, sostituzioni ingredienti e idee coerenti con dispensa e obiettivi nutrizionali.\n\n---\n\nProva a chiedermi:\n- una cena veloce\n- una colazione high-protein\n- come usare quello che hai già in dispensa",
-      createdAt: defaultRecipeTimestamp,
-    },
-  ];
-}
-
-function getRelativeDateKey(offsetDays) {
-  const date = new Date();
-  date.setHours(12, 0, 0, 0);
-  date.setDate(date.getDate() + offsetDays);
-  return date.toISOString().slice(0, 10);
-}
-
-function getLegacySeedProgressDailyLogs() {
-  return [
-    {
-      date: getRelativeDateKey(-6),
-      weightKg: 75.5,
-      waterGlasses: 7,
-      calories: 2060,
-      protein: 143,
-    },
-    {
-      date: getRelativeDateKey(-5),
-      weightKg: 75.3,
-      waterGlasses: 6,
-      calories: 1985,
-      protein: 151,
-    },
-    {
-      date: getRelativeDateKey(-4),
-      weightKg: 75.1,
-      waterGlasses: 8,
-      calories: 2150,
-      protein: 149,
-    },
-    {
-      date: getRelativeDateKey(-3),
-      weightKg: 75.0,
-      waterGlasses: 7,
-      calories: 1890,
-      protein: 138,
-    },
-    {
-      date: getRelativeDateKey(-2),
-      weightKg: 74.9,
-      waterGlasses: 9,
-      calories: 2010,
-      protein: 156,
-    },
-    {
-      date: getRelativeDateKey(-1),
-      weightKg: 74.8,
-      waterGlasses: 5,
-      calories: 1940,
-      protein: 147,
-    },
-  ];
-}
-
-function getDefaultProgressState() {
-  return {
-    selectedRange: "week",
-    dailyLogs: [],
-    autoSnapshots: {},
-  };
-}
-
-const devicesCatalog = [
-  {
-    id: "smartwatch",
-    badgeClass: "badge-watch",
-    badgeLabel: "Wearable",
-    title: "Smartwatch",
-    description: "Monitora passi giornalieri, calorie bruciate, frequenza cardiaca e sessioni di attività.",
-    availableLabel: "Dati: passi, workout, calorie",
-    connectLabel: "Connetti Smartwatch",
-    disconnectedLabel: "Disponibile",
-    permissions: {
-      steps: { label: "Passi", defaultEnabled: true },
-      workouts: { label: "Workout", defaultEnabled: true },
-      calories: { label: "Calorie", defaultEnabled: true },
-    },
-  },
-  {
-    id: "scale",
-    badgeClass: "badge-scale",
-    badgeLabel: "Metriche corpo",
-    title: "Bilancia digitale",
-    description: "Importa peso, massa grassa e composizione corporea in Progress.",
-    availableLabel: "Dati: peso, BMI, massa grassa",
-    connectLabel: "Connetti bilancia",
-    disconnectedLabel: "Disponibile",
-    permissions: {
-      weight: { label: "Peso", defaultEnabled: true },
-      bmi: { label: "BMI", defaultEnabled: true },
-      bodyFat: { label: "Massa grassa", defaultEnabled: true },
-    },
-  },
-  {
-    id: "strava",
-    badgeClass: "badge-app",
-    badgeLabel: "Fitness App",
-    title: "Strava",
-    description: "Integra corsa, ciclismo e allenamenti nei tuoi dati di dispendio calorico.",
-    availableLabel: "Dati: workout, durata, distanza",
-    connectLabel: "Connetti Strava",
-    disconnectedLabel: "Disponibile",
-    permissions: {
-      workouts: { label: "Workout", defaultEnabled: true },
-      duration: { label: "Durata", defaultEnabled: true },
-      distance: { label: "Distanza", defaultEnabled: true },
-    },
-  },
-  {
-    id: "healthHub",
-    badgeClass: "badge-health",
-    badgeLabel: "Health Hub",
-    title: "Google Fit / Apple Health",
-    description: "Centralizza metriche salute da più app e dispositivi in un'unica connessione.",
-    availableLabel: "Dati: attività, passi, peso, sonno",
-    connectLabel: "Connetti Health App",
-    disconnectedLabel: "Disponibile",
-    permissions: {
-      activity: { label: "Attività", defaultEnabled: true },
-      steps: { label: "Passi", defaultEnabled: true },
-      weight: { label: "Peso", defaultEnabled: true },
-      sleep: { label: "Sonno", defaultEnabled: false },
-    },
-  },
-];
-
-function getDefaultDevicesState() {
-  return {
-    showPermissionsPanel: false,
-    integrations: devicesCatalog.reduce((state, device) => {
-      state[device.id] = {
-        connected: false,
-        lastSyncAt: "",
-        permissions: Object.fromEntries(
-          Object.entries(device.permissions).map(([key, config]) => [key, config.defaultEnabled])
-        ),
-        latestData: {},
-      };
-      return state;
-    }, {}),
-    syncPreferences: {
-      autoSyncDaily: true,
-      importWorkoutCalories: true,
-      useConnectedWeightInProfile: false,
-    },
-  };
-}
-
-function isLegacySeedNutritionMeals(meals) {
-  if (!Array.isArray(meals) || meals.length !== 2) {
-    return false;
-  }
-
-  return meals.every((meal, index) => {
-    const expected = [
-      { name: "Oatmeal with berries", time: "08:30", calories: 320, protein: 12, carbs: 54, fats: 6 },
-      { name: "Grilled chicken salad", time: "12:45", calories: 450, protein: 35, carbs: 25, fats: 18 },
-    ][index];
-
-    return (
-      meal?.name === expected.name &&
-      meal?.time === expected.time &&
-      normalizeNumber(meal?.calories) === expected.calories &&
-      normalizeNumber(meal?.protein) === expected.protein &&
-      normalizeNumber(meal?.carbs) === expected.carbs &&
-      normalizeNumber(meal?.fats) === expected.fats
-    );
-  });
-}
-
-function isLegacySeedGroceryItems(items) {
-  if (!Array.isArray(items) || items.length !== 5) {
-    return false;
-  }
-
-  const expectedNames = ["Mele", "Spinaci", "Yogurt greco", "Petto di pollo", "Riso integrale"];
-  return items.every((item, index) => item?.name === expectedNames[index]);
-}
-
-function isLegacySeedPantryItems(items) {
-  return Array.isArray(items) && items.length === 1 && items[0]?.name === "Yogurt greco";
-}
-
-function isLegacySeedRecipeState(recipesState) {
-  return (
-    recipesState?.currentRecipe?.id === "mediterranean-quinoa-bowl" &&
-    recipesState?.currentRecipe?.prompt === "Ricetta iniziale di esempio" &&
-    Array.isArray(recipesState?.history) &&
-    recipesState.history.length === 1 &&
-    recipesState.history[0]?.id === "mediterranean-quinoa-bowl"
-  );
-}
-
-function isLegacySeedProfileState(profileState) {
-  return (
-    profileState?.personal?.fullName === "John Doe" &&
-    normalizeNumber(profileState?.personal?.age) === 30 &&
-    profileState?.personal?.gender === "male" &&
-    normalizeNumber(profileState?.personal?.heightCm) === 175 &&
-    normalizeNumber(profileState?.personal?.currentWeightKg) === 74.7 &&
-    normalizeNumber(profileState?.personal?.targetWeightKg) === 70 &&
-    profileState?.personal?.activityLevel === "moderate" &&
-    profileState?.personal?.dietType === "regular" &&
-    profileState?.medical?.allergies === "None" &&
-    profileState?.medical?.bloodType === "O+"
-  );
-}
-
-const defaultState = {
-  nutrition: {
-    goals: {
-      calories: 2000,
-      protein: 150,
-      carbs: 250,
-      fats: 65,
-    },
-    meals: [],
-  },
-  recipes: getDefaultRecipeState(),
-  grocery: {
-    items: [],
-    pantry: [],
-    ar: {
-      pinnedProductIds: [],
-      lastDetectedBarcode: "",
-    },
-  },
-  datasets: {
-    openFoodFacts: {
-      source: {
-        mode: "official-api-now-official-dump-next",
-        officialDatasetPage: "https://world.openfoodfacts.org/data",
-        officialProjectPage: "https://world.openfoodfacts.org/",
-        license: "ODbL",
-        retrievalStrategy: "scan-live-then-index-official-dump",
-      },
-      productsByBarcode: {},
-    },
-  },
-  progress: getDefaultProgressState(),
-  profile: {
-    personal: {
-      fullName: "",
-      age: null,
-      gender: "",
-      heightCm: null,
-      currentWeightKg: null,
-      targetWeightKg: null,
-      activityLevel: "",
-      dietType: "",
-    },
-    medical: {
-      allergies: "",
-      medications: "",
-      medicalConditions: "",
-      bloodType: "",
-    },
-    goals: {
-      calories: 2000,
-      protein: 150,
-      carbs: 250,
-      fats: 65,
-      water: 8,
-    },
-  },
-  devices: getDefaultDevicesState(),
-};
-
-function normalizeNutriTrackState(parsedState) {
-  if (!parsedState || typeof parsedState !== "object") {
-    return structuredClone(defaultState);
-  }
-
-  const parsedMeals = Array.isArray(parsedState.nutrition?.meals)
-    ? parsedState.nutrition.meals.map(normalizeNutritionMeal)
-    : structuredClone(defaultState.nutrition.meals).map(normalizeNutritionMeal);
-  const parsedDailyLogs = Array.isArray(parsedState.progress?.dailyLogs)
-    ? parsedState.progress.dailyLogs.map(normalizeProgressLog).filter(Boolean)
-    : structuredClone(defaultState.progress.dailyLogs);
-  const parsedAutoSnapshots = normalizeProgressSnapshots(parsedState.progress?.autoSnapshots);
-  const shouldResetLegacyProgressLogs =
-    parsedAutoSnapshots && Object.keys(parsedAutoSnapshots).length === 0 && isLegacySeedProgressLog(parsedDailyLogs);
-
-  const shouldResetLegacyMeals = isLegacySeedNutritionMeals(parsedMeals);
-  const shouldResetLegacyGroceryItems = isLegacySeedGroceryItems(parsedState.grocery?.items);
-  const shouldResetLegacyPantry = isLegacySeedPantryItems(parsedState.grocery?.pantry);
-  const shouldResetLegacyRecipeState = isLegacySeedRecipeState(parsedState.recipes);
-  const shouldResetLegacyProfile = isLegacySeedProfileState(parsedState.profile);
-
-  return {
-    ...structuredClone(defaultState),
-    ...parsedState,
-    nutrition: {
-      ...structuredClone(defaultState.nutrition),
-      ...(parsedState.nutrition || {}),
-      meals: shouldResetLegacyMeals ? [] : parsedMeals,
-    },
-    recipes: {
-      ...structuredClone(defaultState.recipes),
-      ...(parsedState.recipes || {}),
-      generator: {
-        ...structuredClone(defaultState.recipes.generator),
-        ...((parsedState.recipes && parsedState.recipes.generator) || {}),
-      },
-      currentRecipe: shouldResetLegacyRecipeState
-        ? null
-        : parsedState.recipes?.currentRecipe
-        ? {
-            ...(defaultState.recipes.currentRecipe ? structuredClone(defaultState.recipes.currentRecipe) : {}),
-            ...parsedState.recipes.currentRecipe,
-          }
-        : structuredClone(defaultState.recipes.currentRecipe),
-      history: Array.isArray(parsedState.recipes?.history)
-        ? (shouldResetLegacyRecipeState ? [] : parsedState.recipes.history)
-        : structuredClone(defaultState.recipes.history),
-      savedRecipeIds: Array.isArray(parsedState.recipes?.savedRecipeIds)
-        ? parsedState.recipes.savedRecipeIds
-        : structuredClone(defaultState.recipes.savedRecipeIds),
-      generatedRecipesById:
-        parsedState.recipes?.generatedRecipesById && typeof parsedState.recipes.generatedRecipesById === "object"
-          ? parsedState.recipes.generatedRecipesById
-          : structuredClone(defaultState.recipes.generatedRecipesById),
-      chatMessages: Array.isArray(parsedState.recipes?.chatMessages)
-        ? parsedState.recipes.chatMessages
-        : structuredClone(defaultState.recipes.chatMessages),
-    },
-    grocery: {
-      ...structuredClone(defaultState.grocery),
-      ...(parsedState.grocery || {}),
-      items: Array.isArray(parsedState.grocery?.items)
-        ? (shouldResetLegacyGroceryItems ? [] : parsedState.grocery.items.map(normalizeGroceryItem))
-        : structuredClone(defaultState.grocery.items),
-      pantry: Array.isArray(parsedState.grocery?.pantry)
-        ? (shouldResetLegacyPantry ? [] : parsedState.grocery.pantry.map(normalizeGroceryItem))
-        : structuredClone(defaultState.grocery.pantry),
-      ar: {
-        ...structuredClone(defaultState.grocery.ar),
-        ...((parsedState.grocery && parsedState.grocery.ar) || {}),
-        pinnedProductIds: [],
-        lastDetectedBarcode: "",
-      },
-    },
-    datasets: {
-      ...structuredClone(defaultState.datasets),
-      ...(parsedState.datasets || {}),
-      openFoodFacts: {
-        ...structuredClone(defaultState.datasets.openFoodFacts),
-        ...((parsedState.datasets && parsedState.datasets.openFoodFacts) || {}),
-        source: {
-          ...structuredClone(defaultState.datasets.openFoodFacts.source),
-          ...((parsedState.datasets?.openFoodFacts && parsedState.datasets.openFoodFacts.source) || {}),
-        },
-        productsByBarcode:
-          parsedState.datasets?.openFoodFacts?.productsByBarcode &&
-          typeof parsedState.datasets.openFoodFacts.productsByBarcode === "object"
-            ? parsedState.datasets.openFoodFacts.productsByBarcode
-            : structuredClone(defaultState.datasets.openFoodFacts.productsByBarcode),
-      },
-    },
-    progress: {
-      ...structuredClone(defaultState.progress),
-      ...(parsedState.progress || {}),
-      dailyLogs: shouldResetLegacyProgressLogs ? [] : parsedDailyLogs,
-      autoSnapshots: parsedAutoSnapshots,
-    },
-    profile: {
-      ...structuredClone(defaultState.profile),
-      ...(parsedState.profile || {}),
-      personal: {
-        ...structuredClone(defaultState.profile.personal),
-        ...(shouldResetLegacyProfile ? {} : ((parsedState.profile && parsedState.profile.personal) || {})),
-      },
-      medical: {
-        ...structuredClone(defaultState.profile.medical),
-        ...(shouldResetLegacyProfile ? {} : ((parsedState.profile && parsedState.profile.medical) || {})),
-      },
-      goals: {
-        ...structuredClone(defaultState.profile.goals),
-        ...((parsedState.profile && parsedState.profile.goals) || {}),
-      },
-    },
-    devices: normalizeDevicesState(parsedState.devices),
-  };
-}
-
-function loadNutriTrackStateFromLocalCache() {
-  try {
-    const savedState = localStorage.getItem(NUTRITRACK_LOCAL_STATE_CACHE_KEY);
-
-    if (!savedState) {
-      return structuredClone(defaultState);
-    }
-
-    return normalizeNutriTrackState(JSON.parse(savedState));
-  } catch (error) {
-    console.warn("Unable to load saved state, using defaults.", error);
-    return structuredClone(defaultState);
-  }
-}
-
-function saveNutriTrackStateToLocalCache() {
-  localStorage.setItem(NUTRITRACK_LOCAL_STATE_CACHE_KEY, JSON.stringify(appState));
-}
-
-function renderNutriTrackState() {
-  renderNutrition();
-  renderGrocery();
-  renderProgress();
-  renderDevices();
-  renderProfile();
-}
-
-async function persistNutriTrackStateToApi() {
-  if (nutritrackSyncRuntime.isSaving) {
-    nutritrackSyncRuntime.hasPendingWrite = true;
-    return;
-  }
-
-  nutritrackSyncRuntime.isSaving = true;
-
-  try {
-    const response = await fetch(NUTRITRACK_STATE_API_PATH, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ state: appState }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Salvataggio NutriTrack fallito (${response.status}).`);
-    }
-  } catch (error) {
-    console.warn("Unable to persist NutriTrack state to API.", error);
-  } finally {
-    nutritrackSyncRuntime.isSaving = false;
-
-    if (nutritrackSyncRuntime.hasPendingWrite) {
-      nutritrackSyncRuntime.hasPendingWrite = false;
-      queueNutriTrackStateSync();
-    }
-  }
-}
-
-function queueNutriTrackStateSync() {
-  if (nutritrackSyncRuntime.saveTimeoutId) {
-    clearTimeout(nutritrackSyncRuntime.saveTimeoutId);
-  }
-
-  nutritrackSyncRuntime.saveTimeoutId = window.setTimeout(() => {
-    nutritrackSyncRuntime.saveTimeoutId = null;
-    persistNutriTrackStateToApi();
-  }, NUTRITRACK_SYNC_DEBOUNCE_MS);
-}
-
-async function hydrateNutriTrackStateFromApi() {
-  if (nutritrackSyncRuntime.hydrationStarted) {
-    return;
-  }
-
-  nutritrackSyncRuntime.hydrationStarted = true;
-  nutritrackSyncRuntime.isHydrating = true;
-
-  try {
-    const response = await fetch(NUTRITRACK_STATE_API_PATH, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Hydration NutriTrack fallita (${response.status}).`);
-    }
-
-    const payload = await response.json();
-
-    if (!payload?.state) {
-      queueNutriTrackStateSync();
-      return;
-    }
-
-    const normalizedState = normalizeNutriTrackState(payload.state);
-    Object.keys(appState).forEach((key) => {
-      delete appState[key];
-    });
-    Object.assign(appState, normalizedState);
-    saveNutriTrackStateToLocalCache();
-    renderNutriTrackState();
-  } catch (error) {
-    console.warn("Unable to hydrate NutriTrack state from API.", error);
-  } finally {
-    nutritrackSyncRuntime.isHydrating = false;
-  }
-}
-
-function saveState() {
-  saveNutriTrackStateToLocalCache();
-
-  if (!nutritrackSyncRuntime.isHydrating) {
-    queueNutriTrackStateSync();
-  }
+if (missingBootstrapKeys.length > 0) {
+  throw new Error(`Bootstrap frontend incompleto: mancano ${missingBootstrapKeys.join(", ")}.`);
 }
 
 const appState = loadNutriTrackStateFromLocalCache();
-
-function switchToTab(target) {
-  tabs.forEach((item) => item.classList.toggle("is-active", item.dataset.tabTarget === target));
-  panels.forEach((panel) => panel.classList.toggle("is-active", panel.dataset.tabPanel === target));
-
-  if (target !== "grocery" && groceryArRuntime.stream) {
-    stopGroceryArCamera();
-  }
-}
-
-tabs.forEach((tab) => {
-  tab.addEventListener("click", () => {
-    switchToTab(tab.dataset.tabTarget);
-  });
-});
-
-recipeSwitches.forEach((button) => {
-  button.addEventListener("click", () => {
-    const target = button.dataset.recipeTarget;
-
-    recipeSwitches.forEach((item) => item.classList.remove("mode-pill-active"));
-    recipePanels.forEach((panel) => panel.classList.remove("is-active"));
-
-    button.classList.add("mode-pill-active");
-    document.querySelector(`[data-recipe-panel="${target}"]`)?.classList.add("is-active");
-  });
-});
-
-function formatMealTime(value) {
-  if (!value) {
-    return "--:--";
-  }
-
-  const [hoursString, minutesString] = value.split(":");
-  const hours = Number(hoursString);
-  const minutes = Number(minutesString);
-
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("it-IT", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(2026, 0, 1, hours, minutes));
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function formatDateTime(value) {
-  if (!value) {
-    return "--:--";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("it-IT", {
-    hour: "2-digit",
-    minute: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-  }).format(date);
-}
 
 function formatShortDayLabel(value) {
   const date = new Date(`${value}T12:00:00`);
@@ -1131,10 +202,6 @@ function bindFormValidationFeedback(form) {
   const refresh = () => updateFormValidationStyles(form);
   form.addEventListener("input", refresh);
   form.addEventListener("change", refresh);
-}
-
-function roundMacroValue(value) {
-  return Math.max(0, Math.round(value));
 }
 
 function createNutritionSnapshot(values = {}) {
@@ -1559,23 +626,6 @@ function getDeviceMetaLines(device) {
   return [syncLabel, buildEnabledPermissionSummary(device)];
 }
 
-function normalizeNumber(value) {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const normalized = Number(String(value).replace(",", "."));
-  return Number.isFinite(normalized) ? normalized : null;
-}
-
-function isValidDateKey(value) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) {
-    return false;
-  }
-
-  return !Number.isNaN(new Date(`${value}T12:00:00`).getTime());
-}
-
 function normalizeNutritionMeal(meal) {
   return {
     ...meal,
@@ -1619,26 +669,6 @@ function normalizeProgressSnapshots(snapshots) {
     };
     return normalized;
   }, {});
-}
-
-function isLegacySeedProgressLog(logs) {
-  const legacyLogs = getLegacySeedProgressDailyLogs();
-
-  if (!Array.isArray(logs) || logs.length !== legacyLogs.length) {
-    return false;
-  }
-
-  return logs.every((entry, index) => {
-    const legacyEntry = legacyLogs[index];
-
-    return (
-      entry?.date === legacyEntry.date &&
-      normalizeNumber(entry?.weightKg) === legacyEntry.weightKg &&
-      normalizeNumber(entry?.waterGlasses) === legacyEntry.waterGlasses &&
-      normalizeNumber(entry?.calories) === legacyEntry.calories &&
-      normalizeNumber(entry?.protein) === legacyEntry.protein
-    );
-  });
 }
 
 function normalizeDevicesState(devicesState) {
@@ -3173,7 +2203,7 @@ function renderRecipeResult() {
     </div>
     <div class="recipe-actions-row">
       <button class="primary-btn primary-btn-blue" type="button" data-save-current-recipe>${isSaved ? "Rimuovi dai salvati" : "Salva ricetta"}</button>
-      <button class="recipe-secondary-btn" type="button" data-apply-current-recipe-to-nutrition>Usa in Nutrition</button>
+      <button class="recipe-secondary-btn" type="button" data-apply-current-recipe-to-nutrition>Usa nella dieta</button>
     </div>
     <div class="macro-pill-row">
       <span>Proteine ${recipe.protein}g</span>
@@ -3347,48 +2377,6 @@ function parseQuantityLabel(quantityLabel) {
     value,
     unit,
   };
-}
-
-function normalizeQuantityUnit(unit) {
-  if (!unit) {
-    return "";
-  }
-
-  if (unit === "kg") {
-    return "g";
-  }
-
-  if (unit === "l") {
-    return "ml";
-  }
-
-  return unit;
-}
-
-function convertQuantityToBaseUnit(value, unit) {
-  const normalizedUnit = normalizeQuantityUnit(unit);
-
-  if (unit === "kg") {
-    return { value: value * 1000, unit: normalizedUnit };
-  }
-
-  if (unit === "l") {
-    return { value: value * 1000, unit: normalizedUnit };
-  }
-
-  return { value, unit: normalizedUnit };
-}
-
-function formatQuantityValue(value) {
-  return Number.isInteger(value) ? String(value) : String(Math.round(value * 10) / 10).replace(".", ",");
-}
-
-function formatPantryQuantity(value, unit, fallbackRaw) {
-  if (!unit) {
-    return fallbackRaw || formatQuantityValue(value);
-  }
-
-  return `${formatQuantityValue(value)} ${unit}`;
 }
 
 function findMatchingRecipeIngredient(recipe, pantryItem) {
@@ -3619,7 +2607,7 @@ function executeRecipeChatAction(action) {
     if (!recipe) {
       return {
         success: false,
-        message: "Non ho una ricetta attiva da usare.\n\nGenerane o aprine una dalla sezione Recipes e poi chiedimi di aggiungerla a Nutrition.",
+        message: "Non ho una ricetta attiva da usare.\n\nGenerane o aprine una nella sezione Alimenti e poi chiedimi di aggiungerla alla Dieta.",
       };
     }
 
@@ -3630,7 +2618,7 @@ function executeRecipeChatAction(action) {
       switchToTab("nutrition");
       renderNutrition();
       renderGrocery();
-      setFeedback(`Ho aggiunto ${addedMeal.name} ai pasti di oggi da Recipes.`);
+      setFeedback(`Ho aggiunto ${addedMeal.name} ai pasti di oggi dall'area Alimenti.`);
 
       const pantrySummary =
         pantryUpdates.length > 0
@@ -3644,7 +2632,7 @@ function executeRecipeChatAction(action) {
     return {
       success: true,
       message:
-        `Ho aggiunto **${addedMeal.name}** ai pasti di oggi in **Nutrition**.\n\n` +
+        `Ho aggiunto **${addedMeal.name}** ai pasti di oggi in **Dieta**.\n\n` +
         `- Orario impostato: ${formatMealTime(addedMeal.time)}\n` +
         `- Calorie: **${addedMeal.calories} kcal**\n` +
         `- Proteine: **${addedMeal.protein} g**\n\n` +
@@ -3669,7 +2657,7 @@ function applyRecipeToNutrition(recipe, mealType) {
   form.elements.name.value = recipe.title;
   form.elements.time.value = getSuggestedMealTime(mealType);
   switchToTab("nutrition");
-  setFeedback("Ricetta importata da Recipes. I valori nutrizionali verranno inseriti automaticamente.");
+  setFeedback("Ricetta importata dall'area Alimenti. I valori nutrizionali verranno inseriti automaticamente.");
 }
 
 function setupRecipesSection() {
@@ -4116,7 +3104,7 @@ function renderProgressCurrentDayCard() {
       <span>Proteine: ${todayEntry.protein ?? "--"} g</span>
       <span>Peso: ${todayEntry.weightKg == null ? "--" : `${todayEntry.weightKg.toFixed(1)} kg`}</span>
       <span>Acqua: ${todayEntry.waterGlasses ?? "--"} / ${waterGoal || "--"} bicchieri</span>
-      <span>Nutrition: ${nutritionSourceLabel}</span>
+      <span>Dieta: ${nutritionSourceLabel}</span>
     </div>
   `;
 }
@@ -4132,7 +3120,7 @@ function renderProgressSourceList() {
   const snapshot = getProgressAutoSnapshot(getTodayDateKey());
   const items = [
     {
-      title: "Nutrition",
+      title: "Dieta",
       body:
         todayEntry.nutritionMealCount > 0
           ? `${todayEntry.nutritionMealCount} ${todayEntry.nutritionMealCount === 1 ? "pasto contribuisce" : "pasti contribuiscono"} ai grafici di oggi.`
@@ -4141,11 +3129,11 @@ function renderProgressSourceList() {
             : "Nessun dato nutrizionale storico disponibile per oggi.",
     },
     {
-      title: "Profile",
+      title: "Dati",
       body:
         todayEntry.weightKg != null
           ? `Peso corrente disponibile: ${todayEntry.weightKg.toFixed(1)} kg.`
-          : "Nessun peso disponibile da Profile per oggi.",
+          : "Nessun peso disponibile dall'area Dati per oggi.",
     },
   ];
 
@@ -4183,7 +3171,7 @@ function renderProgressCharts(series) {
 }
 
 function syncProgressChartViewport() {
-  const shells = document.querySelectorAll('.app-section[data-tab-panel="progress"] .chart-scroll-shell');
+  const shells = document.querySelectorAll("[data-progress-section] .chart-scroll-shell");
 
   if (!shells.length) {
     return;
@@ -5384,12 +4372,12 @@ function renderDevicesSyncOptions() {
     },
     {
       key: "importWorkoutCalories",
-      title: "Importa le calorie dei workout in Progress",
+      title: "Importa le calorie dei workout nel monitoraggio dieta",
       description: "Usa i dati di attività esterni per aggiornare la stima delle calorie bruciate.",
     },
     {
       key: "useConnectedWeightInProfile",
-      title: "Usa i dati di peso connessi in Profile",
+      title: "Usa i dati di peso connessi nei dati personali",
       description: "Aggiorna le metriche corporee dalle misurazioni della bilancia smart.",
     },
   ];

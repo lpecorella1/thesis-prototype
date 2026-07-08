@@ -18,7 +18,7 @@
       <header class="hero">
         <div>
           <h1>NutriTrack</h1>
-          <p>Il tuo alleato completo per benessere e alimentazione</p>
+          <p>Il tuo alleato per cucina, acquisti, dieta e gestione dei dati alimentari.</p>
         </div>
 
         <div class="goal-panel">
@@ -28,15 +28,6 @@
       </header>
 
       <nav class="tabs" aria-label="Navigazione principale">
-        <button class="tab is-active" type="button" data-tab-target="nutrition">
-          <span class="icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 21c4.35-2.68 7-6.45 7-10.43A4.57 4.57 0 0 0 14.43 6 4.36 4.36 0 0 0 12 6.78 4.36 4.36 0 0 0 9.57 6 4.57 4.57 0 0 0 5 10.57C5 14.55 7.65 18.32 12 21Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
-              <path d="M10 3.8c.2 1.2 1.38 1.82 2.08 2.83" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
-            </svg>
-          </span>
-          Nutrition
-        </button>
         <button class="tab" type="button" data-tab-target="recipes">
           <span class="icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -44,7 +35,7 @@
               <path d="M7 14.2v2.1A1.7 1.7 0 0 0 8.7 18h6.6a1.7 1.7 0 0 0 1.7-1.7v-2.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
             </svg>
           </span>
-          Recipes
+          Ricette
         </button>
         <button class="tab" type="button" data-tab-target="grocery">
           <span class="icon">
@@ -54,16 +45,16 @@
               <path d="M3 5h2l2.2 9.1h10.1l2.1-6.6H7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
             </svg>
           </span>
-          Grocery
+          Spesa
         </button>
-        <button class="tab" type="button" data-tab-target="progress">
+        <button class="tab is-active" type="button" data-tab-target="nutrition">
           <span class="icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m4 16 5-5 4 4 7-8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
-              <path d="M16 7h4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+              <path d="M12 21c4.35-2.68 7-6.45 7-10.43A4.57 4.57 0 0 0 14.43 6 4.36 4.36 0 0 0 12 6.78 4.36 4.36 0 0 0 9.57 6 4.57 4.57 0 0 0 5 10.57C5 14.55 7.65 18.32 12 21Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+              <path d="M10 3.8c.2 1.2 1.38 1.82 2.08 2.83" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
             </svg>
           </span>
-          Progress
+          Dieta
         </button>
         <button class="tab" type="button" data-tab-target="profile">
           <span class="icon">
@@ -72,83 +63,90 @@
               <path d="M5 20a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
             </svg>
           </span>
-          Profile
-        </button>
-        <button class="tab" type="button" data-tab-target="devices">
-          <span class="icon">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <rect x="7" y="2.5" width="10" height="19" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8" />
-              <path d="M10 6h4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
-              <circle cx="12" cy="18" r="1" fill="currentColor" />
-            </svg>
-          </span>
-          Devices
+          Dati
         </button>
       </nav>
 
-      <!-- Nutrition -->
       <main class="content">
-        <section class="app-section is-active" data-tab-panel="nutrition">
-          <div class="stats-grid">
-            <article class="stat-card">
-              <h2>Calorie</h2>
-              <div class="metric"><span data-nutrition-total="calories">0</span> <span>kcal</span></div>
-              <p><span data-nutrition-total="calories">0</span> su <span data-nutrition-goal="calories">2000</span> kcal</p>
-              <div class="progress-track"><span class="progress-fill blue" data-nutrition-progress="calories" style="width: 0%"></span></div>
-            </article>
-            <article class="stat-card">
-              <h2>Proteine</h2>
-              <div class="metric"><span data-nutrition-total="protein">0</span> <span>g</span></div>
-              <p><span data-nutrition-total="protein">0</span> su <span data-nutrition-goal="protein">150</span> g</p>
-              <div class="progress-track"><span class="progress-fill red" data-nutrition-progress="protein" style="width: 0%"></span></div>
-            </article>
-            <article class="stat-card">
-              <h2>Carboidrati</h2>
-              <div class="metric"><span data-nutrition-total="carbs">0</span> <span>g</span></div>
-              <p><span data-nutrition-total="carbs">0</span> su <span data-nutrition-goal="carbs">250</span> g</p>
-              <div class="progress-track"><span class="progress-fill yellow" data-nutrition-progress="carbs" style="width: 0%"></span></div>
-            </article>
-            <article class="stat-card">
-              <h2>Grassi</h2>
-              <div class="metric"><span data-nutrition-total="fats">0</span> <span>g</span></div>
-              <p><span data-nutrition-total="fats">0</span> su <span data-nutrition-goal="fats">65</span> g</p>
-              <div class="progress-track"><span class="progress-fill green" data-nutrition-progress="fats" style="width: 0%"></span></div>
-            </article>
-          </div>
-
-          <section class="meals-section">
-            <div class="section-head">
-              <h2>Pasti di oggi</h2>
+        <section class="app-section" data-tab-panel="home">
+          <section class="mobile-home">
+            <div class="mobile-home-hero">
             </div>
 
-            <div class="nutrition-layout">
-              <article class="panel">
-                <h3>Aggiungi un pasto</h3>
-                <form class="form-grid nutrition-form-grid" data-nutrition-form novalidate>
-                  <div class="field field-full">
-                    <p class="lookup-hint">Calorie e macronutrienti vengono stimati automaticamente e puoi correggerli dopo il salvataggio.</p>
-                  </div>
-                  <label class="field field-full">
-                    <span>Nome pasto</span>
-                    <input type="text" name="name" placeholder="Es. Yogurt con frutta" required />
-                  </label>
-                  <label class="field">
-                    <span>Orario</span>
-                    <input type="time" name="time" required />
-                  </label>
-                  <div class="field field-full nutrition-form-row">
-                    <button class="primary-btn primary-btn-blue" type="submit">Aggiungi</button>
-                    <p class="save-hint" data-nutrition-feedback aria-live="polite"></p>
-                  </div>
-                </form>
-              </article>
+            <div class="home-cloud-grid">
+              <button class="home-cloud cloud-recipes" type="button" data-home-target="recipes">
+                <span class="home-cloud-icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M9 6.5h6l1.4 2.1 2.5.8a2 2 0 0 1 1.4 1.91v2.7H3.7v-2.7a2 2 0 0 1 1.4-1.9l2.5-.81L9 6.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+                    <path d="M7 14.2v2.1A1.7 1.7 0 0 0 8.7 18h6.6a1.7 1.7 0 0 0 1.7-1.7v-2.1" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                  </svg>
+                </span>
+                <strong>Le tue ricette</strong>
+                <span>Idee su cosa mangiare e utilizzo della dispensa.</span>
+              </button>
 
-              <div class="card-stack" data-meals-list></div>
+              <button class="home-cloud cloud-grocery" type="button" data-home-target="grocery">
+                <span class="home-cloud-icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="9" cy="19" r="1.5" fill="currentColor" />
+                    <circle cx="17" cy="19" r="1.5" fill="currentColor" />
+                    <path d="M3 5h2l2.2 9.1h10.1l2.1-6.6H7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                  </svg>
+                </span>
+                <strong>La tua spesa</strong>
+                <span>Lista degli acquisti, confronto prodotti e dispensa.</span>
+              </button>
+
+              <button class="home-cloud cloud-nutrition" type="button" data-home-target="nutrition">
+                <span class="home-cloud-icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 21c4.35-2.68 7-6.45 7-10.43A4.57 4.57 0 0 0 14.43 6 4.36 4.36 0 0 0 12 6.78 4.36 4.36 0 0 0 9.57 6 4.57 4.57 0 0 0 5 10.57C5 14.55 7.65 18.32 12 21Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                    <path d="M10 3.8c.2 1.2 1.38 1.82 2.08 2.83" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+                  </svg>
+                </span>
+                <strong>La tua dieta</strong>
+                <span>Pasti, macronutrienti e progressi.</span>
+              </button>
+
+              <button class="home-cloud cloud-profile" type="button" data-home-target="profile">
+                <span class="home-cloud-icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" fill="none" stroke="currentColor" stroke-width="1.8" />
+                    <path d="M5 20a7 7 0 0 1 14 0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+                  </svg>
+                </span>
+                <strong>I tuoi dati</strong>
+                <span>Profilo, obiettivi e integrazioni collegate.</span>
+              </button>
             </div>
           </section>
         </section>
 
         <section class="app-section" data-tab-panel="recipes">
+          <div class="section-mobile-nav">
+            <div class="section-mobile-nav-head">
+              <button class="section-home-btn" type="button" data-go-home aria-label="Torna alla home">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 11.5 12 5l8 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                  <path d="M6.5 10.5V19h11v-8.5" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </button>
+              <div class="section-crumb">
+                <span>Home / Ricette</span>
+                <strong>Le tue ricette</strong>
+              </div>
+            </div>
+            <div class="section-links">
+              <button class="section-link" type="button" data-section-link-target="recipes">Ricette</button>
+              <button class="section-link" type="button" data-section-link-target="grocery">Spesa</button>
+              <button class="section-link" type="button" data-section-link-target="nutrition">Dieta</button>
+              <button class="section-link" type="button" data-section-link-target="profile">Dati</button>
+            </div>
+          </div>
+
+          <div class="section-head">
+          </div>
+
           <div class="mode-switch">
             <button class="mode-pill mode-pill-active" type="button" data-recipe-target="generator">Generatore rapido di ricette</button>
             <button class="mode-pill" type="button" data-recipe-target="chat">Chat con AI Assistant</button>
@@ -223,27 +221,52 @@
           </div>
 
           <article class="recipe-view panel chat-panel" data-recipe-panel="chat">
-              <div class="chat-header">
-                <div>
-                  <h2>AI Recipe Assistant</h2>
-                </div>
-                <button class="chat-reset-btn" type="button" data-recipe-chat-reset>Reset chat</button>
+            <div class="chat-header">
+              <div>
+                <h2>AI Recipe Assistant</h2>
               </div>
-              <div class="chat-body" data-recipe-chat-messages></div>
-              <div class="chat-footer">
-                <form class="chat-input-row" data-recipe-chat-form novalidate>
-                  <input
-                    type="text"
-                    name="message"
-                    placeholder="Chiedimi qualcosa..."
-                  />
-                  <button class="send-btn" type="submit" aria-label="Invia messaggio">↗</button>
-                </form>
-              </div>
-            </article>
+              <button class="chat-reset-btn" type="button" data-recipe-chat-reset>Reset chat</button>
+            </div>
+            <div class="chat-body" data-recipe-chat-messages></div>
+            <div class="chat-footer">
+              <form class="chat-input-row" data-recipe-chat-form novalidate>
+                <input
+                  type="text"
+                  name="message"
+                  placeholder="Chiedimi qualcosa..."
+                />
+                <button class="send-btn" type="submit" aria-label="Invia messaggio">↗</button>
+              </form>
+            </div>
+          </article>
         </section>
 
         <section class="app-section" data-tab-panel="grocery">
+          <div class="section-mobile-nav">
+            <div class="section-mobile-nav-head">
+              <button class="section-home-btn" type="button" data-go-home aria-label="Torna alla home">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 11.5 12 5l8 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                  <path d="M6.5 10.5V19h11v-8.5" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </button>
+              <div class="section-crumb">
+                <span>Home / Spesa</span>
+                <strong>La tua spesa</strong>
+              </div>
+            </div>
+            <div class="section-links">
+              <button class="section-link" type="button" data-section-link-target="recipes">Ricette</button>
+              <button class="section-link" type="button" data-section-link-target="grocery">Spesa</button>
+              <button class="section-link" type="button" data-section-link-target="nutrition">Dieta</button>
+              <button class="section-link" type="button" data-section-link-target="profile">Dati</button>
+            </div>
+          </div>
+
+          <div class="section-head">
+          </div>
+
+
           <section class="grocery-summary">
             <div>
               <div class="summary-title"><h2>Shopping List</h2></div>
@@ -350,87 +373,197 @@
           </section>
         </section>
 
-        <section class="app-section" data-tab-panel="progress">
-          <div class="section-head">
-            <h2>I tuoi progressi</h2>
-            <div class="range-switch">
-              <button class="range-btn range-btn-active" type="button" data-progress-range="week">Settimana</button>
-              <button class="range-btn" type="button" data-progress-range="month">Mese</button>
+        <section class="app-section is-active" data-tab-panel="nutrition">
+          <div class="section-mobile-nav">
+            <div class="section-mobile-nav-head">
+              <button class="section-home-btn" type="button" data-go-home aria-label="Torna alla home">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 11.5 12 5l8 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                  <path d="M6.5 10.5V19h11v-8.5" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </button>
+              <div class="section-crumb">
+                <span>Home / Dieta</span>
+                <strong>La tua dieta</strong>
+              </div>
+            </div>
+            <div class="section-links">
+              <button class="section-link" type="button" data-section-link-target="recipes">Ricette</button>
+              <button class="section-link" type="button" data-section-link-target="grocery">Spesa</button>
+              <button class="section-link" type="button" data-section-link-target="nutrition">Dieta</button>
+              <button class="section-link" type="button" data-section-link-target="profile">Dati</button>
             </div>
           </div>
 
-          <div class="progress-stats" data-progress-stats></div>
+          <div class="section-head">
+          </div>
 
-          <div class="progress-layout">
-            <article class="panel">
-              <h3>Log giornaliero</h3>
-              <p class="progress-panel-copy">I dati di oggi si aggiornano in automatico da Nutrition e Profile. Qui puoi aggiungere o correggere manualmente la tua giornata.</p>
-              <form class="form-grid progress-form-grid" data-progress-log-form novalidate>
-                <label class="field">
-                  <span>Data</span>
-                  <input type="date" name="date" required />
-                </label>
-                <label class="field">
-                  <span>Peso (kg)</span>
-                  <input type="number" name="weightKg" min="20" max="300" step="0.1" placeholder="74.7" />
-                </label>
-                <label class="field">
-                  <span>Acqua (bicchieri)</span>
-                  <input type="number" name="waterGlasses" min="0" step="1" placeholder="8" />
-                </label>
-                <label class="field">
-                  <span>Calorie manuali</span>
-                  <input type="number" name="calories" min="0" step="1" placeholder="Lascia vuoto per usare Nutrition" />
-                </label>
-                <label class="field">
-                  <span>Proteine manuali (g)</span>
-                  <input type="number" name="protein" min="0" step="1" placeholder="Lascia vuoto per usare Nutrition" />
-                </label>
-                <div class="field field-full progress-form-row">
-                  <button class="primary-btn primary-btn-blue" type="submit">Salva</button>
-                  <button class="soft-btn progress-soft-btn" type="button" data-progress-delete-log>Reset</button>
-                  <p class="save-hint" data-progress-feedback aria-live="polite"></p>
-                </div>
-              </form>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <h2>Calorie</h2>
+              <div class="metric"><span data-nutrition-total="calories">0</span> <span>kcal</span></div>
+              <p><span data-nutrition-total="calories">0</span> su <span data-nutrition-goal="calories">2000</span> kcal</p>
+              <div class="progress-track"><span class="progress-fill blue" data-nutrition-progress="calories" style="width: 0%"></span></div>
+            </article>
+            <article class="stat-card">
+              <h2>Proteine</h2>
+              <div class="metric"><span data-nutrition-total="protein">0</span> <span>g</span></div>
+              <p><span data-nutrition-total="protein">0</span> su <span data-nutrition-goal="protein">150</span> g</p>
+              <div class="progress-track"><span class="progress-fill red" data-nutrition-progress="protein" style="width: 0%"></span></div>
+            </article>
+            <article class="stat-card">
+              <h2>Carboidrati</h2>
+              <div class="metric"><span data-nutrition-total="carbs">0</span> <span>g</span></div>
+              <p><span data-nutrition-total="carbs">0</span> su <span data-nutrition-goal="carbs">250</span> g</p>
+              <div class="progress-track"><span class="progress-fill yellow" data-nutrition-progress="carbs" style="width: 0%"></span></div>
+            </article>
+            <article class="stat-card">
+              <h2>Grassi</h2>
+              <div class="metric"><span data-nutrition-total="fats">0</span> <span>g</span></div>
+              <p><span data-nutrition-total="fats">0</span> su <span data-nutrition-goal="fats">65</span> g</p>
+              <div class="progress-track"><span class="progress-fill green" data-nutrition-progress="fats" style="width: 0%"></span></div>
             </article>
           </div>
 
-          <article class="panel chart-panel">
-            <div class="chart-head"><h3>Andamento calorie</h3><span>kcal / giorno</span></div>
-            <div class="chart-scroll-shell">
-              <div class="chart-scroll-track">
-                <svg class="line-chart" viewBox="0 0 760 250" aria-hidden="true" data-progress-calorie-chart></svg>
+          <section class="meals-section">
+            <div class="section-head">
+              <h2>Pasti di oggi</h2>
+            </div>
+
+            <div class="nutrition-layout">
+              <article class="panel">
+                <h3>Aggiungi un pasto</h3>
+                <form class="form-grid nutrition-form-grid" data-nutrition-form novalidate>
+                  <div class="field field-full">
+                    <p class="lookup-hint">Calorie e macronutrienti vengono stimati automaticamente e puoi correggerli dopo il salvataggio.</p>
+                  </div>
+                  <label class="field field-full">
+                    <span>Nome pasto</span>
+                    <input type="text" name="name" placeholder="Es. Yogurt con frutta" required />
+                  </label>
+                  <label class="field">
+                    <span>Orario</span>
+                    <input type="time" name="time" required />
+                  </label>
+                  <div class="field field-full nutrition-form-row">
+                    <button class="primary-btn primary-btn-blue" type="submit">Aggiungi</button>
+                    <p class="save-hint" data-nutrition-feedback aria-live="polite"></p>
+                  </div>
+                </form>
+              </article>
+
+              <div class="card-stack" data-meals-list></div>
+            </div>
+          </section>
+
+          <section class="integrated-subsection" data-progress-section>
+            <div class="section-head">
+              <h2>Andamento e monitoraggio</h2>
+              <div class="range-switch">
+                <button class="range-btn range-btn-active" type="button" data-progress-range="week">Settimana</button>
+                <button class="range-btn" type="button" data-progress-range="month">Mese</button>
               </div>
             </div>
-          </article>
 
-          <div class="chart-split">
+            <div class="progress-stats" data-progress-stats></div>
+
+            <div class="progress-layout">
+              <article class="panel">
+                <h3>Log giornaliero</h3>
+                <p class="progress-panel-copy">I dati di oggi si aggiornano in automatico dall’area dieta e dai dati personali. Qui puoi aggiungere o correggere manualmente la tua giornata.</p>
+                <form class="form-grid progress-form-grid" data-progress-log-form novalidate>
+                  <label class="field">
+                    <span>Data</span>
+                    <input type="date" name="date" required />
+                  </label>
+                  <label class="field">
+                    <span>Peso (kg)</span>
+                    <input type="number" name="weightKg" min="20" max="300" step="0.1" placeholder="74.7" />
+                  </label>
+                  <label class="field">
+                    <span>Acqua (bicchieri)</span>
+                    <input type="number" name="waterGlasses" min="0" step="1" placeholder="8" />
+                  </label>
+                  <label class="field">
+                    <span>Calorie manuali</span>
+                    <input type="number" name="calories" min="0" step="1" placeholder="Lascia vuoto per usare i pasti registrati" />
+                  </label>
+                  <label class="field">
+                    <span>Proteine manuali (g)</span>
+                    <input type="number" name="protein" min="0" step="1" placeholder="Lascia vuoto per usare i pasti registrati" />
+                  </label>
+                  <div class="field field-full progress-form-row">
+                    <button class="primary-btn primary-btn-blue" type="submit">Salva</button>
+                    <button class="soft-btn progress-soft-btn" type="button" data-progress-delete-log>Reset</button>
+                    <p class="save-hint" data-progress-feedback aria-live="polite"></p>
+                  </div>
+                </form>
+              </article>
+            </div>
+
             <article class="panel chart-panel">
-              <div class="chart-head"><h3>Andamento peso</h3><span>kg</span></div>
+              <div class="chart-head"><h3>Andamento calorie</h3><span>kcal / giorno</span></div>
               <div class="chart-scroll-shell">
                 <div class="chart-scroll-track">
-                  <svg class="line-chart compact" viewBox="0 0 560 230" aria-hidden="true" data-progress-weight-chart></svg>
+                  <svg class="line-chart" viewBox="0 0 760 250" aria-hidden="true" data-progress-calorie-chart></svg>
                 </div>
               </div>
             </article>
-          </div>
 
-          <article class="panel chart-panel">
-            <div class="chart-head"><h3>Assunzione acqua</h3><span>bicchieri / giorno</span></div>
-            <div class="chart-scroll-shell">
-              <div class="chart-scroll-track">
-                <div class="bar-chart bars-cyan" data-progress-water-bars></div>
-                <div class="day-labels" data-progress-water-labels></div>
-              </div>
+            <div class="chart-split">
+              <article class="panel chart-panel">
+                <div class="chart-head"><h3>Andamento peso</h3><span>kg</span></div>
+                <div class="chart-scroll-shell">
+                  <div class="chart-scroll-track">
+                    <svg class="line-chart compact" viewBox="0 0 560 230" aria-hidden="true" data-progress-weight-chart></svg>
+                  </div>
+                </div>
+              </article>
             </div>
-          </article>
+
+            <article class="panel chart-panel">
+              <div class="chart-head"><h3>Assunzione acqua</h3><span>bicchieri / giorno</span></div>
+              <div class="chart-scroll-shell">
+                <div class="chart-scroll-track">
+                  <div class="bar-chart bars-cyan" data-progress-water-bars></div>
+                  <div class="day-labels" data-progress-water-labels></div>
+                </div>
+              </div>
+            </article>
+          </section>
         </section>
 
         <section class="app-section" data-tab-panel="profile">
+          <div class="section-mobile-nav">
+            <div class="section-mobile-nav-head">
+              <button class="section-home-btn" type="button" data-go-home aria-label="Torna alla home">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 11.5 12 5l8 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                  <path d="M6.5 10.5V19h11v-8.5" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+              </button>
+              <div class="section-crumb">
+                <span>Home / Dati</span>
+                <strong>I tuoi dati</strong>
+              </div>
+            </div>
+            <div class="section-links">
+              <button class="section-link" type="button" data-section-link-target="recipes">Ricette</button>
+              <button class="section-link" type="button" data-section-link-target="grocery">Spesa</button>
+              <button class="section-link" type="button" data-section-link-target="nutrition">Dieta</button>
+              <button class="section-link" type="button" data-section-link-target="profile">Dati</button>
+            </div>
+          </div>
+
+          <div class="section-head">
+          </div>
+
+
           <form data-profile-form novalidate>
             <section class="account-banner">
               <div class="panel-heading">
-                <h2>Account Type</h2>
+                <h2>Profilo alimentare</h2>
                 <p>Scegli la tua preferenza alimentare</p>
               </div>
               <div class="account-grid">
@@ -503,7 +636,7 @@
             <article class="ai-profile-panel">
               <div class="panel-heading">
                 <h3>AI-Powered Recommendations</h3>
-                <p>In base al tuo profilo, ecco obiettivi nutrizionali personalizzati</p> <!-- calcolati con l'equazione di Mifflin-St Jeor -->
+                <p>In base al tuo profilo, ecco obiettivi nutrizionali personalizzati</p>
               </div>
               <div class="recommend-top">
                 <article class="recommend-card"><span>Il tuo TDEE (dispendio energetico giornaliero)</span><strong data-profile-recommendation="tdee">--</strong><small data-profile-recommendation-note>Completa altezza, peso ed età per ottenere obiettivi personalizzati.</small></article>
@@ -533,44 +666,44 @@
               <button class="primary-btn primary-btn-blue save-btn" type="submit">Salva</button>
             </div>
           </form>
-        </section>
 
-        <section class="app-section" data-tab-panel="devices">
-          <section class="devices-hero">
-            <div class="panel-heading">
-              <h2>Dispositivi connessi</h2>
-              <p>Collega wearable, bilance smart e fitness app per mantenere aggiornati automaticamente i tuoi dati</p>
-            </div>
-            <div class="devices-summary" data-devices-summary></div>
-          </section>
+          <section class="integrated-subsection" data-devices-section>
+            <section class="devices-hero">
+              <div class="panel-heading">
+                <h2>Integrazioni e dispositivi</h2>
+                <p>Collega wearable, bilance smart e fitness app per mantenere aggiornati automaticamente i dati che alimentano il resto dell’app.</p>
+              </div>
+              <div class="devices-summary" data-devices-summary></div>
+            </section>
 
-          <section class="section-head">
-            <h2>Le tue integrazioni</h2>
-            <div class="inline-actions">
-              <button class="primary-btn primary-btn-blue" type="button" data-devices-add><span>+</span>Aggiungi dispositivo</button>
-            </div>
-          </section>
-
-          <p class="save-hint" data-devices-feedback aria-live="polite"></p>
-
-          <div class="devices-grid" data-devices-grid></div>
-
-          <article class="panel sync-panel">
-            <div class="section-head compact">
-              <h2>Preferenze sync</h2>
-            </div>
-            <div class="sync-options" data-devices-sync-options></div>
-          </article>
-
-          <section class="devices-permissions-section">
-            <section class="section-head compact">
-              <h2>Permessi integrazioni</h2>
+            <section class="section-head">
+              <h2>Le tue integrazioni</h2>
               <div class="inline-actions">
-                <button class="soft-btn devices-soft" type="button" data-devices-manage-permissions>Gestisci permessi ↓</button>
+                <button class="primary-btn primary-btn-blue" type="button" data-devices-add><span>+</span>Aggiungi dispositivo</button>
               </div>
             </section>
 
-            <article class="panel devices-permissions-panel" data-devices-permissions-panel hidden></article>
+            <p class="save-hint" data-devices-feedback aria-live="polite"></p>
+
+            <div class="devices-grid" data-devices-grid></div>
+
+            <article class="panel sync-panel">
+              <div class="section-head compact">
+                <h2>Preferenze sync</h2>
+              </div>
+              <div class="sync-options" data-devices-sync-options></div>
+            </article>
+
+            <section class="devices-permissions-section">
+              <section class="section-head compact">
+                <h2>Permessi integrazioni</h2>
+                <div class="inline-actions">
+                  <button class="soft-btn devices-soft" type="button" data-devices-manage-permissions>Gestisci permessi ↓</button>
+                </div>
+              </section>
+
+              <article class="panel devices-permissions-panel" data-devices-permissions-panel hidden></article>
+            </section>
           </section>
         </section>
       </main>
@@ -596,6 +729,11 @@
       </div>
     </div>
 
+    <script src="scripts/data-config.js"></script>
+    <script src="scripts/bootstrap.js"></script>
+    <script src="scripts/shared-utils.js"></script>
+    <script src="scripts/state.js"></script>
+    <script src="scripts/navigation.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

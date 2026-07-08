@@ -392,9 +392,6 @@ Predicts diet plan based on calories to maintain weight → [dataset](https://ww
 
 The recipes dataset contains 522,517 recipes from 312 different categories. This dataset provides information about each recipe like cooking times, servings, ingredients, nutrition, instructions, and more. The reviews dataset contains 1,401,982 reviews from 271,907 different users. This dataset provides information about the author, rating, review text, and more → [link dataset](https://www.kaggle.com/datasets/irkaal/foodcom-recipes-and-reviews).
 
-- Strutturazione del prompt
-
-Rivedere appunti su taccuino per aggiornare.
 
 "A prompt for a Large Language Model (LLM) is a text input that initiates a conversation or triggers a response from the model. However, it can be in other forms such as an image or audio."
 

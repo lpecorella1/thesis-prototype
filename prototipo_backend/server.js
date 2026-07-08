@@ -12,7 +12,8 @@ const PORT = Number(process.env.PORT || 3000);
 const HTTPS_ENABLED = process.env.HTTPS === "1";
 const HTTPS_KEY_PATH = process.env.HTTPS_KEY_PATH || path.join(__dirname, "certs", "local-key.pem");
 const HTTPS_CERT_PATH = process.env.HTTPS_CERT_PATH || path.join(__dirname, "certs", "local-cert.pem");
-const projectRoot = path.resolve(__dirname, "..");
+const repositoryRoot = path.resolve(__dirname, "..");
+const frontendRoot = path.join(repositoryRoot, "frontend");
 
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -58,9 +59,9 @@ function sendFile(response, filePath) {
 
 function resolveStaticPath(urlPath) {
   const normalizedPath = urlPath === "/" ? "/index.html" : urlPath;
-  const resolvedPath = path.resolve(projectRoot, `.${normalizedPath}`);
+  const resolvedPath = path.resolve(frontendRoot, `.${normalizedPath}`);
 
-  if (!resolvedPath.startsWith(projectRoot)) {
+  if (!resolvedPath.startsWith(frontendRoot)) {
     return null;
   }
 

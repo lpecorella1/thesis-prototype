@@ -4,6 +4,11 @@
    solo quando lo schermo supera i breakpoint tablet/desktop. */
 
 @media (min-width: 841px) {
+  .app-section[data-tab-panel="home"],
+  .section-mobile-nav {
+    display: none !important;
+  }
+
   .hero {
     flex-direction: row;
     justify-content: space-between;
@@ -60,6 +65,15 @@
 
   .content {
     padding: 34px 14px 40px;
+  }
+
+  .section-intro {
+    max-width: 760px;
+    font-size: 1rem;
+  }
+
+  .integrated-subsection {
+    padding-top: 18px;
   }
 
   .section-head {

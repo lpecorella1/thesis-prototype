@@ -1,2 +1,6 @@
+.DS_Store
 prototipo_backend/.env
 prototipo_backend/en.openfoodfacts.org.products.csv
+prototipo_backend/certs/
+prototipo_backend/data/
+node_modules/
