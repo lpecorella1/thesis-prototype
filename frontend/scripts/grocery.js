@@ -1,0 +1,568 @@
+function setGroceryFeedback(message) {
+  const feedback = document.querySelector("[data-grocery-feedback]");
+
+  if (feedback) {
+    feedback.textContent = message;
+  }
+}
+
+function upsertPantryItemFromGrocery(item) {
+  const pantryItem = {
+    id: item.id,
+    name: item.name,
+    quantity: item.quantity,
+    expiryDate: item.expiryDate || "",
+    category: item.category,
+    barcode: item.barcode || "",
+    source: item.source || "manual",
+    nutriscoreGrade: item.nutriscoreGrade || "",
+  };
+  const existingIndex = appState.grocery.pantry.findIndex((entry) => entry.id === item.id);
+
+  if (existingIndex >= 0) {
+    appState.grocery.pantry[existingIndex] = pantryItem;
+  } else {
+    appState.grocery.pantry.push(pantryItem);
+  }
+
+  appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
+}
+
+function removePantryItem(groceryItemId) {
+  appState.grocery.pantry = appState.grocery.pantry.filter((item) => item.id !== groceryItemId);
+}
+
+function renderGrocerySummary() {
+  const totalItems = appState.grocery.items.length;
+  const completedItems = appState.grocery.items.filter((item) => item.completed).length;
+  const count = document.querySelector("[data-grocery-count]");
+  const progress = document.querySelector("[data-grocery-progress]");
+  const percentage = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+
+  if (count) {
+    count.textContent = `${completedItems}/${totalItems}`;
+  }
+
+  if (progress) {
+    progress.style.width = `${percentage}%`;
+  }
+}
+
+function renderGroceryList() {
+  const list = document.querySelector("[data-grocery-list]");
+
+  if (!list) {
+    return;
+  }
+
+  if (appState.grocery.items.length === 0) {
+    list.innerHTML = `
+      <article class="panel empty-state">
+        <h3>Shopping List vuota</h3>
+        <p>Aggiungi il prossimo prodotto da comprare e costruisci il tuo inventario domestico.</p>
+      </article>
+    `;
+    return;
+  }
+
+  const groupedItems = appState.grocery.items.reduce((groups, item) => {
+    if (!groups[item.category]) {
+      groups[item.category] = [];
+    }
+
+    groups[item.category].push(item);
+    return groups;
+  }, {});
+
+  list.innerHTML = Object.entries(groupedItems)
+    .sort(([firstCategory], [secondCategory]) => firstCategory.localeCompare(secondCategory))
+    .map(
+      ([category, items]) => `
+        <article class="panel category-panel">
+          <div class="category-block">
+            <h3>${escapeHtml(category)}</h3>
+            <div class="category-items">
+          ${items
+            .map(
+              (item) => `
+                <article class="grocery-item${item.completed ? " is-complete" : ""}">
+                  <div class="grocery-item-top">
+                    <label class="check-row">
+                      <input type="checkbox" ${item.completed ? "checked" : ""} data-grocery-toggle-id="${item.id}" />
+                      <span class="checkbox-ui"></span>
+                      <span>
+                        <strong>${escapeHtml(item.name)}</strong>
+                        <small>${escapeHtml(item.quantity)}</small>
+                        ${
+                          item.nutriscoreGrade
+                            ? `
+                          <div class="lookup-chip-row">
+                            ${item.nutriscoreGrade ? `<span class="lookup-chip ${escapeHtml(getNutriscoreClassName(item.nutriscoreGrade))} nutriscore-chip">${escapeHtml(getNutriscoreLabel(item.nutriscoreGrade))}</span>` : ""}
+                          </div>
+                        `
+                            : ""
+                        }
+                      </span>
+                    </label>
+                    <button class="delete-btn grocery-delete-mobile" type="button" aria-label="Rimuovi prodotto" data-grocery-delete-id="${item.id}">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
+                    </button>
+                  </div>
+                  <div class="inline-actions">
+                    <button class="delete-btn grocery-delete-desktop" type="button" aria-label="Rimuovi prodotto" data-grocery-delete-id="${item.id}">
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
+                    </button>
+                  </div>
+                </article>
+              `
+            )
+            .join("")}
+            </div>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderPantry() {
+  const pantryList = document.querySelector("[data-pantry-list]");
+
+  if (!pantryList) {
+    return;
+  }
+
+  if (appState.grocery.pantry.length === 0) {
+    pantryList.innerHTML = `
+      <article class="empty-pantry">
+        <h3>Nessun alimento salvato in dispensa</h3>
+        <p>Quando completi un acquisto, l'articolo comparira qui come ingrediente disponibile.</p>
+      </article>
+    `;
+    return;
+  }
+
+  pantryList.innerHTML = `
+    <div class="pantry-list-head" aria-hidden="true">
+      <span>Prodotto</span>
+      <span>Quantita / scadenza</span>
+      <span>Categoria</span>
+    </div>
+    <div class="pantry-list-body">
+      ${appState.grocery.pantry
+        .map(
+          (item) => `
+            <article class="pantry-item">
+              <strong>${escapeHtml(item.name)}</strong>
+              <span>${escapeHtml(item.quantity)}${item.expiryDate ? ` • Scad. ${escapeHtml(formatExpiryDate(item.expiryDate))}` : ""}</span>
+              <small>${escapeHtml(item.category)}</small>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderGroceryArOverlay() {
+  const overlay = document.querySelector("[data-grocery-ar-overlay]");
+  const comparisonBasisLabel = "Valori per 100 g/ml di prodotto";
+
+  if (!overlay) {
+    return;
+  }
+
+  if (!groceryArRuntime.stream) {
+    overlay.innerHTML = "";
+    return;
+  }
+
+  ensureGroceryArState();
+
+  const pinnedProducts = getPinnedGroceryComparisonProducts();
+
+  if (pinnedProducts.length === 0) {
+    overlay.innerHTML = "";
+    return;
+  }
+
+  overlay.innerHTML = pinnedProducts
+    .map(
+      ({ productId, product }) => `
+        <article class="grocery-ar-card">
+          <div class="grocery-ar-card-top">
+            <strong>${escapeHtml(product.name)}</strong>
+            <button class="grocery-ar-remove-btn" type="button" data-grocery-ar-remove-id="${escapeHtml(productId)}" aria-label="Rimuovi ${escapeHtml(product.name)} dal confronto">x</button>
+          </div>
+          <span class="grocery-ar-meta-line">${escapeHtml(product.brand)}</span>
+          <span class="grocery-ar-meta-line">${escapeHtml(product.serving)}</span>
+          ${product.nutriscoreGrade ? `<span class="grocery-ar-meta-line">${escapeHtml(getNutriscoreLabel(product.nutriscoreGrade))}</span>` : ""}
+          <small>${comparisonBasisLabel}</small>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderGroceryArComparison() {
+  const comparison = document.querySelector("[data-grocery-ar-comparison]");
+  const comparisonBasisLabel = "Valori per 100 g/ml di prodotto";
+
+  if (!comparison) {
+    return;
+  }
+
+  ensureGroceryArState();
+
+  const pinnedProducts = getPinnedGroceryComparisonProducts();
+  const winner = getGroceryComparisonWinner(pinnedProducts.map((entry) => entry.product));
+
+  if (pinnedProducts.length === 0) {
+    comparison.innerHTML = `
+      <div class="grocery-ar-comparison-empty">
+        Nessun prodotto in confronto.
+      </div>
+    `;
+  } else {
+    comparison.innerHTML = `
+      <div class="grocery-ar-comparison-header">
+        <strong>Confronto</strong>
+        <span>${pinnedProducts.length === 1 ? "Scansiona un secondo prodotto." : "Rimuovi un prodotto con x per sostituirlo."}</span>
+      </div>
+      <div class="grocery-ar-comparison-grid">
+        ${pinnedProducts
+          .map(({ productId, product }) => {
+            const score = calculateGroceryComparisonScore(product);
+            const isWinner =
+              winner && getComparableProductKey(winner.product) === getComparableProductKey(product) && pinnedProducts.length > 1;
+
+            return `
+              <article class="grocery-ar-compare-card">
+                <div class="grocery-ar-card-top">
+                  <strong>${escapeHtml(product.name)}</strong>
+                  <button class="grocery-ar-remove-btn" type="button" data-grocery-ar-remove-id="${escapeHtml(productId)}" aria-label="Rimuovi ${escapeHtml(product.name)} dal confronto">x</button>
+                </div>
+                <span class="grocery-ar-metric-line">Calorie: ${product.calories ?? "--"} kcal</span>
+                <span class="grocery-ar-metric-line">Proteine: ${product.protein ?? "--"} g</span>
+                <span class="grocery-ar-metric-line">Carboidrati: ${product.carbs ?? "--"} g</span>
+                <span class="grocery-ar-metric-line">Grassi: ${product.fats ?? "--"} g</span>
+                <span class="grocery-ar-metric-line">Zuccheri: ${product.sugar ?? "--"} g</span>
+                <span class="grocery-ar-metric-line">Fibre: ${product.fiber ?? "--"} g</span>
+                <small>${comparisonBasisLabel}</small>
+                <div class="grocery-ar-score${product.nutriscoreGrade ? "" : " is-neutral"}">
+                  ${isWinner ? "Scelta consigliata" : product.nutriscoreGrade ? getNutriscoreLabel(product.nutriscoreGrade) : "Nutrition score"}: ${product.nutriscoreGrade ? escapeHtml(String(product.nutriscoreScore ?? product.nutriscoreGrade.toUpperCase())) : score}
+                </div>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    `;
+  }
+}
+
+function renderGrocery() {
+  renderGrocerySummary();
+  renderGroceryList();
+  renderPantry();
+  renderGroceryArOverlay();
+  renderGroceryArComparison();
+}
+
+function stopGroceryArCamera() {
+  const stage = document.querySelector(".grocery-ar-stage");
+  const video = document.querySelector("[data-grocery-ar-video]");
+  const toggleButton = document.querySelector("[data-grocery-ar-toggle]");
+
+  if (groceryArRuntime.detectionLoopId) {
+    cancelAnimationFrame(groceryArRuntime.detectionLoopId);
+    groceryArRuntime.detectionLoopId = null;
+  }
+
+  if (groceryArRuntime.stream) {
+    groceryArRuntime.stream.getTracks().forEach((track) => track.stop());
+    groceryArRuntime.stream = null;
+  }
+
+  if (video) {
+    video.pause();
+    video.srcObject = null;
+  }
+
+  if (stage) {
+    stage.classList.remove("is-live");
+  }
+
+  if (toggleButton) {
+    setGroceryArToggleButtonState(false);
+  }
+}
+
+function scheduleGroceryBarcodeDetection() {
+  const video = document.querySelector("[data-grocery-ar-video]");
+
+  if (!video || !groceryArRuntime.stream || !groceryArRuntime.detector) {
+    return;
+  }
+
+  const detectFrame = async () => {
+    if (!groceryArRuntime.stream || !groceryArRuntime.detector) {
+      return;
+    }
+
+    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      try {
+        const barcodes = await groceryArRuntime.detector.detect(video);
+        const firstCode = barcodes[0]?.rawValue;
+
+        if (firstCode && appState.grocery.ar.lastDetectedBarcode === firstCode) {
+          groceryArRuntime.detectionLoopId = requestAnimationFrame(detectFrame);
+          return;
+        }
+
+        let matchedProduct = firstCode ? getCachedOpenFoodFactsProduct(firstCode) || getCatalogProductByBarcode(firstCode) : null;
+
+        if (!matchedProduct && firstCode) {
+          appState.grocery.ar.lastDetectedBarcode = firstCode;
+          try {
+            matchedProduct = await fetchOpenFoodFactsProduct(firstCode);
+          } catch (error) {
+            matchedProduct = null;
+          }
+        }
+
+        if (matchedProduct) {
+          ensureGroceryArState();
+
+          appState.grocery.ar.lastDetectedBarcode = firstCode;
+          const pinResult = pinGroceryComparisonProduct(getComparableProductKey(matchedProduct));
+
+          if (pinResult.added) {
+            saveState();
+            renderGroceryArOverlay();
+            renderGroceryArComparison();
+          }
+        }
+      } catch (error) {
+      }
+    }
+
+    groceryArRuntime.detectionLoopId = requestAnimationFrame(detectFrame);
+  };
+
+  groceryArRuntime.detectionLoopId = requestAnimationFrame(detectFrame);
+}
+
+async function startGroceryArCamera() {
+  const video = document.querySelector("[data-grocery-ar-video]");
+  const stage = document.querySelector(".grocery-ar-stage");
+  const toggleButton = document.querySelector("[data-grocery-ar-toggle]");
+
+  if (!video || !stage || groceryArRuntime.isStarting) {
+    return;
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return;
+  }
+
+  groceryArRuntime.isStarting = true;
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: {
+          ideal: "environment",
+        },
+      },
+      audio: false,
+    });
+
+    groceryArRuntime.stream = stream;
+    video.srcObject = stream;
+    await video.play();
+    stage.classList.add("is-live");
+
+    if (toggleButton) {
+      setGroceryArToggleButtonState(true);
+    }
+
+    if ("BarcodeDetector" in window) {
+      groceryArRuntime.detector = new window.BarcodeDetector({
+        formats: ["ean_13", "ean_8", "upc_a", "upc_e", "qr_code"],
+      });
+      scheduleGroceryBarcodeDetection();
+    } else {
+      groceryArRuntime.detector = null;
+    }
+  } catch (error) {
+    stopGroceryArCamera();
+  } finally {
+    groceryArRuntime.isStarting = false;
+  }
+}
+
+function setupGrocerySection() {
+  const form = document.querySelector("[data-grocery-form]");
+  const list = document.querySelector("[data-grocery-list]");
+  const clearCompletedButton = document.querySelector("[data-clear-completed]");
+  const arToggleButton = document.querySelector("[data-grocery-ar-toggle]");
+  const arClearButton = document.querySelector("[data-grocery-ar-clear]");
+
+  if (!form || !list || !clearCompletedButton || !arToggleButton || !arClearButton) {
+    return;
+  }
+
+  bindFormValidationFeedback(form);
+
+  ensureGroceryArState();
+
+  if (appState.grocery.pantry.length === 0) {
+    appState.grocery.items
+      .filter((item) => item.completed)
+      .forEach((item) => upsertPantryItemFromGrocery(item));
+  }
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    markFormValidationAttempt(form);
+
+    const formData = new FormData(form);
+    const linkedProduct = openFoodFactsRuntime.groceryLookup;
+    const item = {
+      id: crypto.randomUUID(),
+      name: String(formData.get("name") || "").trim(),
+      quantity: String(formData.get("quantity") || "").trim(),
+      expiryDate: String(formData.get("expiryDate") || "").trim(),
+      category: String(formData.get("category") || "").trim(),
+      completed: false,
+      barcode: linkedProduct?.barcode || sanitizeBarcode(formData.get("barcode")),
+      source: linkedProduct?.source || "manual",
+      nutriscoreGrade: linkedProduct?.nutriscoreGrade || "",
+    };
+
+    if (!item.name || !item.quantity || !item.category) {
+      setGroceryFeedback("Completa tutti i campi per aggiungere un prodotto.");
+      return;
+    }
+
+    appState.grocery.items.push(item);
+    saveState();
+    renderGrocery();
+    form.reset();
+    resetFormValidationState(form);
+    form.elements.category.value = "Frutta e verdura";
+    openFoodFactsRuntime.groceryLookup = null;
+    form.elements.barcode.value = "";
+    renderLookupResult("[data-off-grocery-result]", null, "");
+    setGroceryFeedback("Prodotto salvato nella lista della spesa.");
+  });
+
+  list.addEventListener("click", (event) => {
+    const arCompareButton = event.target.closest("[data-grocery-ar-item-id]");
+
+    if (arCompareButton) {
+      const matchedProduct = getComparableProductByKey(arCompareButton.dataset.groceryArItemId);
+
+      if (!matchedProduct) {
+        return;
+      }
+
+      const pinResult = pinGroceryComparisonProduct(getComparableProductKey(matchedProduct));
+
+      if (pinResult.added) {
+        saveState();
+        renderGroceryArOverlay();
+        renderGroceryArComparison();
+      }
+      return;
+    }
+
+    const deleteButton = event.target.closest("[data-grocery-delete-id]");
+
+    if (deleteButton) {
+      const { groceryDeleteId } = deleteButton.dataset;
+      appState.grocery.items = appState.grocery.items.filter((item) => item.id !== groceryDeleteId);
+      saveState();
+      renderGrocery();
+      setGroceryFeedback("Prodotto rimosso dalla lista.");
+      return;
+    }
+
+    const toggle = event.target.closest("[data-grocery-toggle-id]");
+
+    if (toggle) {
+      const nextCompleted = toggle.checked;
+
+      appState.grocery.items = appState.grocery.items.map((item) =>
+        item.id === toggle.dataset.groceryToggleId
+          ? { ...item, completed: nextCompleted }
+          : item
+      );
+
+      const updatedItem = appState.grocery.items.find((item) => item.id === toggle.dataset.groceryToggleId);
+
+      if (updatedItem && nextCompleted) {
+        upsertPantryItemFromGrocery(updatedItem);
+      } else if (updatedItem && !nextCompleted) {
+        removePantryItem(updatedItem.id);
+      }
+
+      saveState();
+      renderGrocery();
+      setGroceryFeedback(nextCompleted ? "Prodotto acquistato e salvato in dispensa." : "Prodotto nella lista della spesa.");
+    }
+  });
+
+  arToggleButton.addEventListener("click", async () => {
+    if (groceryArRuntime.stream) {
+      stopGroceryArCamera();
+      return;
+    }
+
+    await startGroceryArCamera();
+  });
+
+  arClearButton.addEventListener("click", () => {
+    ensureGroceryArState();
+    appState.grocery.ar.pinnedProductIds = [];
+    appState.grocery.ar.lastDetectedBarcode = "";
+    saveState();
+    renderGroceryArOverlay();
+    renderGroceryArComparison();
+  });
+
+  const arPanel = document.querySelector(".grocery-ar-panel");
+
+  arPanel?.addEventListener("click", (event) => {
+    const removeButton = event.target.closest("[data-grocery-ar-remove-id]");
+
+    if (!removeButton) {
+      return;
+    }
+
+    unpinGroceryComparisonProduct(removeButton.dataset.groceryArRemoveId);
+    saveState();
+    renderGroceryArOverlay();
+    renderGroceryArComparison();
+  });
+
+  clearCompletedButton.addEventListener("click", () => {
+    const completedCount = appState.grocery.items.filter((item) => item.completed).length;
+
+    if (completedCount === 0) {
+      setGroceryFeedback("Non ci sono prodotti completati da rimuovere.");
+      return;
+    }
+
+    appState.grocery.items = appState.grocery.items.filter((item) => !item.completed);
+    saveState();
+    renderGrocery();
+    setGroceryFeedback("Prodotti completati spostati in dispensa.");
+  });
+
+  window.addEventListener("beforeunload", stopGroceryArCamera);
+  renderGrocery();
+}
+
+setupGrocerySection();

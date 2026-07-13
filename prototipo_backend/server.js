@@ -5,7 +5,21 @@ const os = require("os");
 const path = require("path");
 const { createAzureChatCompletion } = require("./azure-openai");
 const { fetchOpenFoodFactsProduct, sanitizeBarcode } = require("./openfoodfacts");
-const { getNutriTrackState, saveNutriTrackState } = require("./nutritrack-state/nutritrack-state-repository");
+const {
+  getNutriTrackDatabaseStatus,
+  getNutriTrackState,
+  saveNutriTrackState,
+} = require("./nutritrack-state/nutritrack-state-repository");
+const {
+  buildAuthorizeUrl,
+  buildPublicStravaState,
+  consumeAuthorizationState,
+  exchangeAuthorizationCode,
+  getStravaConfig,
+  readStravaConnection,
+  revokeStravaConnection,
+  syncStravaActivities,
+} = require("./strava");
 
 const HOST = process.env.HOST || "0.0.0.0";
 const PORT = Number(process.env.PORT || 3000);
@@ -39,6 +53,14 @@ function sendJson(response, statusCode, payload) {
     "Access-Control-Allow-Headers": "Content-Type"
   });
   response.end(JSON.stringify(payload));
+}
+
+function redirectTo(response, location) {
+  response.writeHead(302, {
+    Location: location,
+    "Access-Control-Allow-Origin": "*",
+  });
+  response.end();
 }
 
 function sendFile(response, filePath) {
@@ -316,16 +338,24 @@ async function handleNutriTrackStateWrite(request, response) {
   try {
     const payload = await readJsonBody(request);
     const savedState = await saveNutriTrackState(payload?.state);
+    const database = getNutriTrackDatabaseStatus();
     sendJson(response, 200, {
       ok: true,
       savedAt: new Date().toISOString(),
       state: savedState,
+      database,
     });
   } catch (error) {
     console.error("[Server] Errore nel salvataggio dello stato NutriTrack.", error);
     const statusCode = error.message === "Lo stato NutriTrack deve essere un oggetto JSON." ? 400 : 500;
     sendJson(response, statusCode, { error: error.message || "Impossibile salvare lo stato NutriTrack." });
   }
+}
+
+function handleDatabaseStatus(response) {
+  sendJson(response, 200, {
+    database: getNutriTrackDatabaseStatus(),
+  });
 }
 
 async function handleOpenFoodFactsProduct(requestUrl, response) {
@@ -353,6 +383,94 @@ async function handleOpenFoodFactsProduct(requestUrl, response) {
     const statusCode = message === "Prodotto non trovato in OpenFoodFacts." ? 404 : 502;
     console.error("[Server] Errore nella route OpenFoodFacts.", message);
     sendJson(response, statusCode, { error: message });
+  }
+}
+
+async function handleStravaStatus(request, response) {
+  try {
+    const config = getStravaConfig(request);
+    const connection = await readStravaConnection();
+    sendJson(response, 200, {
+      strava: buildPublicStravaState(connection, config),
+    });
+  } catch (error) {
+    console.error("[Server] Errore nella lettura stato Strava.", error);
+    sendJson(response, 500, { error: "Impossibile leggere lo stato Strava." });
+  }
+}
+
+function handleStravaConnect(request, response) {
+  try {
+    const authorizeUrl = buildAuthorizeUrl(request);
+    redirectTo(response, authorizeUrl);
+  } catch (error) {
+    console.error("[Server] Errore avvio OAuth Strava.", error);
+    sendJson(response, 500, { error: error.message || "Impossibile avviare l'autenticazione Strava." });
+  }
+}
+
+async function handleStravaCallback(request, requestUrl, response) {
+  const baseUrl = `${requestUrl.origin}/`;
+  const redirectParams = new URLSearchParams({
+    tab: "profile",
+    section: "devices",
+  });
+
+  try {
+    const error = requestUrl.searchParams.get("error");
+    const state = requestUrl.searchParams.get("state");
+    const code = requestUrl.searchParams.get("code");
+
+    if (!consumeAuthorizationState(state)) {
+      throw new Error("Stato OAuth Strava non valido o scaduto.");
+    }
+
+    if (error) {
+      redirectParams.set("strava", "error");
+      redirectParams.set("message", error);
+      redirectTo(response, `${baseUrl}?${redirectParams.toString()}`);
+      return;
+    }
+
+    if (!code) {
+      throw new Error("Codice OAuth Strava mancante.");
+    }
+
+    await exchangeAuthorizationCode(request, code);
+    redirectParams.set("strava", "connected");
+    redirectTo(response, `${baseUrl}?${redirectParams.toString()}`);
+  } catch (error) {
+    console.error("[Server] Errore callback Strava.", error);
+    redirectParams.set("strava", "error");
+    redirectParams.set("message", error.message || "callback_failed");
+    redirectTo(response, `${baseUrl}?${redirectParams.toString()}`);
+  }
+}
+
+async function handleStravaSync(request, response) {
+  try {
+    const strava = await syncStravaActivities(request);
+    sendJson(response, 200, {
+      ok: true,
+      strava,
+    });
+  } catch (error) {
+    console.error("[Server] Errore sync Strava.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile sincronizzare Strava.",
+    });
+  }
+}
+
+async function handleStravaDisconnect(request, response) {
+  try {
+    await revokeStravaConnection(request);
+    sendJson(response, 200, { ok: true });
+  } catch (error) {
+    console.error("[Server] Errore disconnessione Strava.", error);
+    sendJson(response, 500, {
+      error: error.message || "Impossibile disconnettere Strava.",
+    });
   }
 }
 
@@ -388,8 +506,38 @@ const requestHandler = async (request, response) => {
     return;
   }
 
+  if (request.method === "GET" && requestUrl.pathname === "/api/database/status") {
+    handleDatabaseStatus(response);
+    return;
+  }
+
   if (request.method === "GET" && requestUrl.pathname.startsWith("/api/openfoodfacts/product/")) {
     await handleOpenFoodFactsProduct(requestUrl, response);
+    return;
+  }
+
+  if (request.method === "GET" && requestUrl.pathname === "/api/strava/status") {
+    await handleStravaStatus(request, response);
+    return;
+  }
+
+  if (request.method === "GET" && requestUrl.pathname === "/api/strava/connect") {
+    handleStravaConnect(request, response);
+    return;
+  }
+
+  if (request.method === "GET" && requestUrl.pathname === "/api/strava/callback") {
+    await handleStravaCallback(request, requestUrl, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/strava/sync") {
+    await handleStravaSync(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/strava/disconnect") {
+    await handleStravaDisconnect(request, response);
     return;
   }
 

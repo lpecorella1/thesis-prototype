@@ -396,6 +396,15 @@ function getDefaultDevicesState() {
           Object.entries(device.permissions).map(([key, config]) => [key, config.defaultEnabled])
         ),
         latestData: {},
+        ...(device.id === "strava"
+          ? {
+              configured: false,
+              athleteName: "",
+              athleteId: null,
+              acceptedScopes: [],
+              lastSyncStatus: "",
+            }
+          : {}),
       };
       return state;
     }, {}),

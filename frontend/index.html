@@ -70,9 +70,6 @@
       <main class="content">
         <section class="app-section" data-tab-panel="home">
           <section class="mobile-home">
-            <div class="mobile-home-hero">
-            </div>
-
             <div class="home-cloud-grid">
               <button class="home-cloud cloud-recipes" type="button" data-home-target="recipes">
                 <span class="home-cloud-icon">
@@ -435,8 +432,12 @@
               <article class="panel">
                 <h3>Aggiungi un pasto</h3>
                 <form class="form-grid nutrition-form-grid" data-nutrition-form novalidate>
-                  <div class="field field-full">
+                  <div class="field field-full lookup-block">
+                    <div class="lookup-head">
+                      <button class="grocery-action-btn" type="button" data-open-barcode-scanner="nutrition">Scansiona prodotto</button>
+                    </div>
                     <p class="lookup-hint">Calorie e macronutrienti vengono stimati automaticamente e puoi correggerli dopo il salvataggio.</p>
+                    <div class="lookup-result" data-off-nutrition-result></div>
                   </div>
                   <label class="field field-full">
                     <span>Nome pasto</span>
@@ -454,6 +455,33 @@
               </article>
 
               <div class="card-stack" data-meals-list></div>
+
+              <article class="panel" data-nutrition-edit-panel hidden>
+                <h3 data-nutrition-edit-title>Correggi valori nutrizionali</h3>
+                <form class="form-grid nutrition-form-grid" data-nutrition-edit-form novalidate>
+                  <label class="field">
+                    <span>Calorie (kcal)</span>
+                    <input type="number" name="calories" min="0" step="1" required />
+                  </label>
+                  <label class="field">
+                    <span>Proteine (g)</span>
+                    <input type="number" name="protein" min="0" step="0.1" required />
+                  </label>
+                  <label class="field">
+                    <span>Carboidrati (g)</span>
+                    <input type="number" name="carbs" min="0" step="0.1" required />
+                  </label>
+                  <label class="field">
+                    <span>Grassi (g)</span>
+                    <input type="number" name="fats" min="0" step="0.1" required />
+                  </label>
+                  <div class="field field-full nutrition-form-row">
+                    <button class="primary-btn primary-btn-blue" type="submit">Salva correzione</button>
+                    <button class="soft-btn" type="button" data-nutrition-edit-cancel>Annulla</button>
+                    <p class="save-hint" data-nutrition-edit-feedback aria-live="polite"></p>
+                  </div>
+                </form>
+              </article>
             </div>
           </section>
 
@@ -467,6 +495,16 @@
             </div>
 
             <div class="progress-stats" data-progress-stats></div>
+            <div class="chart-split">
+              <article class="panel">
+                <h3>Riepilogo di oggi</h3>
+                <div data-progress-current-day></div>
+              </article>
+              <article class="panel">
+                <h3>Origine dei dati</h3>
+                <div class="progress-source-list" data-progress-source-list></div>
+              </article>
+            </div>
 
             <div class="progress-layout">
               <article class="panel">
@@ -555,10 +593,6 @@
               <button class="section-link" type="button" data-section-link-target="profile">Dati</button>
             </div>
           </div>
-
-          <div class="section-head">
-          </div>
-
 
           <form data-profile-form novalidate>
             <section class="account-banner">
@@ -714,6 +748,7 @@
         <div class="scanner-head">
           <div>
             <h2 id="scanner-modal-title">Scansiona prodotto</h2>
+            <p class="lookup-hint" data-barcode-scanner-subtitle>Inquadra il barcode del prodotto.</p>
           </div>
           <button class="delete-btn" type="button" aria-label="Chiudi scanner" data-close-barcode-scanner>
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -735,5 +770,13 @@
     <script src="scripts/state.js"></script>
     <script src="scripts/navigation.js"></script>
     <script src="app.js"></script>
+    <script src="scripts/grocery.js"></script>
+    <script src="scripts/devices.js"></script>
+    <script src="scripts/progress.js"></script>
+    <script src="scripts/recipes.js"></script>
+    <script src="scripts/profile.js"></script>
+    <script>
+      window.initializeNutriTrackApp?.();
+    </script>
   </body>
 </html>

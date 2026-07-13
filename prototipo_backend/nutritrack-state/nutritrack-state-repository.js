@@ -2,6 +2,10 @@ const {
   readNutriTrackStateFile,
   writeNutriTrackStateFile,
 } = require("./nutritrack-state-file-store");
+const {
+  buildDatabaseStatus,
+  mirrorNutriTrackStateToPostgres,
+} = require("./nutritrack-state-postgres-store");
 
 function cloneNutriTrackState(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -27,10 +31,12 @@ async function getNutriTrackState() {
 async function saveNutriTrackState(nextState) {
   const sanitizedState = sanitizeNutriTrackStatePayload(nextState);
   await writeNutriTrackStateFile(sanitizedState);
+  await mirrorNutriTrackStateToPostgres(sanitizedState);
   return cloneNutriTrackState(sanitizedState);
 }
 
 module.exports = {
+  getNutriTrackDatabaseStatus: buildDatabaseStatus,
   getNutriTrackState,
   saveNutriTrackState,
 };

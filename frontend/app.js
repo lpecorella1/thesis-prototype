@@ -43,6 +43,7 @@ if (missingBootstrapKeys.length > 0) {
 
 const appState = loadNutriTrackStateFromLocalCache();
 
+// Core date and range helpers shared across modules.
 function formatShortDayLabel(value) {
   const date = new Date(`${value}T12:00:00`);
 
@@ -75,89 +76,7 @@ function getRecentDateKeys(days) {
   return Array.from({ length: days }, (_, index) => getRelativeDateKey(index - (days - 1)));
 }
 
-function setProgressFeedback(message) {
-  const feedback = document.querySelector("[data-progress-feedback]");
-
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
-
-function getRecipeById(recipeId) {
-  if (!recipeId) {
-    return null;
-  }
-
-  const libraryRecipe = recipeLibrary.find((recipe) => recipe.id === recipeId);
-
-  if (libraryRecipe) {
-    return libraryRecipe;
-  }
-
-  if (appState.recipes?.generatedRecipesById?.[recipeId]) {
-    return appState.recipes.generatedRecipesById[recipeId];
-  }
-
-  if (appState.recipes?.currentRecipe?.id === recipeId) {
-    return appState.recipes.currentRecipe;
-  }
-
-  return null;
-}
-
-function slugifyRecipeValue(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
-function ensureGeneratedRecipeStore() {
-  if (!appState.recipes.generatedRecipesById || typeof appState.recipes.generatedRecipesById !== "object") {
-    appState.recipes.generatedRecipesById = {};
-  }
-}
-
-function registerRecipe(recipe) {
-  if (!recipe?.id) {
-    return recipe;
-  }
-
-  ensureGeneratedRecipeStore();
-  appState.recipes.generatedRecipesById[recipe.id] = structuredClone(recipe);
-  return recipe;
-}
-
-function getRecipeDietLabel(value) {
-  const labels = {
-    balanced: "Bilanciata",
-    "high-protein": "High protein",
-    vegetarian: "Vegetariana",
-    vegan: "Vegana",
-  };
-
-  return labels[value] || value;
-}
-
-function getRecipeMealLabel(value) {
-  const labels = {
-    breakfast: "Colazione",
-    lunch: "Pranzo",
-    dinner: "Cena",
-    snack: "Snack",
-  };
-
-  return labels[value] || value;
-}
-
-function setRecipeFeedback(message) {
-  const feedback = document.querySelector("[data-recipe-feedback]");
-
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
-
+// Shared form validation helpers used by section modules.
 function updateFormValidationStyles(form) {
   if (!form) {
     return;
@@ -204,6 +123,7 @@ function bindFormValidationFeedback(form) {
   form.addEventListener("change", refresh);
 }
 
+// Shared nutrition and state helpers used across nutrition, progress, profile, and devices.
 function createNutritionSnapshot(values = {}) {
   return {
     calories: roundMacroValue(normalizeNumber(values.calories) || 0),
@@ -213,6 +133,7 @@ function createNutritionSnapshot(values = {}) {
   };
 }
 
+// Heuristic meal profiling used for quick nutrition estimates.
 function detectMealProfile(name) {
   const normalized = String(name || "").toLowerCase();
   const profiles = [
@@ -299,6 +220,7 @@ function getNutritionDraftForMeal(name) {
   return estimateNutritionFromMealName(name);
 }
 
+// Shared draft and totals helpers for nutrition and progress snapshots.
 function clearNutritionDraft() {
   openFoodFactsRuntime.nutritionLookup = null;
   openFoodFactsRuntime.nutritionDraft = null;
@@ -338,6 +260,7 @@ function getMealDateKey(meal) {
   return isValidDateKey(meal?.date) ? meal.date : getTodayDateKey();
 }
 
+// Automatic daily snapshots bridging nutrition totals and progress history.
 function ensureProgressAutoSnapshots() {
   if (!appState.progress.autoSnapshots || typeof appState.progress.autoSnapshots !== "object") {
     appState.progress.autoSnapshots = {};
@@ -382,6 +305,7 @@ function captureTodayProgressSnapshot(options = {}) {
   return captureProgressSnapshotForDate(getTodayDateKey(), options);
 }
 
+// Shared nutrition feedback for the diary section.
 function setFeedback(message) {
   const feedback = document.querySelector("[data-nutrition-feedback]");
 
@@ -390,242 +314,7 @@ function setFeedback(message) {
   }
 }
 
-function setProfileFeedback(message) {
-  const feedback = document.querySelector("[data-profile-feedback]");
-
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
-
-function setGroceryFeedback(message) {
-  const feedback = document.querySelector("[data-grocery-feedback]");
-
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
-
-function setDevicesFeedback(message) {
-  const feedback = document.querySelector("[data-devices-feedback]");
-
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
-
-function getDeviceConfig(deviceId) {
-  return devicesCatalog.find((device) => device.id === deviceId) || null;
-}
-
-function getDeviceState(deviceId) {
-  return appState.devices.integrations[deviceId] || null;
-}
-
-function getConnectedDevices() {
-  return devicesCatalog.filter((device) => getDeviceState(device.id)?.connected);
-}
-
-function getLatestDevicesSyncAt() {
-  return getConnectedDevices()
-    .map((device) => getDeviceState(device.id)?.lastSyncAt || "")
-    .filter(Boolean)
-    .sort()
-    .at(-1) || "";
-}
-
-function formatDeviceSyncLabel(value) {
-  if (!value) {
-    return "Mai";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  const today = getTodayDateKey();
-  const syncDateKey = date.toISOString().slice(0, 10);
-
-  if (syncDateKey === today) {
-    return `Oggi, ${new Intl.DateTimeFormat("it-IT", { hour: "2-digit", minute: "2-digit" }).format(date)}`;
-  }
-
-  return new Intl.DateTimeFormat("it-IT", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
-function buildEnabledPermissionSummary(device) {
-  const deviceState = getDeviceState(device.id);
-
-  if (!deviceState) {
-    return device.availableLabel;
-  }
-
-  const enabledPermissions = Object.entries(device.permissions)
-    .filter(([key]) => deviceState.permissions[key])
-    .map(([, config]) => config.label.toLowerCase());
-
-  if (enabledPermissions.length === 0) {
-    return "Permessi attivi: nessuno";
-  }
-
-  return `Dati: ${enabledPermissions.join(", ")}`;
-}
-
-function syncSmartwatchData() {
-  const mealsToday = getNutritionTotalsForDate(getTodayDateKey()).count;
-  const completedGroceryItems = appState.grocery.items.filter((item) => item.completed).length;
-
-  return {
-    steps: 4200 + mealsToday * 850 + completedGroceryItems * 180,
-    workoutCalories: 180 + mealsToday * 35,
-  };
-}
-
-function syncScaleData() {
-  const weightKg = normalizeNumber(appState.profile.personal.currentWeightKg);
-  const bmi = calculateBmi(
-    normalizeNumber(appState.profile.personal.heightCm),
-    weightKg
-  );
-
-  return {
-    weightKg,
-    bmi: bmi ? Number(bmi.toFixed(1)) : null,
-    bodyFatPercent: weightKg == null ? null : Number((Math.max(14, 24 - (weightKg % 4))).toFixed(1)),
-  };
-}
-
-function syncStravaData() {
-  const mealsToday = getNutritionTotalsForDate(getTodayDateKey()).count;
-
-  return {
-    distanceKm: Number((4.8 + mealsToday * 1.1).toFixed(1)),
-    durationMin: 32 + mealsToday * 6,
-  };
-}
-
-function syncHealthHubData() {
-  const profileWeight = normalizeNumber(appState.profile.personal.currentWeightKg);
-
-  return {
-    steps: 5600 + appState.grocery.pantry.length * 140,
-    weightKg: profileWeight,
-    sleepHours: 7.4,
-  };
-}
-
-function buildDeviceLatestData(deviceId) {
-  const builders = {
-    smartwatch: syncSmartwatchData,
-    scale: syncScaleData,
-    strava: syncStravaData,
-    healthHub: syncHealthHubData,
-  };
-
-  return builders[deviceId] ? builders[deviceId]() : {};
-}
-
-function syncDevice(deviceId) {
-  const deviceState = getDeviceState(deviceId);
-
-  if (!deviceState?.connected) {
-    return false;
-  }
-
-  deviceState.lastSyncAt = new Date().toISOString();
-  deviceState.latestData = buildDeviceLatestData(deviceId);
-
-  if (deviceId === "scale" && appState.devices.syncPreferences.useConnectedWeightInProfile) {
-    const syncedWeight = normalizeNumber(deviceState.latestData.weightKg);
-
-    if (syncedWeight != null) {
-      appState.profile.personal.currentWeightKg = syncedWeight;
-      captureTodayProgressSnapshot({ weightKg: syncedWeight });
-      renderProfile();
-      renderProgress();
-    }
-  }
-
-  saveState();
-  return true;
-}
-
-function connectDevice(deviceId) {
-  const deviceState = getDeviceState(deviceId);
-
-  if (!deviceState || deviceState.connected) {
-    return false;
-  }
-
-  deviceState.connected = true;
-  syncDevice(deviceId);
-  return true;
-}
-
-function disconnectDevice(deviceId) {
-  const deviceState = getDeviceState(deviceId);
-
-  if (!deviceState || !deviceState.connected) {
-    return false;
-  }
-
-  deviceState.connected = false;
-  deviceState.lastSyncAt = "";
-  deviceState.latestData = {};
-  saveState();
-  return true;
-}
-
-function getDeviceMetaLines(device) {
-  const deviceState = getDeviceState(device.id);
-
-  if (!deviceState?.connected) {
-    return [
-      "Pronto per la connessione",
-      buildEnabledPermissionSummary(device),
-    ];
-  }
-
-  const syncLabel = `Ultimo sync: ${formatDeviceSyncLabel(deviceState.lastSyncAt)}`;
-
-  if (device.id === "scale" && deviceState.latestData.weightKg != null) {
-    return [
-      syncLabel,
-      `Peso: ${deviceState.latestData.weightKg} kg${deviceState.latestData.bmi != null ? ` · BMI ${deviceState.latestData.bmi}` : ""}`,
-    ];
-  }
-
-  if (device.id === "smartwatch" && deviceState.latestData.steps != null) {
-    return [
-      syncLabel,
-      `${deviceState.latestData.steps} passi · ${deviceState.latestData.workoutCalories} kcal attive`,
-    ];
-  }
-
-  if (device.id === "strava" && deviceState.latestData.distanceKm != null) {
-    return [
-      syncLabel,
-      `${deviceState.latestData.distanceKm} km · ${deviceState.latestData.durationMin} min`,
-    ];
-  }
-
-  if (device.id === "healthHub" && deviceState.latestData.steps != null) {
-    return [
-      syncLabel,
-      `${deviceState.latestData.steps} passi · sonno ${deviceState.latestData.sleepHours} h`,
-    ];
-  }
-
-  return [syncLabel, buildEnabledPermissionSummary(device)];
-}
-
+// Shared state normalization for persisted frontend data.
 function normalizeNutritionMeal(meal) {
   return {
     ...meal,
@@ -717,6 +406,7 @@ function normalizeDevicesState(devicesState) {
   };
 }
 
+// Shared grocery/OpenFoodFacts normalization and comparison helpers.
 function localizeGroceryCategory(category) {
   const categoryMap = {
     Produce: "Frutta e verdura",
@@ -812,6 +502,7 @@ function normalizeOpenFoodFactsCategory(product) {
   return "Dispensa";
 }
 
+// Structured OpenFoodFacts normalization and RAG record building.
 function getComparableProductKey(product) {
   if (!product) {
     return "";
@@ -928,6 +619,7 @@ function buildOpenFoodFactsRagRecord(product) {
   };
 }
 
+// Cached product lookup and grocery comparison state helpers.
 function ensureOpenFoodFactsState() {
   if (!appState.datasets) {
     appState.datasets = structuredClone(defaultState.datasets);
@@ -1070,7 +762,6 @@ function getPinnedGroceryComparisonProducts() {
 
 async function fetchOpenFoodFactsProduct(barcode) {
   const normalizedBarcode = sanitizeBarcode(barcode);
-  console.log("[Frontend] Inizio lookup OpenFoodFacts.", { barcode: normalizedBarcode });
 
   if (!normalizedBarcode) {
     throw new Error("Barcode non valido.");
@@ -1079,23 +770,17 @@ async function fetchOpenFoodFactsProduct(barcode) {
   const cachedProduct = getCachedOpenFoodFactsProduct(normalizedBarcode);
 
   if (cachedProduct) {
-    console.log("[Frontend] Prodotto OpenFoodFacts trovato.", { barcode: normalizedBarcode });
     return cachedProduct;
   }
 
-  console.log("[Frontend] Chiamata a OpenFoodFacts.", {
-    url: `/api/openfoodfacts/product/${normalizedBarcode}`
-  });
   const response = await fetch(`/api/openfoodfacts/product/${normalizedBarcode}`);
 
   if (!response.ok) {
     const errorPayload = await response.json().catch(() => null);
-    console.error("[Frontend] Errore da OpenFoodFacts.", errorPayload);
     throw new Error(errorPayload?.error || "OpenFoodFacts non raggiungibile.");
   }
 
   const payload = await response.json();
-  console.log("[Frontend] Risposta OpenFoodFacts ricevuta dal backend.", payload);
 
   const normalizedProduct = normalizeOpenFoodFactsProduct(payload.product, payload.source || "api");
 
@@ -1104,16 +789,11 @@ async function fetchOpenFoodFactsProduct(barcode) {
   }
 
   cacheOpenFoodFactsProduct(normalizedProduct);
-  console.log("[Frontend] Prodotto OpenFoodFacts normalizzato e salvato in cache.", {
-    barcode: normalizedProduct.barcode,
-    name: normalizedProduct.name,
-    nutriscore: normalizedProduct.nutriscoreGrade || null,
-    retrievalSource: normalizedProduct.retrievalSource
-  });
   saveState();
   return normalizedProduct;
 }
 
+// Shared lookup rendering and barcode scanner helpers used by nutrition and grocery.
 function renderLookupResult(containerSelector, product, emptyMessage) {
   const container = document.querySelector(containerSelector);
 
@@ -1150,6 +830,7 @@ function renderLookupResult(containerSelector, product, emptyMessage) {
   `;
 }
 
+// Shared scanner modal state and feedback helpers.
 function setBarcodeScannerStatus(message) {
   const status = document.querySelector("[data-barcode-scanner-status]");
 
@@ -1191,6 +872,7 @@ function openBarcodeScannerModal(target) {
   }
 }
 
+// Shared scanner lifecycle helpers.
 function closeBarcodeScannerModal() {
   const modal = getBarcodeScannerModal();
   const video = document.querySelector("[data-barcode-scanner-video]");
@@ -1223,7 +905,8 @@ function closeBarcodeScannerModal() {
   document.body.style.overflow = "";
 }
 
-function applyProductToNutritionLookup(product, barcode) {
+// Shared scanner result application for nutrition and grocery forms.
+function applyProductToNutritionLookup(product) {
   const form = document.querySelector("[data-nutrition-form]");
 
   if (!form) {
@@ -1252,12 +935,9 @@ function applyProductToGroceryLookup(product, barcode) {
   setGroceryFeedback(`Prodotto ${product.name} collegato a OpenFoodFacts.`);
 }
 
+// Shared live barcode lookup flow.
 async function resolveScannedBarcode(barcode) {
   const target = barcodeScannerRuntime.target;
-  console.log("[Frontend] Barcode rilevato.", {
-    barcode,
-    target
-  });
 
   if (!target || barcodeScannerRuntime.isResolving) {
     return;
@@ -1271,7 +951,7 @@ async function resolveScannedBarcode(barcode) {
     const product = await fetchOpenFoodFactsProduct(barcode);
 
     if (target === "nutrition") {
-      applyProductToNutritionLookup(product, barcode);
+      applyProductToNutritionLookup(product);
     } else if (target === "grocery") {
       applyProductToGroceryLookup(product, barcode);
     }
@@ -1293,6 +973,7 @@ async function resolveScannedBarcode(barcode) {
   }
 }
 
+// Shared live barcode scanning loop and bootstrap.
 function scheduleBarcodeScannerDetection() {
   const video = document.querySelector("[data-barcode-scanner-video]");
 
@@ -1419,6 +1100,7 @@ function setupBarcodeScanner() {
   window.addEventListener("beforeunload", closeBarcodeScannerModal);
 }
 
+// Shared biometric helper used by progress, profile, and devices.
 function calculateBmi(heightCm, weightKg) {
   if (!heightCm || !weightKg) {
     return null;
@@ -1433,1889 +1115,11 @@ function calculateBmi(heightCm, weightKg) {
   return weightKg / (heightMeters * heightMeters);
 }
 
-function getBmiLabel(bmi) {
-  if (!bmi) {
-    return "Profilo incompleto";
-  }
-
-  if (bmi < 18.5) {
-    return "Sottopeso";
-  }
-
-  if (bmi < 25) {
-    return "Normale";
-  }
-
-  if (bmi < 30) {
-    return "Sovrappeso";
-  }
-
-  return "Obesità";
-}
-
-function getActivityMultiplier(level) {
-  const multipliers = {
-    sedentary: 1.2,
-    light: 1.375,
-    moderate: 1.55,
-    active: 1.725,
-    "very-active": 1.9,
-  };
-
-  return multipliers[level] || multipliers.moderate;
-}
-
-function getActivityLabel(level) {
-  const labels = {
-    sedentary: "sedentario",
-    light: "poco attivo",
-    moderate: "moderato",
-    active: "attivo",
-    "very-active": "molto attivo",
-  };
-
-  return labels[level] || labels.moderate;
-}
-
-function calculateProfileRecommendations(personal) {
-  const age = normalizeNumber(personal.age);
-  const heightCm = normalizeNumber(personal.heightCm);
-  const currentWeightKg = normalizeNumber(personal.currentWeightKg);
-  const targetWeightKg = normalizeNumber(personal.targetWeightKg);
-  const gender = personal.gender || "male";
-
-  if (!age || !heightCm || !currentWeightKg) {
-    return {
-      tdee: null,
-      calories: null,
-      protein: null,
-      carbs: null,
-      fats: null,
-      note: "Completa altezza, peso ed età per ottenere obiettivi personalizzati.",
-      calorieNote: "Le raccomandazioni appariranno dopo aver completato il profilo.",
-    };
-  }
-
-  const bmrBase =
-    10 * currentWeightKg +
-    6.25 * heightCm -
-    5 * age +
-    (gender === "female" ? -161 : gender === "male" ? 5 : -78);
-  const tdee = Math.round(bmrBase * getActivityMultiplier(personal.activityLevel));
-
-  let recommendedCalories = tdee;
-  let calorieNote = "Target di mantenimento basato sul tuo profilo.";
-
-  if (targetWeightKg && targetWeightKg < currentWeightKg) {
-    recommendedCalories = Math.round(tdee - 500);
-    calorieNote = "Deficit moderato per supportare la perdita di peso.";
-  } else if (targetWeightKg && targetWeightKg > currentWeightKg) {
-    recommendedCalories = Math.round(tdee + 250);
-    calorieNote = "Surplus moderato per supportare l'aumento di peso.";
-  }
-
-  const protein = Math.round(currentWeightKg * 2);
-  const fats = Math.round((recommendedCalories * 0.25) / 9);
-  const carbs = Math.max(0, Math.round((recommendedCalories - protein * 4 - fats * 9) / 4));
-
-  return {
-    tdee,
-    calories: recommendedCalories,
-    protein,
-    carbs,
-    fats,
-    note: `Basato su un livello di attività ${getActivityLabel(personal.activityLevel)}.`,
-    calorieNote,
-  };
-}
-
-function buildIngredientLine(component) {
-  return `${component.amount} ${component.name}`;
-}
-
-function sumRecipeNutrition(components) {
-  return components.reduce(
-    (totals, component) => ({
-      calories: totals.calories + component.calories,
-      protein: totals.protein + component.protein,
-      carbs: totals.carbs + component.carbs,
-      fats: totals.fats + component.fats,
-    }),
-    { calories: 0, protein: 0, carbs: 0, fats: 0 }
-  );
-}
-
-function getRecentRecipeSignatures(limit = 10) {
-  return appState.recipes.history.slice(0, limit).map((entry) => entry.signature).filter(Boolean);
-}
-
-function getPromptTokens(prompt) {
-  return String(prompt || "")
-    .toLowerCase()
-    .split(/[^a-z0-9àèéìòù]+/i)
-    .filter((token) => token.length >= 3);
-}
-
-function getComparableTokens(value, options = {}) {
-  const includeGenericTokens = options.includeGenericTokens === true;
-  const tokens = normalizeComparableText(value)
-    .split(" ")
-    .filter((token) => token.length >= 3)
-    .filter((token) => !RECIPE_TOKEN_STOPWORDS.has(token));
-
-  const filteredTokens = includeGenericTokens
-    ? tokens
-    : tokens.filter((token) => !RECIPE_GENERIC_TOKENS.has(token));
-
-  return filteredTokens.length > 0 ? filteredTokens : tokens;
-}
-
-function buildRecipeComponentCatalog() {
-  const proteins = {
-    chicken: { name: "pollo grigliato", amount: "160 g di", calories: 260, protein: 34, carbs: 0, fats: 11, diets: ["balanced", "high-protein"], tags: ["pollo", "proteico", "grigliato"] },
-    salmon: { name: "salmone al forno", amount: "150 g di", calories: 310, protein: 30, carbs: 0, fats: 20, diets: ["balanced", "high-protein"], tags: ["salmone", "pesce", "omega"] },
-    turkey: { name: "fesa di tacchino", amount: "160 g di", calories: 220, protein: 36, carbs: 0, fats: 6, diets: ["balanced", "high-protein"], tags: ["tacchino", "lean"] },
-    tofu: { name: "tofu croccante", amount: "180 g di", calories: 250, protein: 22, carbs: 8, fats: 15, diets: ["balanced", "vegetarian", "vegan"], tags: ["tofu", "vegano"] },
-    tempeh: { name: "tempeh saltato", amount: "150 g di", calories: 290, protein: 27, carbs: 16, fats: 14, diets: ["balanced", "vegetarian", "vegan", "high-protein"], tags: ["tempeh", "vegano", "fermentato"] },
-    eggs: { name: "uova strapazzate", amount: "3", calories: 230, protein: 21, carbs: 2, fats: 15, diets: ["balanced", "vegetarian", "high-protein"], tags: ["uova", "colazione", "proteico"] },
-    yogurt: { name: "yogurt greco", amount: "170 g di", calories: 110, protein: 18, carbs: 5, fats: 2, diets: ["balanced", "vegetarian", "high-protein"], tags: ["yogurt", "cremoso"] },
-    hummus: { name: "hummus", amount: "90 g di", calories: 210, protein: 7, carbs: 17, fats: 12, diets: ["balanced", "vegetarian", "vegan"], tags: ["hummus", "ceci"] },
-    beans: { name: "ceci speziati", amount: "170 g di", calories: 260, protein: 13, carbs: 34, fats: 8, diets: ["balanced", "vegetarian", "vegan"], tags: ["ceci", "legumi"] },
-  };
-
-  const carbs = {
-    oats: { name: "fiocchi d'avena", amount: "55 g di", calories: 214, protein: 7, carbs: 36, fats: 4, mealTypes: ["breakfast", "snack"], tags: ["avena", "colazione"] },
-    granola: { name: "granola croccante", amount: "35 g di", calories: 158, protein: 4, carbs: 24, fats: 5, mealTypes: ["breakfast", "snack"], tags: ["granola", "croccante"] },
-    toast: { name: "pane integrale tostato", amount: "2 fette di", calories: 170, protein: 8, carbs: 28, fats: 3, mealTypes: ["breakfast", "snack"], tags: ["toast", "pane"] },
-    rice: { name: "riso integrale", amount: "150 g di", calories: 220, protein: 5, carbs: 46, fats: 2, mealTypes: ["lunch", "dinner"], tags: ["riso", "bowl"] },
-    quinoa: { name: "quinoa", amount: "150 g di", calories: 225, protein: 8, carbs: 39, fats: 4, mealTypes: ["lunch", "dinner"], tags: ["quinoa", "gluten free"] },
-    pasta: { name: "pasta integrale", amount: "85 g di", calories: 298, protein: 11, carbs: 56, fats: 3, mealTypes: ["lunch", "dinner"], tags: ["pasta", "comfort"] },
-    potatoes: { name: "patate arrosto", amount: "220 g di", calories: 210, protein: 5, carbs: 40, fats: 4, mealTypes: ["lunch", "dinner"], tags: ["patate", "forno"] },
-    wrap: { name: "wrap integrale", amount: "1", calories: 190, protein: 7, carbs: 31, fats: 5, mealTypes: ["lunch", "dinner"], tags: ["wrap", "piadina"] },
-    fruit: { name: "frutta fresca", amount: "120 g di", calories: 72, protein: 1, carbs: 18, fats: 0, mealTypes: ["breakfast", "snack"], tags: ["frutta", "dolce"] },
-  };
-
-  const vegetables = {
-    berries: { name: "frutti rossi", amount: "90 g di", calories: 40, protein: 1, carbs: 9, fats: 0, tags: ["frutti", "berries"] },
-    apple: { name: "mela e cannella", amount: "1 porzione di", calories: 78, protein: 0, carbs: 20, fats: 0, tags: ["mela", "cannella"] },
-    banana: { name: "banana a rondelle", amount: "1", calories: 96, protein: 1, carbs: 23, fats: 0, tags: ["banana"] },
-    spinachTomato: { name: "spinaci e pomodorini", amount: "120 g di", calories: 38, protein: 3, carbs: 6, fats: 0, tags: ["spinaci", "pomodorini"] },
-    mediterranean: { name: "verdure mediterranee", amount: "180 g di", calories: 72, protein: 3, carbs: 13, fats: 2, tags: ["zucchine", "peperoni", "pomodorini"] },
-    broccoliCarrot: { name: "broccoli e carote", amount: "180 g di", calories: 84, protein: 5, carbs: 15, fats: 1, tags: ["broccoli", "carote"] },
-    mushrooms: { name: "funghi e zucchine", amount: "170 g di", calories: 58, protein: 4, carbs: 9, fats: 1, tags: ["funghi", "zucchine"] },
-    cucumberTomato: { name: "cetriolo e pomodoro", amount: "160 g di", calories: 42, protein: 2, carbs: 8, fats: 0, tags: ["cetriolo", "pomodoro"] },
-  };
-
-  const extras = {
-    chia: { name: "semi di chia", amount: "10 g di", calories: 49, protein: 2, carbs: 4, fats: 3, tags: ["chia", "fibre"] },
-    nuts: { name: "noci tritate", amount: "12 g di", calories: 78, protein: 2, carbs: 2, fats: 7, tags: ["noci", "crunch"] },
-    avocado: { name: "avocado", amount: "70 g di", calories: 112, protein: 1, carbs: 6, fats: 10, tags: ["avocado", "healthy fats"] },
-    feta: { name: "feta", amount: "35 g di", calories: 93, protein: 5, carbs: 1, fats: 7, tags: ["feta", "mediterraneo"] },
-    parmesan: { name: "parmigiano", amount: "15 g di", calories: 58, protein: 5, carbs: 0, fats: 4, tags: ["parmigiano"] },
-    tahini: { name: "salsa tahina e limone", amount: "18 g di", calories: 95, protein: 3, carbs: 3, fats: 8, tags: ["tahina", "limone"] },
-    pesto: { name: "pesto leggero", amount: "20 g di", calories: 86, protein: 2, carbs: 2, fats: 8, tags: ["pesto"] },
-    yogurtSauce: { name: "salsa yogurt e senape", amount: "35 g di", calories: 42, protein: 4, carbs: 2, fats: 1, tags: ["yogurt", "senape"] },
-  };
-
-  return { proteins, carbs, vegetables, extras };
-}
-
-function getRecipeFormatTemplates(mealType) {
-  const templates = {
-    breakfast: [
-      { id: "bowl", title: "{proteinLabel} Bowl con {vegLabel}", description: "Colazione cremosa e bilanciata, pronta in pochi minuti.", duration: 8, servings: 1, difficulty: "Facile" },
-      { id: "overnight", title: "Overnight {carbLabel} con {vegLabel}", description: "Preparazione da fare in anticipo per una mattina piu semplice.", duration: 10, servings: 1, difficulty: "Facile" },
-      { id: "toast", title: "Toast di {proteinLabel} con {vegLabel}", description: "Colazione salata ad alto potere saziante.", duration: 10, servings: 1, difficulty: "Facile" },
-      { id: "scramble", title: "{proteinLabel} con {carbLabel} e {vegLabel}", description: "Piatto proteico veloce, ottimo anche per brunch.", duration: 12, servings: 1, difficulty: "Facile" },
-    ],
-    snack: [
-      { id: "cup", title: "Cup di {proteinLabel} con {vegLabel}", description: "Snack rapido con buon equilibrio tra proteine e carboidrati.", duration: 6, servings: 1, difficulty: "Facile" },
-      { id: "toast-snack", title: "Toast snack con {proteinLabel} e {vegLabel}", description: "Spuntino piu sostanzioso ma ancora semplice da preparare.", duration: 7, servings: 1, difficulty: "Facile" },
-      { id: "box", title: "Snack box con {proteinLabel} e {vegLabel}", description: "Idea pratica da portare fuori casa o in ufficio.", duration: 5, servings: 1, difficulty: "Facile" },
-    ],
-    lunch: [
-      { id: "bowl", title: "{proteinLabel} Bowl con {carbLabel} e {vegLabel}", description: "Piatto unico completo, adatto a pausa pranzo e meal prep.", duration: 24, servings: 2, difficulty: "Facile" },
-      { id: "wrap", title: "Wrap di {proteinLabel} con {vegLabel}", description: "Pranzo veloce e portabile, con buon bilanciamento dei macro.", duration: 18, servings: 1, difficulty: "Facile" },
-      { id: "pasta", title: "{carbLabel} con {proteinLabel} e {vegLabel}", description: "Versione smart di un comfort food, piu centrata sugli obiettivi nutrizionali.", duration: 26, servings: 2, difficulty: "Media" },
-      { id: "salad", title: "Insalata completa di {proteinLabel} e {vegLabel}", description: "Pranzo fresco, leggero ma con una quota proteica credibile.", duration: 16, servings: 1, difficulty: "Facile" },
-    ],
-    dinner: [
-      { id: "plate", title: "{proteinLabel} con {carbLabel} e {vegLabel}", description: "Cena completa e gestibile anche in settimana.", duration: 28, servings: 2, difficulty: "Facile" },
-      { id: "stirfry", title: "Stir-fry di {proteinLabel} con {vegLabel}", description: "Cena rapida in padella con sapori netti e buon volume.", duration: 20, servings: 2, difficulty: "Facile" },
-      { id: "traybake", title: "Teglia di {proteinLabel} e {vegLabel}", description: "Versione da forno con poca gestione e ottima resa per meal prep.", duration: 32, servings: 2, difficulty: "Facile" },
-      { id: "bowl", title: "Power bowl di {proteinLabel} con {carbLabel}", description: "Cena energizzante pensata per recupero e sazieta'.", duration: 25, servings: 2, difficulty: "Media" },
-    ],
-  };
-
-  return templates[mealType] || templates.dinner;
-}
-
-function getRecipeIngredientVocabulary() {
-  const catalog = buildRecipeComponentCatalog();
-  const values = [
-    ...Object.values(catalog.proteins),
-    ...Object.values(catalog.carbs),
-    ...Object.values(catalog.vegetables),
-    ...Object.values(catalog.extras),
-  ];
-
-  return [...new Set(values.flatMap((item) => getComparableTokens([item.name, ...(item.tags || [])].join(" "))))];
-}
-
-function extractMaxDurationFromPrompt(prompt) {
-  const match = String(prompt || "").match(/(\d+)\s*(?:min|mins|minuti|minute)\b/i);
-
-  if (!match) {
-    return null;
-  }
-
-  const value = Number(match[1]);
-  return Number.isFinite(value) ? value : null;
-}
-
-function parseRecipePromptConstraints(prompt) {
-  const normalizedPrompt = normalizeComparableText(prompt);
-  const ingredientVocabulary = getRecipeIngredientVocabulary();
-  const requestedIngredientTerms = ingredientVocabulary.filter((term) => normalizedPrompt.includes(term));
-
-  return {
-    normalizedPrompt,
-    wantsPantry: /(dispensa|frigo|pantry|ingredienti gia|ingredienti già|quello che ho|quello che c e|quello che c'è)/i.test(prompt),
-    strictPantry: /(usa|utilizza|solo|quello che ho|che ho in dispensa|che ho in frigo|ingredienti gia|ingredienti già)/i.test(prompt),
-    maxDuration: extractMaxDurationFromPrompt(prompt),
-    excludeLactose: /(senza lattosio|lactose free)/i.test(prompt),
-    excludeGluten: /(senza glutine|gluten free)/i.test(prompt),
-    preferHighProtein: /(high protein|proteic|proteica|proteico|ricco di proteine)/i.test(prompt),
-    requestedIngredientTerms,
-  };
-}
-
-function getRecipeSearchText(recipe) {
-  return normalizeComparableText([
-    recipe.title,
-    recipe.description,
-    ...(recipe.ingredients || []),
-    ...(recipe.instructions || []),
-  ].join(" "));
-}
-
-function textContainsComparableToken(text, token) {
-  return getComparableTokens(text, { includeGenericTokens: true }).some(
-    (candidate) => candidate === token || candidate.includes(token) || token.includes(candidate)
-  );
-}
-
-function getRecipeConstraintViolations(recipe, constraints, pantryMatches) {
-  const violations = [];
-  const recipeText = getRecipeSearchText(recipe);
-  const maxDuration = Number(recipe.duration) || 0;
-
-  if (constraints.maxDuration && maxDuration > constraints.maxDuration) {
-    violations.push("max-duration");
-  }
-
-  if (constraints.excludeLactose && /yogurt|feta|parmigiano|latte/.test(recipeText)) {
-    violations.push("exclude-lactose");
-  }
-
-  if (constraints.excludeGluten && /pasta|pane|toast|wrap|granola|avena/.test(recipeText)) {
-    violations.push("exclude-gluten");
-  }
-
-  if (constraints.preferHighProtein) {
-    const proteinTarget = recipe.mealTypes?.includes("snack") || recipe.mealTypes?.includes("breakfast") ? 18 : 25;
-
-    if ((Number(recipe.protein) || 0) < proteinTarget) {
-      violations.push("high-protein");
-    }
-  }
-
-  if (constraints.requestedIngredientTerms.some((term) => !textContainsComparableToken(recipeText, term))) {
-    violations.push("ingredient-term");
-  }
-
-  if (constraints.strictPantry && appState.grocery.pantry.length > 0 && pantryMatches.length === 0) {
-    violations.push("pantry");
-  }
-
-  return violations;
-}
-
-function getRecipeCriteriaNote(violations, constraints) {
-  if (violations.length === 0) {
-    return "";
-  }
-
-  if (violations.includes("pantry") && constraints.wantsPantry) {
-    return "Nessun match diretto con la dispensa.";
-  }
-
-  if (violations.includes("ingredient-term")) {
-    return "Non ho trovato una ricetta che includa tutti gli ingredienti richiesti, quindi ho scelto l'alternativa più coerente.";
-  }
-
-  if (violations.includes("max-duration")) {
-    return "Non ho trovato una ricetta dentro il tempo richiesto, quindi ho scelto l'opzione più vicina.";
-  }
-
-  if (violations.includes("exclude-lactose") || violations.includes("exclude-gluten")) {
-    return "Non ho trovato una ricetta che rispetti completamente tutte le esclusioni richieste.";
-  }
-
-  if (violations.includes("high-protein")) {
-    return "Non ho trovato una ricetta high-protein, quindi ho scelto il compromesso più vicino.";
-  }
-
-  return "";
-}
-
-function getRecipeComponentSets(filters) {
-  const catalog = buildRecipeComponentCatalog();
-  const mealType = filters.mealType;
-  const dietType = filters.dietType;
-  const prompt = String(filters.prompt || "").toLowerCase();
-
-  const proteins = Object.values(catalog.proteins).filter((item) => item.diets.includes(dietType) && (!prompt.includes("senza lattosio") || !/yogurt/.test(item.name)));
-  const carbs = Object.values(catalog.carbs).filter((item) => item.mealTypes.includes(mealType));
-  const vegetables = Object.values(catalog.vegetables);
-  const extras = Object.values(catalog.extras).filter((item) => {
-    if (dietType === "vegan") {
-      return !/feta|parmigiano|yogurt/.test(item.name);
-    }
-
-    return true;
-  });
-
-  return { proteins, carbs, vegetables, extras };
-}
-
-function buildRecipeInstructions(mealType, template, parts) {
-  const intro = {
-    breakfast: `Prepara ${parts.carb.name} e tieni pronta la base proteica.`,
-    snack: `Sistema ${parts.protein.name} e ${parts.vegetable.name} in una bowl o lunch box.`,
-    lunch: `Cuoci ${parts.carb.name} e prepara ${parts.protein.name} come componente principale.`,
-    dinner: `Prepara ${parts.protein.name} e porta a cottura ${parts.carb.name} o l'accompagnamento scelto.`,
-  };
-
-  const finishingVerb = template.id === "traybake" ? "Completa la teglia" : "Completa il piatto";
-
-  return [
-    intro[mealType] || intro.dinner,
-    `Aggiungi ${parts.vegetable.name} e condisci con ${parts.extra.name}.`,
-    `${finishingVerb} regolando sale, spezie ed eventuale succo di limone secondo gusto.`,
-    mealType === "breakfast" || mealType === "snack"
-      ? "Servi subito oppure conserva in frigo se vuoi prepararlo in anticipo."
-      : "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep.",
-  ];
-}
-
-function buildGeneratedRecipeCandidate(filters, template, parts) {
-  const nutrition = sumRecipeNutrition([parts.protein, parts.carb, parts.vegetable, parts.extra]);
-  const title = template.title
-    .replace("{proteinLabel}", parts.protein.name)
-    .replace("{carbLabel}", parts.carb.name)
-    .replace("{vegLabel}", parts.vegetable.name);
-  const signature = slugifyRecipeValue(`${filters.mealType}-${filters.dietType}-${template.id}-${parts.protein.name}-${parts.carb.name}-${parts.vegetable.name}-${parts.extra.name}`);
-  const recipe = {
-    id: `recipe-${signature}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-    title: title.charAt(0).toUpperCase() + title.slice(1),
-    description: template.description,
-    calories: roundMacroValue(nutrition.calories),
-    protein: roundMacroValue(nutrition.protein),
-    carbs: roundMacroValue(nutrition.carbs),
-    fats: roundMacroValue(nutrition.fats),
-    duration: template.duration,
-    servings: template.servings,
-    difficulty: template.difficulty,
-    dietTypes: [filters.dietType],
-    mealTypes: [filters.mealType],
-    ingredients: [
-      buildIngredientLine(parts.protein),
-      buildIngredientLine(parts.carb),
-      buildIngredientLine(parts.vegetable),
-      buildIngredientLine(parts.extra),
-      "Sale, pepe e spezie a piacere",
-    ],
-    instructions: buildRecipeInstructions(filters.mealType, template, parts),
-    generatedAt: new Date().toISOString(),
-    prompt: String(filters.prompt || "").trim(),
-    mode: "generated-local",
-    signature,
-  };
-
-  return recipe;
-}
-
-function buildGeneratedRecipeCandidates(filters) {
-  const templates = getRecipeFormatTemplates(filters.mealType);
-  const { proteins, carbs, vegetables, extras } = getRecipeComponentSets(filters);
-  const candidates = [];
-
-  templates.forEach((template, templateIndex) => {
-    proteins.forEach((protein, proteinIndex) => {
-      carbs.forEach((carb, carbIndex) => {
-        vegetables.forEach((vegetable, vegetableIndex) => {
-          const extra = extras[(templateIndex + proteinIndex + carbIndex + vegetableIndex) % extras.length];
-
-          if (!extra) {
-            return;
-          }
-
-          candidates.push(buildGeneratedRecipeCandidate(filters, template, { protein, carb, vegetable, extra }));
-        });
-      });
-    });
-  });
-
-  return candidates;
-}
-
-function recipeMatchesPrompt(recipe, prompt) {
-  if (!prompt) {
-    return true;
-  }
-
-  const searchableText = [
-    recipe.title,
-    recipe.description,
-    ...recipe.ingredients,
-    ...recipe.instructions,
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  const promptTokens = prompt
-    .toLowerCase()
-    .split(/[^a-z0-9àèéìòù]+/i)
-    .filter((token) => token.length >= 3);
-
-  if (promptTokens.length === 0) {
-    return true;
-  }
-
-  return promptTokens.some((token) => searchableText.includes(token));
-}
-
-function buildRecipeRecommendation(filters) {
-  const targetCalories = Number(filters.caloriesTarget) || 500;
-  const prompt = String(filters.prompt || "").trim();
-  const pantryNames = appState.grocery.pantry.map((item) => item.name.toLowerCase());
-  const recentSignatures = getRecentRecipeSignatures();
-  const constraints = parseRecipePromptConstraints(prompt);
-  const promptTokens = getPromptTokens(prompt);
-  const candidatePool = [
-    ...buildGeneratedRecipeCandidates(filters),
-    ...recipeLibrary
-      .filter((recipe) => recipe.dietTypes.includes(filters.dietType))
-      .filter((recipe) => recipe.mealTypes.includes(filters.mealType))
-      .map((recipe) => ({
-        ...recipe,
-        generatedAt: new Date().toISOString(),
-        prompt,
-        mode: "seed-library",
-        signature: recipe.id,
-      })),
-  ];
-  const rankedRecipes = candidatePool
-    .map((recipe) => {
-      const pantryMatches = getPantryMatchesForRecipe(recipe);
-      const violations = getRecipeConstraintViolations(recipe, constraints, pantryMatches);
-      const calorieDelta = Math.abs(recipe.calories - targetCalories);
-      const pantryBonus = pantryMatches.length * (constraints.wantsPantry ? 70 : 28);
-      const requestedBonus = constraints.wantsPantry && pantryMatches.length > 0 ? 120 : 0;
-      const promptBonus = promptTokens.length > 0 ? Math.min(promptTokens.filter((token) => recipeMatchesPrompt(recipe, token)).length * 18, 72) : 0;
-      const noveltyPenalty = recentSignatures.includes(recipe.signature) ? 180 : 0;
-      const violationPenalty = violations.length * 320;
-
-      return {
-        recipe,
-        pantryMatches,
-        violations,
-        score: calorieDelta + noveltyPenalty + violationPenalty - pantryBonus - requestedBonus - promptBonus,
-      };
-    })
-    .sort((firstItem, secondItem) => firstItem.score - secondItem.score);
-
-  if (rankedRecipes.length === 0) {
-    const emergencyRecipe = {
-      ...recipeLibrary[0],
-      generatedAt: new Date().toISOString(),
-      prompt,
-      mode: "seed-library",
-      signature: recipeLibrary[0].id,
-    };
-
-    registerRecipe(emergencyRecipe);
-    return emergencyRecipe;
-  }
-
-  const topCandidates = rankedRecipes.slice(0, Math.min(6, rankedRecipes.length));
-  const selectableCandidates = topCandidates.length > 0 ? topCandidates : rankedRecipes;
-  const selectionWindow = selectableCandidates.filter((entry) => entry.score <= selectableCandidates[0].score + 90);
-  const fallbackRecipe = selectionWindow[Math.floor(Math.random() * selectionWindow.length)] || rankedRecipes[0];
-  const selectedRecipe = fallbackRecipe.recipe;
-  const pantryMatches = fallbackRecipe.pantryMatches;
-  const criteriaNote = getRecipeCriteriaNote(fallbackRecipe.violations, constraints);
-  const pantryNote =
-    pantryMatches.length > 0
-      ? `Hai già in dispensa: ${pantryMatches.join(", ")}.`
-        : pantryNames.length > 0
-        ? "Nessun match diretto con la dispensa."
-        : "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.";
-
-  const recipe = {
-    ...selectedRecipe,
-    prompt,
-    generatedAt: new Date().toISOString(),
-    pantryMatches,
-    pantryNote,
-    criteriaNote,
-    personalNote: `Suggerita per ${getRecipeMealLabel(filters.mealType).toLowerCase()} ${getRecipeDietLabel(filters.dietType).toLowerCase()} intorno a ${targetCalories} kcal, con priorita a varieta e coerenza nutrizionale.`,
-  };
-
-  registerRecipe(recipe);
-  return recipe;
-}
-
-function saveRecipeToHistory(recipe) {
-  registerRecipe(recipe);
-  appState.recipes.history = [
-    {
-      id: recipe.id,
-      title: recipe.title,
-      generatedAt: recipe.generatedAt,
-      signature: recipe.signature || recipe.id,
-    },
-    ...appState.recipes.history.filter(
-      (entry) => entry.id !== recipe.id && entry.signature !== (recipe.signature || recipe.id)
-    ),
-  ].slice(0, 6);
-}
-
-function buildRecipeAssistantReply(message) {
-  const prompt = message.toLowerCase();
-  const pantryNames = appState.grocery.pantry.map((item) => item.name);
-
-  if (prompt.includes("meal prep")) {
-    return `Per il meal prep ti conviene puntare su 2 basi riutilizzabili: ${pantryNames.includes("Riso integrale") ? "riso integrale" : "un cereale"} e una proteina già cotta. Prepara 3 bowl variando condimenti e verdure, così riduci il tempo nei giorni feriali.`;
-  }
-
-  if (prompt.includes("colazione")) {
-    return "Una buona colazione semplice e bilanciata può partire da overnight oats, yogurt bowl proteica oppure toast salato con uova e verdure, in base al tempo che hai.";
-  }
-
-  if (prompt.includes("cena")) {
-    return `Per una cena veloce puoi partire da ${pantryNames.includes("Petto di pollo") ? "petto di pollo e verdure" : "una bowl proteica"} e tenerti tra 500 e 650 kcal. Se vuoi posso anche strutturarla in ingredienti, passaggi e macro stimati.`;
-  }
-
-  if (prompt.includes("veg") || prompt.includes("vegan") || prompt.includes("vegetar")) {
-    return "Per richieste vegetali possiamo orientarci su tofu, tempeh, ceci o bowl con quinoa, variando salsa e verdure per non ripetere sempre la stessa ricetta.";
-  }
-
-  if (prompt.includes("dispensa") || prompt.includes("ingredient")) {
-    return pantryNames.length > 0
-      ? `In questo momento la dispensa contiene: ${pantryNames.join(", ")}. Posso usarli per proporti una ricetta realistica, con sostituzioni e passaggi essenziali.`
-      : "Dispensa vuota.";
-  }
-
-  return "Posso aiutarti con idee di ricette, meal prep, sostituzioni ingredienti e adattamenti in base a calorie target, tipo di dieta e alimenti gia presenti.";
-}
-
-function formatInlineMarkdown(text) {
-  return escapeHtml(text)
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+?)`/g, "<code>$1</code>");
-}
-
-function renderMarkdownBlock(block) {
-  const trimmed = block.trim();
-
-  if (!trimmed) {
-    return "";
-  }
-
-  if (/^---+$/.test(trimmed)) {
-    return "<hr />";
-  }
-
-  if (/^(\-|\*)\s+/m.test(trimmed) && trimmed.split("\n").every((line) => /^(\-|\*)\s+/.test(line.trim()))) {
-    const items = trimmed
-      .split("\n")
-      .map((line) => line.trim().replace(/^(\-|\*)\s+/, ""))
-      .map((line) => `<li>${formatInlineMarkdown(line)}</li>`)
-      .join("");
-    return `<ul>${items}</ul>`;
-  }
-
-  if (/^\d+\.\s+/m.test(trimmed) && trimmed.split("\n").every((line) => /^\d+\.\s+/.test(line.trim()))) {
-    const items = trimmed
-      .split("\n")
-      .map((line) => line.trim().replace(/^\d+\.\s+/, ""))
-      .map((line) => `<li>${formatInlineMarkdown(line)}</li>`)
-      .join("");
-    return `<ol>${items}</ol>`;
-  }
-
-  return `<p>${trimmed.split("\n").map((line) => formatInlineMarkdown(line)).join("<br />")}</p>`;
-}
-
-function renderChatMarkdown(content) {
-  return String(content || "")
-    .split(/\n{2,}/)
-    .map((block) => renderMarkdownBlock(block))
-    .filter(Boolean)
-    .join("");
-}
-
-function generateRecipeSuggestion(filters) {
-  return buildRecipeRecommendation(filters);
-}
-
-function getRecipeChatOpenFoodFactsKnowledge() {
-  ensureOpenFoodFactsState();
-
-  // I record RAG inviati al backend rappresentano solo prodotti già acquisiti
-  // dall'app tramite scan/lookup OpenFoodFacts. In questo modo il modello usa
-  // il dataset come knowledge base locale, senza sostituire i nutrienti
-  // strutturati che restano gestiti dal flusso deterministico del prodotto.
-  return Object.values(appState.datasets.openFoodFacts.productsByBarcode || {})
-    .slice(0, 24)
-    .map((product) => buildOpenFoodFactsRagRecord(product));
-}
-
-function buildRecipeChatContext() {
-  return {
-    pantry: appState.grocery.pantry.slice(0, 12).map((item) => ({
-      name: item.name,
-      quantity: item.quantity,
-      category: item.category,
-    })),
-    profile: {
-      calories: appState.profile.goals.calories,
-      protein: appState.profile.goals.protein,
-      carbs: appState.profile.goals.carbs,
-      fats: appState.profile.goals.fats,
-      dietType: appState.profile.personal.dietType,
-      activityLevel: appState.profile.personal.activityLevel,
-    },
-    generator: appState.recipes.generator,
-    currentRecipe: appState.recipes.currentRecipe
-      ? {
-          title: appState.recipes.currentRecipe.title,
-          calories: appState.recipes.currentRecipe.calories,
-          protein: appState.recipes.currentRecipe.protein,
-          carbs: appState.recipes.currentRecipe.carbs,
-          fats: appState.recipes.currentRecipe.fats,
-          ingredients: appState.recipes.currentRecipe.ingredients,
-        }
-      : null,
-    openFoodFactsKnowledge: {
-      provider: "OpenFoodFacts",
-      records: getRecipeChatOpenFoodFactsKnowledge(),
-    },
-  };
-}
-
-async function getRecipeAssistantResponse(message) {
-  const history = appState.recipes.chatMessages.slice(-8).map((entry) => ({
-    role: entry.role,
-    content: entry.content,
-  }));
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 20000);
-  console.log("[Frontend] Invio messaggio chat al backend.", {
-    messageLength: message.length
-  });
-  try {
-    const response = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        message,
-        history,
-        context: buildRecipeChatContext(),
-      }),
-      signal: controller.signal,
-    });
-
-    const payload = await response.json();
-    console.log("[Frontend] Risposta chat ricevuta dal backend.", payload);
-
-    if (!response.ok) {
-      throw new Error(payload.error || "Backend non raggiungibile.");
-    }
-
-    if (!payload.reply) {
-      throw new Error("Risposta del backend non valida.");
-    }
-
-    return payload.reply;
-  } catch (error) {
-    if (error.name === "AbortError") {
-      throw new Error("La risposta ha impiegato troppo tempo.");
-    }
-
-    throw error;
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-}
-
-function renderRecipeResult() {
-  const container = document.querySelector("[data-recipe-result]");
-  const recipe = appState.recipes.currentRecipe;
-
-  if (!container) {
-    return;
-  }
-
-  if (!recipe) {
-    container.innerHTML = `
-      <article class="empty-state">
-        <h3>Nessuna ricetta generata</h3>
-        <p>Imposta i criteri qui accanto e genera una proposta basata sui tuoi vincoli reali.</p>
-      </article>
-    `;
-    return;
-  }
-
-  const isSaved = appState.recipes.savedRecipeIds.includes(recipe.id);
-
-  container.innerHTML = `
-    <div class="result-head">
-      <div>
-        <h3>${escapeHtml(recipe.title)}</h3>
-        <p>${escapeHtml(recipe.description)}</p>
-        <div class="inline-meta">
-          <span>${recipe.duration} min</span>
-          <span>${recipe.servings} porzioni</span>
-          <span>${escapeHtml(recipe.difficulty)}</span>
-          <span>${escapeHtml(getRecipeMealLabel(appState.recipes.generator.mealType))}</span>
-        </div>
-      </div>
-      <div class="calorie-badge">
-        <strong>${recipe.calories}</strong>
-        <span>calorie</span>
-      </div>
-    </div>
-    <div class="recipe-actions-row">
-      <button class="primary-btn primary-btn-blue" type="button" data-save-current-recipe>${isSaved ? "Rimuovi dai salvati" : "Salva ricetta"}</button>
-      <button class="recipe-secondary-btn" type="button" data-apply-current-recipe-to-nutrition>Usa nella dieta</button>
-    </div>
-    <div class="macro-pill-row">
-      <span>Proteine ${recipe.protein}g</span>
-      <span>Carboidrati ${recipe.carbs}g</span>
-      <span>Grassi ${recipe.fats}g</span>
-      <span>Generata ${escapeHtml(formatDateTime(recipe.generatedAt))}</span>
-    </div>
-    ${
-      recipe.pantryNote || recipe.criteriaNote
-        ? `
-      <div class="lookup-chip-row">
-        ${recipe.pantryNote ? `<span class="lookup-chip">${escapeHtml(recipe.pantryNote)}</span>` : ""}
-        ${recipe.criteriaNote ? `<span class="lookup-chip">${escapeHtml(recipe.criteriaNote)}</span>` : ""}
-      </div>
-    `
-        : ""
-    }
-    <div class="two-col-copy">
-      <div>
-        <h4>Ingredienti</h4>
-        <ul>
-          ${recipe.ingredients.map((ingredient) => `<li>${escapeHtml(ingredient)}</li>`).join("")}
-        </ul>
-      </div>
-      <div>
-        <h4>Istruzioni</h4>
-        <ol>
-          ${recipe.instructions.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
-        </ol>
-      </div>
-    </div>
-  `;
-}
-
-function renderRecipeHistory() {
-  const container = document.querySelector("[data-recipe-history]");
-
-  if (!container) {
-    return;
-  }
-
-  if (appState.recipes.history.length === 0) {
-    container.innerHTML = `<p class="recipe-side-empty">Nessuna generazione ancora.</p>`;
-    return;
-  }
-
-  container.innerHTML = appState.recipes.history
-    .map(
-      (entry) => `
-        <button class="recipe-history-item" type="button" data-recipe-history-id="${entry.id}">
-          <strong>${escapeHtml(entry.title)}</strong>
-          <span>${escapeHtml(formatDateTime(entry.generatedAt))}</span>
-        </button>
-      `
-    )
-    .join("");
-}
-
-function renderSavedRecipes() {
-  const container = document.querySelector("[data-saved-recipes]");
-
-  if (!container) {
-    return;
-  }
-
-  if (appState.recipes.savedRecipeIds.length === 0) {
-    container.innerHTML = `<p class="recipe-side-empty">Salva le ricette migliori per ritrovarle qui.</p>`;
-    return;
-  }
-
-  container.innerHTML = appState.recipes.savedRecipeIds
-    .map((recipeId) => getRecipeById(recipeId))
-    .filter(Boolean)
-    .map(
-      (recipe) => `
-        <button class="recipe-saved-item" type="button" data-recipe-saved-id="${recipe.id}">
-          <strong>${escapeHtml(recipe.title)}</strong>
-          <span>${recipe.calories} kcal</span>
-        </button>
-      `
-    )
-    .join("");
-}
-
-function renderRecipeChat() {
-  const container = document.querySelector("[data-recipe-chat-messages]");
-
-  if (!container) {
-    return;
-  }
-
-  const messagesMarkup = appState.recipes.chatMessages
-    .map(
-      (message) => `
-        <article class="message-card ${message.role === "user" ? "message-card-user" : ""}">
-          <div class="message-markdown">${message.role === "assistant" ? renderChatMarkdown(message.content) : `<p>${escapeHtml(message.content)}</p>`}</div>
-          <time datetime="${escapeHtml(message.createdAt)}">${escapeHtml(formatDateTime(message.createdAt))}</time>
-        </article>
-      `
-    )
-    .join("");
-  const typingMarkup = recipeChatRuntime.isWaiting
-    ? `
-      <article class="message-card message-card-typing" aria-live="polite">
-        <div class="typing-indicator">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <p>Sto scrivendo...</p>
-      </article>
-    `
-    : "";
-
-  container.innerHTML = `${messagesMarkup}${typingMarkup}`;
-
-  container.scrollTop = container.scrollHeight;
-}
-
-function renderRecipes() {
-  const form = document.querySelector("[data-recipe-generator-form]");
-
-  if (form) {
-    form.elements.dietType.value = appState.recipes.generator.dietType;
-    form.elements.caloriesTarget.value = appState.recipes.generator.caloriesTarget;
-    form.elements.mealType.value = appState.recipes.generator.mealType;
-    form.elements.prompt.value = appState.recipes.generator.prompt;
-  }
-
-  renderRecipeResult();
-  renderRecipeHistory();
-  renderSavedRecipes();
-  renderRecipeChat();
-}
-
-function getSuggestedMealTime(mealType) {
-  const defaults = {
-    breakfast: "08:00",
-    lunch: "13:00",
-    dinner: "20:00",
-    snack: "16:30",
-  };
-
-  return defaults[mealType] || "";
-}
-
-function normalizeComparableText(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9àèéìòù]+/g, " ")
-    .trim();
-}
-
-function parseQuantityLabel(quantityLabel) {
-  const raw = String(quantityLabel || "").trim();
-  const match = raw.match(/(\d+(?:[.,]\d+)?)(?:\s*([a-zA-Zà-ÿ]+))?/);
-
-  if (!match) {
-    return null;
-  }
-
-  const value = normalizeNumber(match[1]);
-  const unit = String(match[2] || "").toLowerCase();
-
-  if (value == null) {
-    return null;
-  }
-
-  return {
-    raw,
-    value,
-    unit,
-  };
-}
-
-function findMatchingRecipeIngredient(recipe, pantryItem) {
-  if (!recipe || !pantryItem) {
-    return null;
-  }
-
-  const pantryName = normalizeComparableText(pantryItem.name);
-  const pantryTokens = getComparableTokens(pantryItem.name);
-
-  return recipe.ingredients.find((ingredient) => {
-    const normalizedIngredient = normalizeComparableText(ingredient);
-    const ingredientTokens = getComparableTokens(ingredient);
-    const hasTokenOverlap = pantryTokens.some((pantryToken) =>
-      ingredientTokens.some(
-        (ingredientToken) =>
-          ingredientToken === pantryToken || ingredientToken.includes(pantryToken) || pantryToken.includes(ingredientToken)
-      )
-    );
-
-    return pantryName && (normalizedIngredient.includes(pantryName) || hasTokenOverlap);
-  }) || null;
-}
-
-function getRecipePantryMatches(recipe) {
-  if (!recipe || !Array.isArray(recipe.ingredients)) {
-    return [];
-  }
-
-  return appState.grocery.pantry.reduce((matches, pantryItem) => {
-    const ingredientLine = findMatchingRecipeIngredient(recipe, pantryItem);
-
-    if (ingredientLine) {
-      matches.push({
-        pantryItem,
-        ingredientLine,
-      });
-    }
-
-    return matches;
-  }, []);
-}
-
-function getPantryMatchesForRecipe(recipe) {
-  return getRecipePantryMatches(recipe).map(({ pantryItem }) => pantryItem.name);
-}
-
-function decreasePantryItemQuantity(pantryItem, ingredientLine) {
-  const pantryQuantity = parseQuantityLabel(pantryItem.quantity);
-  const ingredientQuantity = parseQuantityLabel(ingredientLine);
-
-  if (!pantryQuantity) {
-    return {
-      consumed: true,
-      nextQuantity: "",
-      removed: true,
-      reason: "used-up",
-    };
-  }
-
-  if (!ingredientQuantity) {
-    const nextValue = pantryQuantity.value - 1;
-
-    if (nextValue <= 0) {
-      return {
-        consumed: pantryQuantity.value,
-        nextQuantity: "",
-        removed: true,
-        reason: "used-up",
-      };
-    }
-
-    return {
-      consumed: 1,
-      nextQuantity: formatPantryQuantity(nextValue, pantryQuantity.unit, pantryItem.quantity),
-      removed: false,
-      reason: "count-decrement",
-    };
-  }
-
-  const pantryBase = convertQuantityToBaseUnit(pantryQuantity.value, pantryQuantity.unit);
-  const ingredientBase = convertQuantityToBaseUnit(ingredientQuantity.value, ingredientQuantity.unit);
-
-  if (pantryBase.unit && ingredientBase.unit && pantryBase.unit === ingredientBase.unit) {
-    const nextValue = pantryBase.value - ingredientBase.value;
-
-    if (nextValue <= 0) {
-      return {
-        consumed: ingredientBase.value,
-        nextQuantity: "",
-        removed: true,
-        reason: "unit-consumed",
-      };
-    }
-
-    return {
-      consumed: ingredientBase.value,
-      nextQuantity: formatPantryQuantity(nextValue, pantryBase.unit, pantryItem.quantity),
-      removed: false,
-      reason: "unit-consumed",
-    };
-  }
-
-  const fallbackValue = pantryQuantity.value - 1;
-
-  if (fallbackValue <= 0) {
-    return {
-      consumed: pantryQuantity.value,
-      nextQuantity: "",
-      removed: true,
-      reason: "fallback-decrement",
-    };
-  }
-
-  return {
-    consumed: 1,
-    nextQuantity: formatPantryQuantity(fallbackValue, pantryQuantity.unit, pantryItem.quantity),
-    removed: false,
-    reason: "fallback-decrement",
-  };
-}
-
-function inferRecipeMealType(recipe) {
-  return appState.recipes.generator.mealType || recipe?.mealTypes?.[0] || "lunch";
-}
-
-function createNutritionMealFromRecipe(recipe, mealType = inferRecipeMealType(recipe)) {
-  if (!recipe) {
-    return null;
-  }
-
-  return {
-    id: crypto.randomUUID(),
-    name: recipe.title,
-    date: getTodayDateKey(),
-    time: getSuggestedMealTime(mealType),
-    calories: roundMacroValue(recipe.calories ?? 0),
-    protein: roundMacroValue(recipe.protein ?? 0),
-    carbs: roundMacroValue(recipe.carbs ?? 0),
-    fats: roundMacroValue(recipe.fats ?? 0),
-    barcode: "",
-    source: "recipes",
-    brand: "",
-    nutriscoreGrade: "",
-    nutritionSource: "imported",
-    nutritionSourceLabel: RECIPE_NUTRITION_SOURCE_LABEL,
-  };
-}
-
-function createRecipeNutritionDraft(recipe) {
-  if (!recipe) {
-    return null;
-  }
-
-  return createImportedNutritionDraft(recipe, RECIPE_NUTRITION_SOURCE_LABEL);
-}
-
-function addRecipeToNutritionLog(recipe, mealType = inferRecipeMealType(recipe)) {
-  const meal = createNutritionMealFromRecipe(recipe, mealType);
-
-  if (!meal) {
-    return null;
-  }
-
-  appState.nutrition.meals.push(meal);
-  captureProgressSnapshotForDate(getMealDateKey(meal));
-  return meal;
-}
-
-function consumePantryForRecipe(recipe) {
-  if (!recipe) {
-    return [];
-  }
-
-  const updates = [];
-  const matchedPantryItems = getRecipePantryMatches(recipe);
-
-  matchedPantryItems.forEach(({ pantryItem, ingredientLine }) => {
-    const result = decreasePantryItemQuantity(pantryItem, ingredientLine);
-    const pantryIndex = appState.grocery.pantry.findIndex((item) => item.id === pantryItem.id);
-
-    if (pantryIndex === -1) {
-      return;
-    }
-
-    if (result.removed) {
-      appState.grocery.pantry.splice(pantryIndex, 1);
-    } else {
-      appState.grocery.pantry[pantryIndex] = {
-        ...appState.grocery.pantry[pantryIndex],
-        quantity: result.nextQuantity,
-      };
-    }
-
-    updates.push({
-      pantryItemName: pantryItem.name,
-      ingredientLine,
-      removed: result.removed,
-      nextQuantity: result.nextQuantity,
-    });
-  });
-
-  return updates;
-}
-
-function getRecipeChatAction(message) {
-  const normalizedMessage = normalizeComparableText(message);
-  const addToNutritionIntent =
-    /(aggiung|inserisc|salva|porta)/.test(normalizedMessage) &&
-    /(nutrition|giornata|diario|pasti)/.test(normalizedMessage) &&
-    /(ricett|propost|corrente|quest|past)/.test(normalizedMessage);
-
-  if (addToNutritionIntent) {
-    return { type: "add-current-recipe-to-nutrition" };
-  }
-
-  return null;
-}
-
-function executeRecipeChatAction(action) {
-  if (!action) {
-    return null;
-  }
-
-    if (action.type === "add-current-recipe-to-nutrition") {
-      const recipe = appState.recipes.currentRecipe;
-
-    if (!recipe) {
-      return {
-        success: false,
-        message: "Non ho una ricetta attiva da usare.\n\nGenerane o aprine una nella sezione Alimenti e poi chiedimi di aggiungerla alla Dieta.",
-      };
-    }
-
-      const mealType = inferRecipeMealType(recipe);
-      const addedMeal = addRecipeToNutritionLog(recipe, mealType);
-      const pantryUpdates = consumePantryForRecipe(recipe);
-      saveState();
-      switchToTab("nutrition");
-      renderNutrition();
-      renderGrocery();
-      setFeedback(`Ho aggiunto ${addedMeal.name} ai pasti di oggi dall'area Alimenti.`);
-
-      const pantrySummary =
-        pantryUpdates.length > 0
-        ? pantryUpdates
-            .map((entry) =>
-              `- **${entry.pantryItemName}** -> ${entry.removed ? "esaurito" : `restano ${entry.nextQuantity}`}`
-            )
-            .join("\n")
-        : "- Nessun ingrediente della ricetta era presente in dispensa con un match diretto.";
-
-    return {
-      success: true,
-      message:
-        `Ho aggiunto **${addedMeal.name}** ai pasti di oggi in **Dieta**.\n\n` +
-        `- Orario impostato: ${formatMealTime(addedMeal.time)}\n` +
-        `- Calorie: **${addedMeal.calories} kcal**\n` +
-        `- Proteine: **${addedMeal.protein} g**\n\n` +
-        `---\n\n` +
-        `**Aggiornamento dispensa**\n${pantrySummary}`,
-    };
-  }
-
-  return null;
-}
-
-function applyRecipeToNutrition(recipe, mealType) {
-  const form = document.querySelector("[data-nutrition-form]");
-
-  if (!form || !recipe) {
-    return;
-  }
-
-  clearNutritionDraft();
-  openFoodFactsRuntime.nutritionDraft = createRecipeNutritionDraft(recipe);
-  form.reset();
-  form.elements.name.value = recipe.title;
-  form.elements.time.value = getSuggestedMealTime(mealType);
-  switchToTab("nutrition");
-  setFeedback("Ricetta importata dall'area Alimenti. I valori nutrizionali verranno inseriti automaticamente.");
-}
-
-function setupRecipesSection() {
-  const generatorForm = document.querySelector("[data-recipe-generator-form]");
-  const recipeResult = document.querySelector("[data-recipe-result]");
-  const recipeHistory = document.querySelector("[data-recipe-history]");
-  const savedRecipes = document.querySelector("[data-saved-recipes]");
-  const chatForm = document.querySelector("[data-recipe-chat-form]");
-  const chatResetButton = document.querySelector("[data-recipe-chat-reset]");
-
-  if (!generatorForm || !recipeResult || !recipeHistory || !savedRecipes || !chatForm) {
-    return;
-  }
-
-  generatorForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    const nextFilters = {
-      dietType: generatorForm.elements.dietType.value,
-      caloriesTarget: generatorForm.elements.caloriesTarget.value,
-      mealType: generatorForm.elements.mealType.value,
-      prompt: String(generatorForm.elements.prompt.value || "").trim(),
-    };
-
-    appState.recipes.generator = nextFilters;
-    appState.recipes.currentRecipe = generateRecipeSuggestion(nextFilters);
-    saveRecipeToHistory(appState.recipes.currentRecipe);
-    saveState();
-    renderRecipes();
-    setRecipeFeedback("Ricetta generata correttamente.");
-  });
-
-  recipeResult.addEventListener("click", (event) => {
-    const saveButton = event.target.closest("[data-save-current-recipe]");
-    const applyButton = event.target.closest("[data-apply-current-recipe-to-nutrition]");
-
-    if (applyButton && appState.recipes.currentRecipe) {
-      applyRecipeToNutrition(appState.recipes.currentRecipe, appState.recipes.generator.mealType);
-      return;
-    }
-
-    if (!saveButton || !appState.recipes.currentRecipe) {
-      return;
-    }
-
-    const recipeId = appState.recipes.currentRecipe.id;
-    const isSaved = appState.recipes.savedRecipeIds.includes(recipeId);
-
-    appState.recipes.savedRecipeIds = isSaved
-      ? appState.recipes.savedRecipeIds.filter((id) => id !== recipeId)
-      : [recipeId, ...appState.recipes.savedRecipeIds];
-
-    saveState();
-    renderRecipes();
-    setRecipeFeedback(isSaved ? "Ricetta rimossa dai salvati." : "Ricetta salvata.");
-  });
-
-  recipeHistory.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-recipe-history-id]");
-
-    if (!button) {
-      return;
-    }
-
-    const recipe = getRecipeById(button.dataset.recipeHistoryId);
-
-    if (!recipe) {
-      return;
-    }
-
-    const pantryMatches = getPantryMatchesForRecipe(recipe);
-    appState.recipes.currentRecipe = {
-      ...recipe,
-      pantryMatches,
-      pantryNote: pantryMatches.length ? `Hai già in dispensa: ${pantryMatches.join(", ")}.` : "Ricetta riaperta dallo storico recente.",
-      personalNote: recipe.personalNote || "Ricetta recuperata dallo storico delle generazioni.",
-    };
-
-    saveState();
-    renderRecipes();
-    setRecipeFeedback("Ricetta ricaricata dallo storico.");
-  });
-
-  savedRecipes.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-recipe-saved-id]");
-
-    if (!button) {
-      return;
-    }
-
-    const recipe = getRecipeById(button.dataset.recipeSavedId);
-
-    if (!recipe) {
-      return;
-    }
-
-    const pantryMatches = getPantryMatchesForRecipe(recipe);
-    appState.recipes.currentRecipe = {
-      ...recipe,
-      pantryMatches,
-      pantryNote: pantryMatches.length ? `Hai già in dispensa: ${pantryMatches.join(", ")}.` : "Ricetta aperta dai preferiti.",
-      personalNote: recipe.personalNote || "Ricetta recuperata dall'elenco salvati.",
-    };
-
-    saveState();
-    renderRecipes();
-    setRecipeFeedback("Ricetta aperta dai salvati.");
-  });
-
-  chatForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const message = String(chatForm.elements.message.value || "").trim();
-    console.log("[Frontend] Submit chat intercettato.", {
-      messageLength: message.length
-    });
-
-    if (!message) {
-      return;
-    }
-
-    appState.recipes.chatMessages.push({
-      id: crypto.randomUUID(),
-      role: "user",
-      content: message,
-      createdAt: new Date().toISOString(),
-    });
-
-    const requestedAction = getRecipeChatAction(message);
-
-    if (requestedAction) {
-      const actionResult = executeRecipeChatAction(requestedAction);
-
-      if (actionResult?.message) {
-        appState.recipes.chatMessages.push({
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: actionResult.message,
-          createdAt: new Date().toISOString(),
-        });
-      }
-
-      saveState();
-      renderRecipeChat();
-      chatForm.reset();
-      return;
-    }
-
-    saveState();
-    renderRecipeChat();
-    chatForm.elements.message.value = "";
-
-    const messageField = chatForm.elements.message;
-    const submitButton = chatForm.querySelector('button[type="submit"]');
-
-    messageField.disabled = true;
-    if (submitButton) {
-      submitButton.disabled = true;
-    }
-
-    recipeChatRuntime.isWaiting = true;
-    renderRecipeChat();
-
-    try {
-      const assistantReply = await getRecipeAssistantResponse(message);
-      console.log("[Frontend] Risposta chat pronta per il render.", {
-        replyLength: assistantReply.length
-      });
-
-      appState.recipes.chatMessages.push({
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: assistantReply,
-        createdAt: new Date().toISOString(),
-      });
-
-      saveState();
-      renderRecipeChat();
-      chatForm.reset();
-    } catch (error) {
-      console.error("[Frontend] Errore nella chat backend, attivo fallback locale.", error);
-      const fallbackReply = buildRecipeAssistantReply(message);
-
-      appState.recipes.chatMessages.push({
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: fallbackReply,
-        createdAt: new Date().toISOString(),
-      });
-
-      saveState();
-      renderRecipeChat();
-    } finally {
-      recipeChatRuntime.isWaiting = false;
-      renderRecipeChat();
-      messageField.disabled = false;
-      if (submitButton) {
-        submitButton.disabled = false;
-      }
-    }
-  });
-
-  chatResetButton?.addEventListener("click", () => {
-    appState.recipes.chatMessages = getDefaultRecipeChatMessages();
-    saveState();
-    renderRecipeChat();
-  });
-
-  renderRecipes();
-}
-
-function getProgressLogByDate(dateKey) {
-  return appState.progress.dailyLogs.find((entry) => entry.date === dateKey) || null;
-}
-
-function getResolvedProgressEntry(dateKey) {
-  const log = getProgressLogByDate(dateKey);
-  const todayKey = getTodayDateKey();
-  const nutritionTotals = getNutritionTotalsForDate(dateKey);
-  const autoSnapshot = getProgressAutoSnapshot(dateKey);
-  const currentWeight = normalizeNumber(appState.profile.personal.currentWeightKg);
-  const autoCalories = nutritionTotals.count > 0 ? nutritionTotals.calories : autoSnapshot?.calories ?? null;
-  const autoProtein = nutritionTotals.count > 0 ? nutritionTotals.protein : autoSnapshot?.protein ?? null;
-  const autoWeight = dateKey === todayKey ? currentWeight : autoSnapshot?.weightKg ?? null;
-
-  return {
-    date: dateKey,
-    calories: log?.calories ?? autoCalories,
-    protein: log?.protein ?? autoProtein,
-    waterGlasses: log?.waterGlasses ?? null,
-    weightKg: log?.weightKg ?? autoWeight,
-    hasManualLog: Boolean(log),
-    nutritionMealCount: nutritionTotals.count,
-    isAutoNutrition: (log?.calories == null || log?.protein == null) && (autoCalories != null || autoProtein != null),
-    isAutoWeight: log?.weightKg == null && autoWeight != null,
-    hasAutoSnapshot: Boolean(autoSnapshot),
-  };
-}
-
-function getProgressSeries() {
-  return getRecentDateKeys(getProgressRangeDays()).map(getResolvedProgressEntry);
-}
-
-function getLastKnownWeight(series) {
-  const reversed = [...series].reverse();
-  const entry = reversed.find((item) => item.weightKg != null);
-  return entry?.weightKg ?? normalizeNumber(appState.profile.personal.currentWeightKg);
-}
-
-function calculateAverage(values) {
-  const filteredValues = values.filter((value) => value != null);
-
-  if (filteredValues.length === 0) {
-    return null;
-  }
-
-  return filteredValues.reduce((sum, value) => sum + value, 0) / filteredValues.length;
-}
-
-function buildLineChartMarkup(values, color) {
-  const width = 760;
-  const height = 250;
-  const paddingX = 85;
-  const top = 45;
-  const bottom = 210;
-  const usableWidth = width - paddingX * 2;
-  const filteredValues = values.filter((value) => value != null);
-  const numericValues = values.map((value) => (value == null ? null : Number(value)));
-
-  if (filteredValues.length === 0) {
-    const gridLines = [top, 86, 127, 168, bottom]
-      .map((y) => `<line x1="${paddingX}" y1="${y}" x2="${width - paddingX}" y2="${y}"></line>`)
-      .join("");
-
-    return `
-      <g class="grid">${gridLines}</g>
-      <text class="chart-empty-label" x="${width / 2}" y="${height / 2}" text-anchor="middle">Nessun dato disponibile</text>
-    `;
-  }
-
-  const minValue = Math.min(...filteredValues);
-  const maxValue = Math.max(...filteredValues);
-  const range = maxValue - minValue || 1;
-  const stepX = values.length > 1 ? usableWidth / (values.length - 1) : 0;
-  const gradientId = `progressGradient${color}${values.length}`;
-  const strokeClass = color === "purple" ? "line-purple" : "line-green";
-  const areaClass = color === "purple" ? "area-purple" : "area-green";
-  const pointClass = color === "purple" ? "point-purple" : "point-green";
-
-  const points = numericValues.map((value, index) => {
-    if (value == null) {
-      return null;
-    }
-
-    const x = paddingX + stepX * index;
-    const y = bottom - ((value - minValue) / range) * (bottom - top);
-    return { x, y };
-  });
-
-  const gridLines = [top, 86, 127, 168, bottom]
-    .map((y) => `<line x1="${paddingX}" y1="${y}" x2="${width - paddingX}" y2="${y}"></line>`)
-    .join("");
-  const pathSegments = [];
-  let activeSegment = [];
-
-  points.forEach((point) => {
-    if (!point) {
-      if (activeSegment.length > 0) {
-        pathSegments.push(activeSegment);
-        activeSegment = [];
-      }
-      return;
-    }
-
-    activeSegment.push(point);
-  });
-
-  if (activeSegment.length > 0) {
-    pathSegments.push(activeSegment);
-  }
-
-  const linePath = pathSegments
-    .map((segment) => segment.map((point, index) => `${index === 0 ? "M" : "L"}${point.x} ${point.y}`).join(" "))
-    .join(" ");
-  const circles = points
-    .filter(Boolean)
-    .map((point) => `<circle cx="${point.x}" cy="${point.y}" r="5"></circle>`)
-    .join("");
-  const largestSegment = pathSegments.reduce(
-    (largest, segment) => (segment.length > largest.length ? segment : largest),
-    []
-  );
-  const areaPath =
-    largestSegment.length >= 2
-      ? `${largestSegment.map((point, index) => `${index === 0 ? "M" : "L"}${point.x} ${point.y}`).join(" ")} L${largestSegment[largestSegment.length - 1].x} ${bottom} L${largestSegment[0].x} ${bottom} Z`
-      : "";
-
-  return `
-    <defs>
-      <linearGradient id="${gradientId}" x1="0" x2="0" y1="0" y2="1">
-        <stop offset="0%" stop-color="${color === "purple" ? "#7d58ff" : "#14a16d"}" stop-opacity="0.16" />
-        <stop offset="100%" stop-color="${color === "purple" ? "#7d58ff" : "#14a16d"}" stop-opacity="0" />
-      </linearGradient>
-    </defs>
-    <g class="grid">${gridLines}</g>
-    ${areaPath ? `<path class="area ${areaClass}" style="fill:url(#${gradientId})" d="${areaPath}"></path>` : ""}
-    <path class="line ${strokeClass}" d="${linePath}"></path>
-    <g class="points ${pointClass}">${circles}</g>
-  `;
-}
-
-function renderBarChart(values, barsSelector, labelsSelector) {
-  const bars = document.querySelector(barsSelector);
-  const labels = document.querySelector(labelsSelector);
-
-  if (!bars || !labels) {
-    return;
-  }
-
-  const numericValues = values.map((entry) => entry.value ?? 0);
-  const maxValue = Math.max(...numericValues, 1);
-  const minChartWidth = Math.max(320, values.length * 62);
-
-  bars.style.minWidth = `${minChartWidth}px`;
-  labels.style.minWidth = `${minChartWidth}px`;
-
-  bars.innerHTML = values
-    .map((entry) => {
-      const height = Math.max(16, Math.round(((entry.value ?? 0) / maxValue) * 110));
-      return `<span style="height:${height}px" title="${escapeHtml(`${entry.label}: ${entry.value ?? 0}`)}"></span>`;
-    })
-    .join("");
-
-  labels.innerHTML = values.map((entry) => `<span>${escapeHtml(entry.label)}</span>`).join("");
-}
-
-function setLineChartMinWidth(chartElement, pointCount, pixelsPerPoint = 84) {
-  if (!chartElement) {
-    return;
-  }
-
-  const minChartWidth = Math.max(320, pointCount * pixelsPerPoint);
-  chartElement.style.minWidth = `${minChartWidth}px`;
-}
-
-function renderProgressStats(series) {
-  const container = document.querySelector("[data-progress-stats]");
-
-  if (!container) {
-    return;
-  }
-
-  const weights = series.map((entry) => entry.weightKg).filter((value) => value != null);
-  const firstWeight = weights[0] ?? normalizeNumber(appState.profile.personal.currentWeightKg);
-  const currentWeight = getLastKnownWeight(series);
-  const weightDelta = firstWeight != null && currentWeight != null ? currentWeight - firstWeight : null;
-  const avgCalories = calculateAverage(series.map((entry) => entry.calories));
-  const avgProtein = calculateAverage(series.map((entry) => entry.protein));
-
-  container.innerHTML = `
-    <article class="mini-stat-card progress-mini-stat progress-mini-stat-weight-delta">
-      <span class="progress-mini-stat-accent">Trend</span>
-      <h3>Variazione peso</h3>
-      <strong>${weightDelta == null ? "--" : `${weightDelta > 0 ? "+" : ""}${weightDelta.toFixed(1)} kg`}</strong>
-    </article>
-    <article class="mini-stat-card progress-mini-stat progress-mini-stat-weight-current">
-      <span class="progress-mini-stat-accent">Oggi</span>
-      <h3>Peso attuale</h3>
-      <strong>${currentWeight == null ? "--" : `${currentWeight.toFixed(1)} kg`}</strong>
-    </article>
-    <article class="mini-stat-card progress-mini-stat progress-mini-stat-calories">
-      <span class="progress-mini-stat-accent">Media</span>
-      <h3>Calorie</h3>
-      <strong>${avgCalories == null ? "--" : `${Math.round(avgCalories)} kcal`}</strong>
-    </article>
-    <article class="mini-stat-card progress-mini-stat progress-mini-stat-protein">
-      <span class="progress-mini-stat-accent">Media</span>
-      <h3>Proteine</h3>
-      <strong>${avgProtein == null ? "--" : `${Math.round(avgProtein)} g`}</strong>
-    </article>
-  `;
-}
-
-function renderProgressCurrentDayCard() {
-  const container = document.querySelector("[data-progress-current-day]");
-
-  if (!container) {
-    return;
-  }
-
-  const todayEntry = getResolvedProgressEntry(getTodayDateKey());
-  const waterGoal = normalizeNumber(appState.profile.goals.water) || 0;
-  const nutritionSourceLabel =
-    todayEntry.nutritionMealCount > 0
-      ? `${todayEntry.nutritionMealCount} ${todayEntry.nutritionMealCount === 1 ? "pasto registrato" : "pasti registrati"}`
-      : todayEntry.hasAutoSnapshot
-        ? "snapshot automatico salvato"
-        : "nessun pasto registrato";
-
-  container.innerHTML = `
-    <div class="progress-current-day-card">
-      <strong>Oggi</strong>
-      <span>Calorie: ${todayEntry.calories ?? "--"} kcal</span>
-      <span>Proteine: ${todayEntry.protein ?? "--"} g</span>
-      <span>Peso: ${todayEntry.weightKg == null ? "--" : `${todayEntry.weightKg.toFixed(1)} kg`}</span>
-      <span>Acqua: ${todayEntry.waterGlasses ?? "--"} / ${waterGoal || "--"} bicchieri</span>
-      <span>Dieta: ${nutritionSourceLabel}</span>
-    </div>
-  `;
-}
-
-function renderProgressSourceList() {
-  const container = document.querySelector("[data-progress-source-list]");
-
-  if (!container) {
-    return;
-  }
-
-  const todayEntry = getResolvedProgressEntry(getTodayDateKey());
-  const snapshot = getProgressAutoSnapshot(getTodayDateKey());
-  const items = [
-    {
-      title: "Dieta",
-      body:
-        todayEntry.nutritionMealCount > 0
-          ? `${todayEntry.nutritionMealCount} ${todayEntry.nutritionMealCount === 1 ? "pasto contribuisce" : "pasti contribuiscono"} ai grafici di oggi.`
-          : snapshot?.calories != null || snapshot?.protein != null
-            ? "Uso l'ultimo snapshot giornaliero salvato in automatico."
-            : "Nessun dato nutrizionale storico disponibile per oggi.",
-    },
-    {
-      title: "Dati",
-      body:
-        todayEntry.weightKg != null
-          ? `Peso corrente disponibile: ${todayEntry.weightKg.toFixed(1)} kg.`
-          : "Nessun peso disponibile dall'area Dati per oggi.",
-    },
-  ];
-
-  container.innerHTML = items
-    .map(
-      (item) => `
-        <article class="progress-source-item">
-          <strong>${escapeHtml(item.title)}</strong>
-          <span>${escapeHtml(item.body)}</span>
-        </article>
-      `
-    )
-    .join("");
-}
-
-function renderProgressCharts(series) {
-  const calorieChart = document.querySelector("[data-progress-calorie-chart]");
-  const weightChart = document.querySelector("[data-progress-weight-chart]");
-
-  if (calorieChart) {
-    setLineChartMinWidth(calorieChart, series.length);
-    calorieChart.innerHTML = buildLineChartMarkup(series.map((entry) => entry.calories), "green");
-  }
-
-  if (weightChart) {
-    setLineChartMinWidth(weightChart, series.length);
-    weightChart.innerHTML = buildLineChartMarkup(series.map((entry) => entry.weightKg), "purple");
-  }
-
-  renderBarChart(
-    series.map((entry) => ({ label: formatShortDayLabel(entry.date), value: entry.waterGlasses })),
-    "[data-progress-water-bars]",
-    "[data-progress-water-labels]"
-  );
-}
-
-function syncProgressChartViewport() {
-  const shells = document.querySelectorAll("[data-progress-section] .chart-scroll-shell");
-
-  if (!shells.length) {
-    return;
-  }
-
-  const isCompactViewport = window.matchMedia("(max-width: 840px)").matches;
-
-  requestAnimationFrame(() => {
-    shells.forEach((shell) => {
-      if (!isCompactViewport) {
-        shell.scrollLeft = 0;
-        return;
-      }
-
-      shell.scrollLeft = shell.scrollWidth - shell.clientWidth;
-    });
-  });
-}
-
-function renderProgress() {
-  const series = getProgressSeries();
-  const form = document.querySelector("[data-progress-log-form]");
-
-  document.querySelectorAll("[data-progress-range]").forEach((button) => {
-    button.classList.toggle("range-btn-active", button.dataset.progressRange === appState.progress.selectedRange);
-  });
-
-  if (form && !form.elements.date.value) {
-    form.elements.date.value = getTodayDateKey();
-  }
-
-  renderProgressStats(series);
-  renderProgressCurrentDayCard();
-  renderProgressSourceList();
-  renderProgressCharts(series);
-  syncProgressChartViewport();
-}
-
-function populateProgressForm(dateKey) {
-  const form = document.querySelector("[data-progress-log-form]");
-  const log = getProgressLogByDate(dateKey);
-
-  if (!form) {
-    return;
-  }
-
-  form.elements.date.value = dateKey;
-  form.elements.weightKg.value = log?.weightKg ?? "";
-  form.elements.waterGlasses.value = log?.waterGlasses ?? "";
-  form.elements.calories.value = log?.calories ?? "";
-  form.elements.protein.value = log?.protein ?? "";
-}
-
-function setupProgressSection() {
-  const form = document.querySelector("[data-progress-log-form]");
-  const deleteButton = document.querySelector("[data-progress-delete-log]");
-
-  if (!form || !deleteButton) {
-    return;
-  }
-
-  bindFormValidationFeedback(form);
-
-  document.querySelectorAll("[data-progress-range]").forEach((button) => {
-    button.addEventListener("click", () => {
-      appState.progress.selectedRange = button.dataset.progressRange;
-      saveState();
-      renderProgress();
-    });
-  });
-
-  form.addEventListener("change", (event) => {
-    if (event.target.name === "date") {
-      populateProgressForm(form.elements.date.value);
-      setProgressFeedback("");
-    }
-  });
-
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    markFormValidationAttempt(form);
-
-    const date = String(form.elements.date.value || "").trim();
-
-    if (!date) {
-      setProgressFeedback("Seleziona una data valida.");
-      return;
-    }
-
-    const nextLog = {
-      date,
-      weightKg: normalizeNumber(form.elements.weightKg.value),
-      waterGlasses: normalizeNumber(form.elements.waterGlasses.value),
-      calories: normalizeNumber(form.elements.calories.value),
-      protein: normalizeNumber(form.elements.protein.value),
-    };
-
-    const hasAnyValue = [nextLog.weightKg, nextLog.waterGlasses, nextLog.calories, nextLog.protein].some(
-      (value) => value != null
-    );
-
-    if (!hasAnyValue) {
-      setProgressFeedback("Inserisci almeno un valore manuale oppure usa il pulsante di rimozione.");
-      return;
-    }
-
-    appState.progress.dailyLogs = [
-      ...appState.progress.dailyLogs.filter((entry) => entry.date !== date),
-      nextLog,
-    ].sort((firstEntry, secondEntry) => firstEntry.date.localeCompare(secondEntry.date));
-
-    saveState();
-    renderProgress();
-    populateProgressForm(date);
-    resetFormValidationState(form);
-    setProgressFeedback("Progressi salvati.");
-  });
-
-  deleteButton.addEventListener("click", () => {
-    const date = String(form.elements.date.value || "").trim();
-
-    if (!date) {
-      setProgressFeedback("Seleziona la data dei dati da rimuovere.");
-      return;
-    }
-
-    const initialLength = appState.progress.dailyLogs.length;
-    appState.progress.dailyLogs = appState.progress.dailyLogs.filter((entry) => entry.date !== date);
-
-    if (initialLength === appState.progress.dailyLogs.length) {
-      setProgressFeedback("Non ci sono dati da rimuovere.");
-      return;
-    }
-
-    saveState();
-    renderProgress();
-    populateProgressForm(date);
-    setProgressFeedback("Progressi rimossi.");
-  });
-
-  populateProgressForm(getTodayDateKey());
-  renderProgress();
-}
-
+const nutritionEditorRuntime = {
+  mealId: "",
+};
+
+// Nutrition core rendering and setup remain here because they coordinate shared state.
 function renderNutritionSummary() {
   const totals = getNutritionTotals();
   const { goals } = appState.nutrition;
@@ -3346,6 +1150,7 @@ function renderNutritionSummary() {
   }
 }
 
+// Sync profile goals into the nutrition dashboard summary.
 function syncNutritionGoalsFromProfile() {
   const { calories, protein, carbs, fats } = appState.profile.goals;
 
@@ -3357,32 +1162,7 @@ function syncNutritionGoalsFromProfile() {
   };
 }
 
-function upsertPantryItemFromGrocery(item) {
-  const pantryItem = {
-    id: item.id,
-    name: item.name,
-    quantity: item.quantity,
-    expiryDate: item.expiryDate || "",
-    category: item.category,
-    barcode: item.barcode || "",
-    source: item.source || "manual",
-    nutriscoreGrade: item.nutriscoreGrade || "",
-  };
-  const existingIndex = appState.grocery.pantry.findIndex((entry) => entry.id === item.id);
-
-  if (existingIndex >= 0) {
-    appState.grocery.pantry[existingIndex] = pantryItem;
-  } else {
-    appState.grocery.pantry.push(pantryItem);
-  }
-
-  appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
-}
-
-function removePantryItem(groceryItemId) {
-  appState.grocery.pantry = appState.grocery.pantry.filter((item) => item.id !== groceryItemId);
-}
-
+// Render the list of meals currently tracked for today.
 function renderMeals() {
   const list = document.querySelector("[data-meals-list]");
   const todayMeals = appState.nutrition.meals.filter((meal) => getMealDateKey(meal) === getTodayDateKey());
@@ -3445,490 +1225,159 @@ function renderMeals() {
 function renderNutrition() {
   renderNutritionSummary();
   renderMeals();
+  renderNutritionEditForm();
   renderProgress();
 }
 
-function renderGrocerySummary() {
-  const totalItems = appState.grocery.items.length;
-  const completedItems = appState.grocery.items.filter((item) => item.completed).length;
-  const count = document.querySelector("[data-grocery-count]");
-  const progress = document.querySelector("[data-grocery-progress]");
-  const percentage = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+// Inline nutrition editor state and rendering helpers.
+function getActiveNutritionEditMeal() {
+  return appState.nutrition.meals.find((meal) => meal.id === nutritionEditorRuntime.mealId) || null;
+}
 
-  if (count) {
-    count.textContent = `${completedItems}/${totalItems}`;
-  }
+function setNutritionEditFeedback(message) {
+  const feedback = document.querySelector("[data-nutrition-edit-feedback]");
 
-  if (progress) {
-    progress.style.width = `${percentage}%`;
+  if (feedback) {
+    feedback.textContent = message;
   }
 }
 
-function renderGroceryList() {
-  const list = document.querySelector("[data-grocery-list]");
-
-  if (!list) {
-    return;
-  }
-
-  if (appState.grocery.items.length === 0) {
-    list.innerHTML = `
-      <article class="panel empty-state">
-        <h3>Shopping List vuota</h3>
-        <p>Aggiungi il prossimo prodotto da comprare e costruisci il tuo inventario domestico.</p>
-      </article>
-    `;
-    return;
-  }
-
-  const groupedItems = appState.grocery.items.reduce((groups, item) => {
-    if (!groups[item.category]) {
-      groups[item.category] = [];
-    }
-
-    groups[item.category].push(item);
-    return groups;
-  }, {});
-
-  list.innerHTML = Object.entries(groupedItems)
-    .sort(([firstCategory], [secondCategory]) => firstCategory.localeCompare(secondCategory))
-    .map(
-      ([category, items]) => `
-        <article class="panel category-panel">
-          <div class="category-block">
-            <h3>${escapeHtml(category)}</h3>
-            <div class="category-items">
-          ${items
-            .map((item) => {
-              return `
-                <article class="grocery-item${item.completed ? " is-complete" : ""}">
-                  <div class="grocery-item-top">
-                    <label class="check-row">
-                      <input type="checkbox" ${item.completed ? "checked" : ""} data-grocery-toggle-id="${item.id}" />
-                      <span class="checkbox-ui"></span>
-                      <span>
-                        <strong>${escapeHtml(item.name)}</strong>
-                        <small>${escapeHtml(item.quantity)}</small>
-                        ${
-                          item.nutriscoreGrade
-                            ? `
-                          <div class="lookup-chip-row">
-                            ${item.nutriscoreGrade ? `<span class="lookup-chip ${escapeHtml(getNutriscoreClassName(item.nutriscoreGrade))} nutriscore-chip">${escapeHtml(getNutriscoreLabel(item.nutriscoreGrade))}</span>` : ""}
-                          </div>
-                        `
-                            : ""
-                        }
-                      </span>
-                    </label>
-                    <button class="delete-btn grocery-delete-mobile" type="button" aria-label="Rimuovi prodotto" data-grocery-delete-id="${item.id}">
-                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
-                    </button>
-                  </div>
-                  <div class="inline-actions">
-                    <button class="delete-btn grocery-delete-desktop" type="button" aria-label="Rimuovi prodotto" data-grocery-delete-id="${item.id}">
-                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
-                    </button>
-                  </div>
-                </article>
-              `;
-            })
-            .join("")}
-            </div>
-          </div>
-        </article>
-      `
-    )
-    .join("");
+function closeNutritionEditForm() {
+  nutritionEditorRuntime.mealId = "";
+  setNutritionEditFeedback("");
+  renderNutritionEditForm();
 }
 
-function renderPantry() {
-  const pantryList = document.querySelector("[data-pantry-list]");
-
-  if (!pantryList) {
+function openNutritionEditForm(meal) {
+  if (!meal) {
     return;
   }
 
-  if (appState.grocery.pantry.length === 0) {
-    pantryList.innerHTML = `
-      <article class="empty-pantry">
-        <h3>Nessun alimento salvato in dispensa</h3>
-        <p>Quando completi un acquisto, l'articolo comparira qui come ingrediente disponibile.</p>
-      </article>
-    `;
-    return;
-  }
-
-  pantryList.innerHTML = `
-    <div class="pantry-list-head" aria-hidden="true">
-      <span>Prodotto</span>
-      <span>Quantità / scadenza</span>
-      <span>Categoria</span>
-    </div>
-    <div class="pantry-list-body">
-      ${appState.grocery.pantry
-        .map(
-          (item) => `
-            <article class="pantry-item">
-              <strong>${escapeHtml(item.name)}</strong>
-              <span>${escapeHtml(item.quantity)}${item.expiryDate ? ` • Scad. ${escapeHtml(formatExpiryDate(item.expiryDate))}` : ""}</span>
-              <small>${escapeHtml(item.category)}</small>
-            </article>
-          `
-        )
-        .join("")}
-    </div>
-  `;
+  nutritionEditorRuntime.mealId = meal.id;
+  setNutritionEditFeedback("");
+  renderNutritionEditForm();
 }
 
-function exportOpenFoodFactsRagRecords() {
-  ensureOpenFoodFactsState();
+function renderNutritionEditForm() {
+  const panel = document.querySelector("[data-nutrition-edit-panel]");
+  const form = document.querySelector("[data-nutrition-edit-form]");
+  const title = document.querySelector("[data-nutrition-edit-title]");
+  const meal = getActiveNutritionEditMeal();
 
-  const records = Object.values(appState.datasets.openFoodFacts.productsByBarcode || {})
-    .sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name))
-    .map((product) => buildOpenFoodFactsRagRecord(product));
-
-  if (records.length === 0) {
-    setGroceryFeedback("Non ci sono ancora record OpenFoodFacts da esportare.");
+  if (!panel || !form || !title) {
     return;
   }
 
-  const payload = {
-    exportedAt: new Date().toISOString(),
-    dataset: appState.datasets.openFoodFacts.source,
-    count: records.length,
-    records,
+  if (!meal) {
+    panel.hidden = true;
+    form.reset();
+    resetFormValidationState(form);
+    return;
+  }
+
+  panel.hidden = false;
+  title.textContent = `Correggi ${meal.name}`;
+  form.elements.calories.value = meal.calories;
+  form.elements.protein.value = meal.protein;
+  form.elements.carbs.value = meal.carbs;
+  form.elements.fats.value = meal.fats;
+}
+
+// Shared nutrition meal creation and mutation helpers used by the section wiring.
+function createNutritionMealFromForm(form) {
+  const formData = new FormData(form);
+  const linkedProduct = openFoodFactsRuntime.nutritionLookup;
+  const nutritionDraft = getNutritionDraftForMeal(formData.get("name"));
+
+  return {
+    id: crypto.randomUUID(),
+    name: String(formData.get("name") || "").trim(),
+    date: getTodayDateKey(),
+    time: String(formData.get("time") || "").trim(),
+    calories: nutritionDraft.calories,
+    protein: nutritionDraft.protein,
+    carbs: nutritionDraft.carbs,
+    fats: nutritionDraft.fats,
+    barcode: linkedProduct?.barcode || "",
+    source: linkedProduct ? linkedProduct.source : "manual",
+    brand: linkedProduct?.brand || "",
+    nutriscoreGrade: linkedProduct?.nutriscoreGrade || "",
+    nutritionSource: nutritionDraft.nutritionSource,
+    nutritionSourceLabel: nutritionDraft.nutritionSourceLabel,
   };
-
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "openfoodfacts-rag-records.json";
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-  setGroceryFeedback(`Esportati ${records.length} record RAG OpenFoodFacts.`);
 }
 
-function renderGroceryArOverlay() {
-  const overlay = document.querySelector("[data-grocery-ar-overlay]");
-  const comparisonBasisLabel = "Valori per 100 g/ml di prodotto";
+function isNutritionMealValid(meal) {
+  const hasInvalidNumber = ["calories", "protein", "carbs", "fats"].some((key) => {
+    const value = meal[key];
+    return Number.isNaN(value) || value < 0;
+  });
 
-  if (!overlay) {
-    return;
-  }
-
-  if (!groceryArRuntime.stream) {
-    overlay.innerHTML = "";
-    return;
-  }
-
-  ensureGroceryArState();
-
-  const pinnedProducts = getPinnedGroceryComparisonProducts();
-
-  if (pinnedProducts.length === 0) {
-    overlay.innerHTML = "";
-    return;
-  }
-
-  overlay.innerHTML = pinnedProducts
-    .map(
-      ({ productId, product }) => `
-        <article class="grocery-ar-card">
-          <div class="grocery-ar-card-top">
-            <strong>${escapeHtml(product.name)}</strong>
-            <button class="grocery-ar-remove-btn" type="button" data-grocery-ar-remove-id="${escapeHtml(productId)}" aria-label="Rimuovi ${escapeHtml(product.name)} dal confronto">x</button>
-          </div>
-          <span class="grocery-ar-meta-line">${escapeHtml(product.brand)}</span>
-          <span class="grocery-ar-meta-line">${escapeHtml(product.serving)}</span>
-          ${product.nutriscoreGrade ? `<span class="grocery-ar-meta-line">${escapeHtml(getNutriscoreLabel(product.nutriscoreGrade))}</span>` : ""}
-          <small>${comparisonBasisLabel}</small>
-        </article>
-      `
-    )
-    .join("");
+  return Boolean(meal.name && meal.time && !hasInvalidNumber);
 }
 
-function renderGroceryArComparison() {
-  const comparison = document.querySelector("[data-grocery-ar-comparison]");
-  const comparisonBasisLabel = "Valori per 100 g/ml di prodotto";
-
-  if (!comparison) {
-    return;
-  }
-
-  ensureGroceryArState();
-
-  const pinnedProducts = getPinnedGroceryComparisonProducts();
-  const winner = getGroceryComparisonWinner(pinnedProducts.map((entry) => entry.product));
-
-  if (pinnedProducts.length === 0) {
-    comparison.innerHTML = `
-      <div class="grocery-ar-comparison-empty">
-        Nessun prodotto in confronto.
-      </div>
-    `;
-  } else {
-    comparison.innerHTML = `
-      <div class="grocery-ar-comparison-header">
-        <strong>Confronto</strong>
-        <span>${pinnedProducts.length === 1 ? "Scansiona un secondo prodotto." : "Rimuovi un prodotto con x per sostituirlo."}</span>
-      </div>
-      <div class="grocery-ar-comparison-grid">
-        ${pinnedProducts
-          .map(({ productId, product }) => {
-            const score = calculateGroceryComparisonScore(product);
-            const isWinner =
-              winner && getComparableProductKey(winner.product) === getComparableProductKey(product) && pinnedProducts.length > 1;
-
-            return `
-              <article class="grocery-ar-compare-card">
-                <div class="grocery-ar-card-top">
-                  <strong>${escapeHtml(product.name)}</strong>
-                  <button class="grocery-ar-remove-btn" type="button" data-grocery-ar-remove-id="${escapeHtml(productId)}" aria-label="Rimuovi ${escapeHtml(product.name)} dal confronto">x</button>
-                </div>
-                <span class="grocery-ar-metric-line">Calorie: ${product.calories ?? "--"} kcal</span>
-                <span class="grocery-ar-metric-line">Proteine: ${product.protein ?? "--"} g</span>
-                <span class="grocery-ar-metric-line">Carboidrati: ${product.carbs ?? "--"} g</span>
-                <span class="grocery-ar-metric-line">Grassi: ${product.fats ?? "--"} g</span>
-                <span class="grocery-ar-metric-line">Zuccheri: ${product.sugar ?? "--"} g</span>
-                <span class="grocery-ar-metric-line">Fibre: ${product.fiber ?? "--"} g</span>
-                <small>${comparisonBasisLabel}</small>
-                <div class="grocery-ar-score${product.nutriscoreGrade ? "" : " is-neutral"}">
-                  ${isWinner ? "Scelta consigliata" : product.nutriscoreGrade ? getNutriscoreLabel(product.nutriscoreGrade) : "Nutrition score"}: ${product.nutriscoreGrade ? escapeHtml(String(product.nutriscoreScore ?? product.nutriscoreGrade.toUpperCase())) : score}
-                </div>
-              </article>
-            `;
-          })
-          .join("")}
-      </div>
-    `;
-  }
+function persistNutritionMealChanges(dateKey) {
+  captureProgressSnapshotForDate(dateKey);
+  saveState();
+  renderNutrition();
 }
 
-function renderGrocery() {
-  renderGrocerySummary();
-  renderGroceryList();
-  renderPantry();
-  renderGroceryArOverlay();
-  renderGroceryArComparison();
+function applyManualNutritionCorrection(meal, updatedValues) {
+  Object.assign(meal, updatedValues, {
+    nutritionSource: "manual-correction",
+    nutritionSourceLabel: "Corretto manualmente",
+  });
+
+  persistNutritionMealChanges(getMealDateKey(meal));
 }
 
-function stopGroceryArCamera() {
-  const stage = document.querySelector(".grocery-ar-stage");
-  const video = document.querySelector("[data-grocery-ar-video]");
-  const toggleButton = document.querySelector("[data-grocery-ar-toggle]");
+function removeNutritionMeal(mealId) {
+  const mealToDelete = appState.nutrition.meals.find((meal) => meal.id === mealId);
+  const mealDateKey = mealToDelete ? getMealDateKey(mealToDelete) : getTodayDateKey();
 
-  if (groceryArRuntime.detectionLoopId) {
-    cancelAnimationFrame(groceryArRuntime.detectionLoopId);
-    groceryArRuntime.detectionLoopId = null;
+  if (nutritionEditorRuntime.mealId === mealId) {
+    nutritionEditorRuntime.mealId = "";
+    setNutritionEditFeedback("");
   }
 
-  if (groceryArRuntime.stream) {
-    groceryArRuntime.stream.getTracks().forEach((track) => track.stop());
-    groceryArRuntime.stream = null;
-  }
-
-  if (video) {
-    video.pause();
-    video.srcObject = null;
-  }
-
-  if (stage) {
-    stage.classList.remove("is-live");
-  }
-
-  if (toggleButton) {
-    setGroceryArToggleButtonState(false);
-  }
-
+  appState.nutrition.meals = appState.nutrition.meals.filter((meal) => meal.id !== mealId);
+  persistNutritionMealChanges(mealDateKey);
 }
 
-function scheduleGroceryBarcodeDetection() {
-  const video = document.querySelector("[data-grocery-ar-video]");
-
-  if (!video || !groceryArRuntime.stream || !groceryArRuntime.detector) {
-    return;
-  }
-
-  const detectFrame = async () => {
-    if (!groceryArRuntime.stream || !groceryArRuntime.detector) {
-      return;
-    }
-
-    if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      try {
-        const barcodes = await groceryArRuntime.detector.detect(video);
-        const firstCode = barcodes[0]?.rawValue;
-
-        if (firstCode && appState.grocery.ar.lastDetectedBarcode === firstCode) {
-          groceryArRuntime.detectionLoopId = requestAnimationFrame(detectFrame);
-          return;
-        }
-
-        let matchedProduct = firstCode ? getCachedOpenFoodFactsProduct(firstCode) || getCatalogProductByBarcode(firstCode) : null;
-
-        if (!matchedProduct && firstCode) {
-          appState.grocery.ar.lastDetectedBarcode = firstCode;
-          try {
-            matchedProduct = await fetchOpenFoodFactsProduct(firstCode);
-          } catch (error) {
-            matchedProduct = null;
-          }
-        }
-
-        if (matchedProduct) {
-          ensureGroceryArState();
-
-          appState.grocery.ar.lastDetectedBarcode = firstCode;
-          const pinResult = pinGroceryComparisonProduct(getComparableProductKey(matchedProduct));
-
-          if (pinResult.added) {
-            saveState();
-            renderGroceryArOverlay();
-            renderGroceryArComparison();
-          }
-        }
-      } catch (error) {
-      }
-    }
-
-    groceryArRuntime.detectionLoopId = requestAnimationFrame(detectFrame);
-  };
-
-  groceryArRuntime.detectionLoopId = requestAnimationFrame(detectFrame);
+function resetNutritionFormAfterSubmit(form) {
+  form.reset();
+  resetFormValidationState(form);
+  clearNutritionDraft();
 }
 
-async function startGroceryArCamera() {
-  const video = document.querySelector("[data-grocery-ar-video]");
-  const stage = document.querySelector(".grocery-ar-stage");
-  const toggleButton = document.querySelector("[data-grocery-ar-toggle]");
-
-  if (!video || !stage || groceryArRuntime.isStarting) {
-    return;
-  }
-
-  if (!navigator.mediaDevices?.getUserMedia) {
-    return;
-  }
-
-  groceryArRuntime.isStarting = true;
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: {
-          ideal: "environment",
-        },
-      },
-      audio: false,
-    });
-
-    groceryArRuntime.stream = stream;
-    video.srcObject = stream;
-    await video.play();
-    stage.classList.add("is-live");
-
-    if (toggleButton) {
-      setGroceryArToggleButtonState(true);
-    }
-
-    if ("BarcodeDetector" in window) {
-      groceryArRuntime.detector = new window.BarcodeDetector({
-        formats: ["ean_13", "ean_8", "upc_a", "upc_e", "qr_code"],
-      });
-      scheduleGroceryBarcodeDetection();
-    } else {
-      groceryArRuntime.detector = null;
-    }
-  } catch (error) {
-    stopGroceryArCamera();
-  } finally {
-    groceryArRuntime.isStarting = false;
-  }
-}
-
-function promptMealNutritionCorrection(meal) {
-  const fields = [
-    { key: "calories", label: "Calorie (kcal)" },
-    { key: "protein", label: "Proteine (g)" },
-    { key: "carbs", label: "Carboidrati (g)" },
-    { key: "fats", label: "Grassi (g)" },
-  ];
-  const updatedValues = {};
-
-  for (const field of fields) {
-    const nextValue = window.prompt(`${field.label} per ${meal.name}`, String(meal[field.key] ?? 0));
-
-    if (nextValue === null) {
-      return null;
-    }
-
-    const normalizedValue = normalizeNumber(nextValue);
-
-    if (normalizedValue === null || normalizedValue < 0) {
-      return undefined;
-    }
-
-    updatedValues[field.key] = roundMacroValue(normalizedValue);
-  }
-
-  return updatedValues;
-}
-
+// Nutrition section event binding and persistence flow.
 function setupNutritionSection() {
   const form = document.querySelector("[data-nutrition-form]");
   const mealsList = document.querySelector("[data-meals-list]");
+  const editForm = document.querySelector("[data-nutrition-edit-form]");
+  const editCancelButton = document.querySelector("[data-nutrition-edit-cancel]");
 
-  if (!form || !mealsList) {
+  if (!form || !mealsList || !editForm || !editCancelButton) {
     return;
   }
 
   bindFormValidationFeedback(form);
+  bindFormValidationFeedback(editForm);
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     markFormValidationAttempt(form);
 
-    const formData = new FormData(form);
-    const linkedProduct = openFoodFactsRuntime.nutritionLookup;
-    const nutritionDraft = getNutritionDraftForMeal(formData.get("name"));
-    const meal = {
-      id: crypto.randomUUID(),
-      name: String(formData.get("name") || "").trim(),
-      date: getTodayDateKey(),
-      time: String(formData.get("time") || "").trim(),
-      calories: nutritionDraft.calories,
-      protein: nutritionDraft.protein,
-      carbs: nutritionDraft.carbs,
-      fats: nutritionDraft.fats,
-      barcode: linkedProduct?.barcode || "",
-      source: linkedProduct ? linkedProduct.source : "manual",
-      brand: linkedProduct?.brand || "",
-      nutriscoreGrade: linkedProduct?.nutriscoreGrade || "",
-      nutritionSource: nutritionDraft.nutritionSource,
-      nutritionSourceLabel: nutritionDraft.nutritionSourceLabel,
-    };
+    const meal = createNutritionMealFromForm(form);
 
-    const hasInvalidNumber = ["calories", "protein", "carbs", "fats"].some((key) => {
-      const value = meal[key];
-      return Number.isNaN(value) || value < 0;
-    });
-
-    if (!meal.name || !meal.time || hasInvalidNumber) {
+    if (!isNutritionMealValid(meal)) {
       setFeedback("Completa almeno nome e orario con valori validi.");
       return;
     }
 
     appState.nutrition.meals.push(meal);
-    captureProgressSnapshotForDate(getMealDateKey(meal));
-    saveState();
-    renderNutrition();
-    form.reset();
-    resetFormValidationState(form);
-    clearNutritionDraft();
+    persistNutritionMealChanges(getMealDateKey(meal));
+    resetNutritionFormAfterSubmit(form);
     setFeedback(`${meal.nutritionSourceLabel || "Valori nutrizionali"} salvati. Puoi correggerli dal pasto appena creato.`);
   });
 
@@ -3943,26 +1392,8 @@ function setupNutritionSection() {
         return;
       }
 
-      const updatedValues = promptMealNutritionCorrection(meal);
-
-      if (updatedValues === null) {
-        setFeedback("Correzione annullata.");
-        return;
-      }
-
-      if (updatedValues === undefined) {
-        setFeedback("Inserisci solo numeri validi per correggere i valori nutrizionali.");
-        return;
-      }
-
-      Object.assign(meal, updatedValues, {
-        nutritionSource: "manual-correction",
-        nutritionSourceLabel: "Corretto manualmente",
-      });
-      captureProgressSnapshotForDate(getMealDateKey(meal));
-      saveState();
-      renderNutrition();
-      setFeedback("Valori nutrizionali aggiornati manualmente.");
+      openNutritionEditForm(meal);
+      resetFormValidationState(editForm);
       return;
     }
 
@@ -3970,726 +1401,70 @@ function setupNutritionSection() {
       return;
     }
 
-    const { deleteMealId } = button.dataset;
-    const mealToDelete = appState.nutrition.meals.find((meal) => meal.id === deleteMealId);
-    const mealDateKey = mealToDelete ? getMealDateKey(mealToDelete) : getTodayDateKey();
-    appState.nutrition.meals = appState.nutrition.meals.filter((meal) => meal.id !== deleteMealId);
-    captureProgressSnapshotForDate(mealDateKey);
-    saveState();
-    renderNutrition();
+    removeNutritionMeal(button.dataset.deleteMealId);
     setFeedback("Pasto rimosso.");
+  });
+
+  editForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    markFormValidationAttempt(editForm);
+
+    const meal = getActiveNutritionEditMeal();
+
+    if (!meal) {
+      closeNutritionEditForm();
+      return;
+    }
+
+    const rawValues = {
+      calories: normalizeNumber(editForm.elements.calories.value),
+      protein: normalizeNumber(editForm.elements.protein.value),
+      carbs: normalizeNumber(editForm.elements.carbs.value),
+      fats: normalizeNumber(editForm.elements.fats.value),
+    };
+    const updatedValues = {
+      calories: rawValues.calories === null ? null : roundMacroValue(rawValues.calories),
+      protein: rawValues.protein === null ? null : roundMacroValue(rawValues.protein),
+      carbs: rawValues.carbs === null ? null : roundMacroValue(rawValues.carbs),
+      fats: rawValues.fats === null ? null : roundMacroValue(rawValues.fats),
+    };
+
+    const hasInvalidNumber = Object.values(updatedValues).some((value) => value === null || value < 0);
+
+    if (hasInvalidNumber) {
+      setNutritionEditFeedback("Inserisci solo numeri validi per correggere i valori nutrizionali.");
+      return;
+    }
+
+    applyManualNutritionCorrection(meal, updatedValues);
+    closeNutritionEditForm();
+    setFeedback("Valori nutrizionali aggiornati manualmente.");
+  });
+
+  editCancelButton.addEventListener("click", () => {
+    closeNutritionEditForm();
+    setFeedback("Correzione annullata.");
   });
 
   renderNutrition();
 }
 
-function setupGrocerySection() {
-  const form = document.querySelector("[data-grocery-form]");
-  const list = document.querySelector("[data-grocery-list]");
-  const clearCompletedButton = document.querySelector("[data-clear-completed]");
-  const arToggleButton = document.querySelector("[data-grocery-ar-toggle]");
-  const arClearButton = document.querySelector("[data-grocery-ar-clear]");
-
-  if (!form || !list || !clearCompletedButton || !arToggleButton || !arClearButton) {
+// Core app bootstrap kept in app.js as the shared entrypoint.
+function initializeNutriTrackApp() {
+  if (initializeNutriTrackApp.hasRun) {
     return;
   }
 
-  bindFormValidationFeedback(form);
+  initializeNutriTrackApp.hasRun = true;
 
-  ensureGroceryArState();
-
-  if (appState.grocery.pantry.length === 0) {
-    appState.grocery.items
-      .filter((item) => item.completed)
-      .forEach((item) => upsertPantryItemFromGrocery(item));
-  }
-
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    markFormValidationAttempt(form);
-
-    const formData = new FormData(form);
-    const linkedProduct = openFoodFactsRuntime.groceryLookup;
-    const item = {
-      id: crypto.randomUUID(),
-      name: String(formData.get("name") || "").trim(),
-      quantity: String(formData.get("quantity") || "").trim(),
-      expiryDate: String(formData.get("expiryDate") || "").trim(),
-      category: String(formData.get("category") || "").trim(),
-      completed: false,
-      barcode: linkedProduct?.barcode || sanitizeBarcode(formData.get("barcode")),
-      source: linkedProduct?.source || "manual",
-      nutriscoreGrade: linkedProduct?.nutriscoreGrade || "",
-    };
-
-    if (!item.name || !item.quantity || !item.category) {
-      setGroceryFeedback("Completa tutti i campi per aggiungere un prodotto.");
-      return;
-    }
-
-    appState.grocery.items.push(item);
-    saveState();
-    renderGrocery();
-    form.reset();
-    resetFormValidationState(form);
-    form.elements.category.value = "Frutta e verdura";
-    openFoodFactsRuntime.groceryLookup = null;
-    form.elements.barcode.value = "";
-    renderLookupResult("[data-off-grocery-result]", null, "");
-    setGroceryFeedback("Prodotto salvato nella lista della spesa.");
-  });
-
-  list.addEventListener("click", (event) => {
-    const arCompareButton = event.target.closest("[data-grocery-ar-item-id]");
-
-    if (arCompareButton) {
-      const matchedProduct = getComparableProductByKey(arCompareButton.dataset.groceryArItemId);
-
-      if (!matchedProduct) {
-        return;
-      }
-
-      const pinResult = pinGroceryComparisonProduct(getComparableProductKey(matchedProduct));
-
-      if (pinResult.added) {
-        saveState();
-        renderGroceryArOverlay();
-        renderGroceryArComparison();
-      }
-      return;
-    }
-
-    const deleteButton = event.target.closest("[data-grocery-delete-id]");
-
-    if (deleteButton) {
-      const { groceryDeleteId } = deleteButton.dataset;
-      appState.grocery.items = appState.grocery.items.filter((item) => item.id !== groceryDeleteId);
-      saveState();
-      renderGrocery();
-      setGroceryFeedback("Prodotto rimosso dalla lista.");
-      return;
-    }
-
-    const toggle = event.target.closest("[data-grocery-toggle-id]");
-
-    if (toggle) {
-      const nextCompleted = toggle.checked;
-
-      appState.grocery.items = appState.grocery.items.map((item) =>
-        item.id === toggle.dataset.groceryToggleId
-          ? { ...item, completed: nextCompleted }
-          : item
-      );
-
-      const updatedItem = appState.grocery.items.find((item) => item.id === toggle.dataset.groceryToggleId);
-
-      if (updatedItem && nextCompleted) {
-        upsertPantryItemFromGrocery(updatedItem);
-      } else if (updatedItem && !nextCompleted) {
-        removePantryItem(updatedItem.id);
-      }
-
-      saveState();
-      renderGrocery();
-      setGroceryFeedback(nextCompleted ? "Prodotto acquistato e salvato in dispensa." : "Prodotto nella lista della spesa.");
-    }
-  });
-
-  arToggleButton.addEventListener("click", async () => {
-    if (groceryArRuntime.stream) {
-      stopGroceryArCamera();
-      return;
-    }
-
-    await startGroceryArCamera();
-  });
-
-  arClearButton.addEventListener("click", () => {
-    ensureGroceryArState();
-    appState.grocery.ar.pinnedProductIds = [];
-    appState.grocery.ar.lastDetectedBarcode = "";
-    saveState();
-    renderGroceryArOverlay();
-    renderGroceryArComparison();
-  });
-
-  const arPanel = document.querySelector(".grocery-ar-panel");
-
-  arPanel?.addEventListener("click", (event) => {
-    const removeButton = event.target.closest("[data-grocery-ar-remove-id]");
-
-    if (!removeButton) {
-      return;
-    }
-
-    const removedProduct = getComparableProductByKey(removeButton.dataset.groceryArRemoveId);
-    unpinGroceryComparisonProduct(removeButton.dataset.groceryArRemoveId);
-    saveState();
-    renderGroceryArOverlay();
-    renderGroceryArComparison();
-  });
-
-  clearCompletedButton.addEventListener("click", () => {
-    const completedCount = appState.grocery.items.filter((item) => item.completed).length;
-
-    if (completedCount === 0) {
-      setGroceryFeedback("Non ci sono prodotti completati da rimuovere.");
-      return;
-    }
-
-    appState.grocery.items = appState.grocery.items.filter((item) => !item.completed);
-    saveState();
-    renderGrocery();
-    setGroceryFeedback("Prodotti completati spostati in dispensa.");
-  });
-
-  window.addEventListener("beforeunload", stopGroceryArCamera);
-  renderGrocery();
+  syncNutritionGoalsFromProfile();
+  captureTodayProgressSnapshot();
+  saveState();
+  setupBarcodeScanner();
+  setupNutritionSection();
+  setupProgressSection();
+  hydrateNutriTrackStateFromApi();
 }
 
-function renderProfile() {
-  const form = document.querySelector("[data-profile-form]");
-
-  if (!form) {
-    return;
-  }
-
-  const { personal, medical, goals } = appState.profile;
-
-  form.elements.fullName.value = personal.fullName;
-  form.elements.age.value = personal.age;
-  form.elements.gender.value = personal.gender;
-  form.elements.heightCm.value = personal.heightCm;
-  form.elements.currentWeightKg.value = personal.currentWeightKg;
-  form.elements.targetWeightKg.value = personal.targetWeightKg;
-  form.elements.activityLevel.value = personal.activityLevel;
-
-  form.elements.allergies.value = medical.allergies;
-  form.elements.medications.value = medical.medications;
-  form.elements.medicalConditions.value = medical.medicalConditions;
-  form.elements.bloodType.value = medical.bloodType;
-
-  form.elements.goalCalories.value = goals.calories;
-  form.elements.goalProtein.value = goals.protein;
-  form.elements.goalCarbs.value = goals.carbs;
-  form.elements.goalFats.value = goals.fats;
-  form.elements.goalWater.value = goals.water;
-
-  document.querySelectorAll("[data-diet-type]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.dietType === personal.dietType);
-  });
-
-  const bmi = calculateBmi(normalizeNumber(personal.heightCm), normalizeNumber(personal.currentWeightKg));
-  const bmiDisplay = document.querySelector("[data-bmi-display]");
-
-  if (bmiDisplay) {
-    bmiDisplay.innerHTML = bmi
-      ? `${bmi.toFixed(1)} <em>${getBmiLabel(bmi)}</em>`
-      : `-- <em>${getBmiLabel(bmi)}</em>`;
-  }
-
-  const recommendations = calculateProfileRecommendations(personal);
-
-  const recommendationMap = {
-    tdee: recommendations.tdee ? `${recommendations.tdee} kcal` : "--",
-    calories: recommendations.calories ? `${recommendations.calories} kcal` : "--",
-    protein: recommendations.protein ? `${recommendations.protein}g` : "--",
-    carbs: recommendations.carbs ? `${recommendations.carbs}g` : "--",
-    fats: recommendations.fats ? `${recommendations.fats}g` : "--",
-  };
-
-  Object.entries(recommendationMap).forEach(([key, value]) => {
-    const element = document.querySelector(`[data-profile-recommendation="${key}"]`);
-
-    if (element) {
-      element.textContent = value;
-    }
-  });
-
-  const note = document.querySelector("[data-profile-recommendation-note]");
-  const calorieNote = document.querySelector("[data-profile-goal-note]");
-
-  if (note) {
-    note.textContent = recommendations.note;
-  }
-
-  if (calorieNote) {
-    calorieNote.textContent = recommendations.calorieNote;
-  }
-
-  renderProgress();
-  renderDevices();
-}
-
-function renderDevicesSummary() {
-  const container = document.querySelector("[data-devices-summary]");
-
-  if (!container) {
-    return;
-  }
-
-  const connectedCount = getConnectedDevices().length;
-  const latestSyncAt = getLatestDevicesSyncAt();
-
-  container.innerHTML = `
-    <article>
-      <strong>${devicesCatalog.length}</strong>
-      <span>integrazioni disponibili</span>
-    </article>
-    <article>
-      <strong>${connectedCount}</strong>
-      <span>connessioni attive</span>
-    </article>
-    <article>
-      <strong>${latestSyncAt ? formatDeviceSyncLabel(latestSyncAt) : "--"}</strong>
-      <span>ultimo sync</span>
-    </article>
-  `;
-}
-
-function renderDevicesGrid() {
-  const container = document.querySelector("[data-devices-grid]");
-
-  if (!container) {
-    return;
-  }
-
-  container.innerHTML = devicesCatalog
-    .map((device) => {
-      const deviceState = getDeviceState(device.id);
-      const isConnected = Boolean(deviceState?.connected);
-      const metaLines = getDeviceMetaLines(device);
-
-      return `
-        <article class="device-card${isConnected ? " is-connected" : ""}">
-          <div class="device-top">
-            <div>
-              <span class="device-badge ${escapeHtml(device.badgeClass)}">${escapeHtml(device.badgeLabel)}</span>
-              <h3>${escapeHtml(device.title)}</h3>
-              <p>${escapeHtml(device.description)}</p>
-            </div>
-            <span class="status-pill${isConnected ? " connected" : ""}">${isConnected ? "Connesso" : escapeHtml(device.disconnectedLabel)}</span>
-          </div>
-          <div class="device-meta">
-            ${metaLines.map((line) => `<span>${escapeHtml(line)}</span>`).join("")}
-          </div>
-          <div class="device-actions">
-            ${
-              isConnected
-                ? `
-              <button class="ghost-btn" type="button" data-device-sync="${escapeHtml(device.id)}">Sync ora</button>
-              <button class="ghost-btn danger" type="button" data-device-disconnect="${escapeHtml(device.id)}">Disconnetti</button>
-            `
-                : `<button class="ghost-btn primary" type="button" data-device-connect="${escapeHtml(device.id)}">${escapeHtml(device.connectLabel)}</button>`
-            }
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-}
-
-function renderDevicesPermissionsPanel() {
-  const panel = document.querySelector("[data-devices-permissions-panel]");
-
-  if (!panel) {
-    return;
-  }
-
-  panel.hidden = !appState.devices.showPermissionsPanel;
-
-  if (panel.hidden) {
-    panel.innerHTML = "";
-    return;
-  }
-
-  const connectedDevices = getConnectedDevices();
-
-  if (connectedDevices.length === 0) {
-    panel.innerHTML = `
-      <h3>Permessi integrazioni</h3>
-      <p class="save-hint">Collega almeno un dispositivo per gestire i permessi dei dati condivisi.</p>
-    `;
-    return;
-  }
-
-  panel.innerHTML = `
-    <h3>Permessi integrazioni</h3>
-    <div class="sync-options">
-      ${connectedDevices
-        .map((device) => {
-          const deviceState = getDeviceState(device.id);
-          return `
-            <div class="sync-row">
-              <span class="sync-row-copy">
-                <span class="sync-row-head">
-                  <strong>${escapeHtml(device.title)}</strong>
-                </span>
-                <small>${escapeHtml(device.description)}</small>
-                <div class="lookup-chip-row">
-                  ${Object.entries(device.permissions)
-                    .map(
-                      ([key, config]) => `
-                        <label class="lookup-chip">
-                          <input type="checkbox" data-device-permission="${escapeHtml(device.id)}" data-device-permission-key="${escapeHtml(key)}" ${deviceState.permissions[key] ? "checked" : ""} />
-                          ${escapeHtml(config.label)}
-                        </label>
-                      `
-                    )
-                    .join("")}
-                </div>
-              </span>
-            </div>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
-}
-
-function renderDevicesManagePermissionsButton() {
-  const button = document.querySelector("[data-devices-manage-permissions]");
-
-  if (!button) {
-    return;
-  }
-
-  button.textContent = appState.devices.showPermissionsPanel ? "Gestisci permessi ↑" : "Gestisci permessi ↓";
-}
-
-function renderDevicesSyncOptions() {
-  const container = document.querySelector("[data-devices-sync-options]");
-
-  if (!container) {
-    return;
-  }
-
-  const options = [
-    {
-      key: "autoSyncDaily",
-      title: "Auto-sync ogni giorno",
-      description: "Aggiorna automaticamente i dati connessi di salute e nutrizione.",
-    },
-    {
-      key: "importWorkoutCalories",
-      title: "Importa le calorie dei workout nel monitoraggio dieta",
-      description: "Usa i dati di attività esterni per aggiornare la stima delle calorie bruciate.",
-    },
-    {
-      key: "useConnectedWeightInProfile",
-      title: "Usa i dati di peso connessi nei dati personali",
-      description: "Aggiorna le metriche corporee dalle misurazioni della bilancia smart.",
-    },
-  ];
-
-  container.innerHTML = options
-    .map(
-      (option) => `
-        <label class="sync-row">
-          <span class="sync-row-copy">
-            <span class="sync-row-head">
-              <strong>${escapeHtml(option.title)}</strong>
-              <input type="checkbox" data-device-sync-pref="${escapeHtml(option.key)}" ${appState.devices.syncPreferences[option.key] ? "checked" : ""} />
-            </span>
-            <small>${escapeHtml(option.description)}</small>
-          </span>
-        </label>
-      `
-    )
-    .join("");
-}
-
-function renderDevices() {
-  renderDevicesManagePermissionsButton();
-  renderDevicesSummary();
-  renderDevicesGrid();
-  renderDevicesPermissionsPanel();
-  renderDevicesSyncOptions();
-}
-
-function setupDevicesSection() {
-  const grid = document.querySelector("[data-devices-grid]");
-  const permissionsButton = document.querySelector("[data-devices-manage-permissions]");
-  const addButton = document.querySelector("[data-devices-add]");
-  const permissionsPanel = document.querySelector("[data-devices-permissions-panel]");
-  const syncOptions = document.querySelector("[data-devices-sync-options]");
-
-  if (!grid || !permissionsButton || !addButton || !permissionsPanel || !syncOptions) {
-    return;
-  }
-
-  permissionsButton.addEventListener("click", () => {
-    appState.devices.showPermissionsPanel = !appState.devices.showPermissionsPanel;
-    saveState();
-    renderDevicesManagePermissionsButton();
-    renderDevicesPermissionsPanel();
-  });
-
-  addButton.addEventListener("click", () => {
-    const nextDevice = devicesCatalog.find((device) => !getDeviceState(device.id)?.connected);
-
-    if (!nextDevice) {
-      setDevicesFeedback("Tutte le integrazioni disponibili sono già collegate.");
-      return;
-    }
-
-    connectDevice(nextDevice.id);
-    renderDevices();
-    setDevicesFeedback(`${nextDevice.title} collegato e sincronizzato.`);
-  });
-
-  grid.addEventListener("click", (event) => {
-    const connectButton = event.target.closest("[data-device-connect]");
-    const syncButton = event.target.closest("[data-device-sync]");
-    const disconnectButton = event.target.closest("[data-device-disconnect]");
-
-    if (connectButton) {
-      const device = getDeviceConfig(connectButton.dataset.deviceConnect);
-
-      if (!device || !connectDevice(device.id)) {
-        return;
-      }
-
-      renderDevices();
-      setDevicesFeedback(`${device.title} collegato e sincronizzato.`);
-      return;
-    }
-
-    if (syncButton) {
-      const device = getDeviceConfig(syncButton.dataset.deviceSync);
-
-      if (!device || !syncDevice(device.id)) {
-        return;
-      }
-
-      renderDevices();
-      setDevicesFeedback(`${device.title} sincronizzato.`);
-      return;
-    }
-
-    if (disconnectButton) {
-      const device = getDeviceConfig(disconnectButton.dataset.deviceDisconnect);
-
-      if (!device || !disconnectDevice(device.id)) {
-        return;
-      }
-
-      renderDevices();
-      setDevicesFeedback(`${device.title} disconnesso.`);
-    }
-  });
-
-  permissionsPanel.addEventListener("change", (event) => {
-    const permissionToggle = event.target.closest("[data-device-permission]");
-
-    if (!permissionToggle) {
-      return;
-    }
-
-    const deviceState = getDeviceState(permissionToggle.dataset.devicePermission);
-
-    if (!deviceState) {
-      return;
-    }
-
-    deviceState.permissions[permissionToggle.dataset.devicePermissionKey] = permissionToggle.checked;
-    saveState();
-    renderDevicesGrid();
-    setDevicesFeedback("Permessi integrazione aggiornati.");
-  });
-
-  syncOptions.addEventListener("change", (event) => {
-    const toggle = event.target.closest("[data-device-sync-pref]");
-
-    if (!toggle) {
-      return;
-    }
-
-    appState.devices.syncPreferences[toggle.dataset.deviceSyncPref] = toggle.checked;
-
-    if (toggle.dataset.deviceSyncPref === "useConnectedWeightInProfile" && toggle.checked) {
-      const scaleState = getDeviceState("scale");
-
-      if (scaleState?.connected) {
-        syncDevice("scale");
-      }
-    } else {
-      saveState();
-    }
-
-    renderDevices();
-    setDevicesFeedback("Preferenze sync aggiornate.");
-  });
-
-  renderDevices();
-}
-
-function setupProfileSection() {
-  const form = document.querySelector("[data-profile-form]");
-  const applyButton = document.querySelector("[data-apply-profile-recommendations]");
-
-  if (!form || !applyButton) {
-    return;
-  }
-
-  bindFormValidationFeedback(form);
-
-  document.querySelectorAll("[data-diet-type]").forEach((button) => {
-    button.addEventListener("click", () => {
-      appState.profile.personal.dietType = button.dataset.dietType;
-      renderProfile();
-      setProfileFeedback("Salva per conservare le preferenze alimentari.");
-    });
-  });
-
-  form.addEventListener("input", (event) => {
-    const relevantFields = ["age", "gender", "heightCm", "currentWeightKg", "targetWeightKg", "activityLevel"];
-
-    if (relevantFields.includes(event.target.name)) {
-      const draftPersonal = {
-        ...appState.profile.personal,
-        age: form.elements.age.value,
-        gender: form.elements.gender.value,
-        heightCm: form.elements.heightCm.value,
-        currentWeightKg: form.elements.currentWeightKg.value,
-        targetWeightKg: form.elements.targetWeightKg.value,
-        activityLevel: form.elements.activityLevel.value,
-      };
-
-      const bmi = calculateBmi(normalizeNumber(draftPersonal.heightCm), normalizeNumber(draftPersonal.currentWeightKg));
-      const bmiDisplay = document.querySelector("[data-bmi-display]");
-
-      if (bmiDisplay) {
-        bmiDisplay.innerHTML = bmi
-          ? `${bmi.toFixed(1)} <em>${getBmiLabel(bmi)}</em>`
-          : `-- <em>${getBmiLabel(bmi)}</em>`;
-      }
-
-      const recommendations = calculateProfileRecommendations(draftPersonal);
-      const liveMap = {
-        tdee: recommendations.tdee ? `${recommendations.tdee} kcal` : "--",
-        calories: recommendations.calories ? `${recommendations.calories} kcal` : "--",
-        protein: recommendations.protein ? `${recommendations.protein}g` : "--",
-        carbs: recommendations.carbs ? `${recommendations.carbs}g` : "--",
-        fats: recommendations.fats ? `${recommendations.fats}g` : "--",
-      };
-
-      Object.entries(liveMap).forEach(([key, value]) => {
-        const element = document.querySelector(`[data-profile-recommendation="${key}"]`);
-
-        if (element) {
-          element.textContent = value;
-        }
-      });
-
-      const note = document.querySelector("[data-profile-recommendation-note]");
-      const calorieNote = document.querySelector("[data-profile-goal-note]");
-
-      if (note) {
-        note.textContent = recommendations.note;
-      }
-
-      if (calorieNote) {
-        calorieNote.textContent = recommendations.calorieNote;
-      }
-    }
-  });
-
-  applyButton.addEventListener("click", () => {
-    const recommendations = calculateProfileRecommendations({
-      ...appState.profile.personal,
-      age: form.elements.age.value,
-      gender: form.elements.gender.value,
-      heightCm: form.elements.heightCm.value,
-      currentWeightKg: form.elements.currentWeightKg.value,
-      targetWeightKg: form.elements.targetWeightKg.value,
-      activityLevel: form.elements.activityLevel.value,
-    });
-
-    if (!recommendations.calories) {
-      setProfileFeedback("Completa età, altezza e peso prima di applicare le raccomandazioni.");
-      return;
-    }
-
-    form.elements.goalCalories.value = recommendations.calories;
-    form.elements.goalProtein.value = recommendations.protein;
-    form.elements.goalCarbs.value = recommendations.carbs;
-    form.elements.goalFats.value = recommendations.fats;
-    setProfileFeedback("Obiettivi consigliati applicati. Salva il profilo per mantenerli.");
-  });
-
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    markFormValidationAttempt(form);
-
-    const nextProfile = {
-      personal: {
-        fullName: String(form.elements.fullName.value).trim(),
-        age: normalizeNumber(form.elements.age.value),
-        gender: form.elements.gender.value,
-        heightCm: normalizeNumber(form.elements.heightCm.value),
-        currentWeightKg: normalizeNumber(form.elements.currentWeightKg.value),
-        targetWeightKg: normalizeNumber(form.elements.targetWeightKg.value),
-        activityLevel: form.elements.activityLevel.value,
-        dietType: appState.profile.personal.dietType,
-      },
-      medical: {
-        allergies: String(form.elements.allergies.value).trim(),
-        medications: String(form.elements.medications.value).trim(),
-        medicalConditions: String(form.elements.medicalConditions.value).trim(),
-        bloodType: form.elements.bloodType.value,
-      },
-      goals: {
-        calories: normalizeNumber(form.elements.goalCalories.value),
-        protein: normalizeNumber(form.elements.goalProtein.value),
-        carbs: normalizeNumber(form.elements.goalCarbs.value),
-        fats: normalizeNumber(form.elements.goalFats.value),
-        water: normalizeNumber(form.elements.goalWater.value),
-      },
-    };
-
-    const requiredValues = [
-      nextProfile.personal.fullName,
-      nextProfile.personal.age,
-      nextProfile.personal.heightCm,
-      nextProfile.personal.currentWeightKg,
-      nextProfile.personal.targetWeightKg,
-      nextProfile.personal.activityLevel,
-      nextProfile.goals.calories,
-      nextProfile.goals.protein,
-      nextProfile.goals.carbs,
-      nextProfile.goals.fats,
-      nextProfile.goals.water,
-    ];
-
-    if (requiredValues.some((value) => value === null || value === "")) {
-      setProfileFeedback("Completa i campi obbligatori.");
-      return;
-    }
-
-    appState.profile = nextProfile;
-    syncNutritionGoalsFromProfile();
-    captureTodayProgressSnapshot({
-      weightKg: nextProfile.personal.currentWeightKg,
-    });
-    saveState();
-    renderProfile();
-    renderNutrition();
-    resetFormValidationState(form);
-    setProfileFeedback("Profilo salvato e sincronizzato.");
-  });
-
-  renderProfile();
-}
-
-syncNutritionGoalsFromProfile();
-captureTodayProgressSnapshot();
-saveState();
-setupBarcodeScanner();
-setupNutritionSection();
-setupRecipesSection();
-setupGrocerySection();
-setupProgressSection();
-setupDevicesSection();
-setupProfileSection();
-hydrateNutriTrackStateFromApi();
+initializeNutriTrackApp.hasRun = false;
+window.initializeNutriTrackApp = initializeNutriTrackApp;

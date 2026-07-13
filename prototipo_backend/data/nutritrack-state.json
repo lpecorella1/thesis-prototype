@@ -90,6 +90,22 @@
         "nutriscoreGrade": "",
         "nutritionSource": "manual-correction",
         "nutritionSourceLabel": "Corretto manualmente"
+      },
+      {
+        "id": "f0eb45a4-a7c2-46ca-93d4-4b59f3fb6589",
+        "name": "Cup di hummus con spinaci e pomodorini",
+        "date": "2026-07-12",
+        "time": "16:30",
+        "calories": 420,
+        "protein": 14,
+        "carbs": 44,
+        "fats": 20,
+        "barcode": "",
+        "source": "manual",
+        "brand": "",
+        "nutriscoreGrade": "",
+        "nutritionSource": "manual-correction",
+        "nutritionSourceLabel": "Corretto manualmente"
       }
     ]
   },
@@ -101,14 +117,14 @@
       "prompt": ""
     },
     "currentRecipe": {
-      "id": "recipe-snack-vegan-toast-snack-hummus-frutta-fresca-spinaci-e-pomodorini-pesto-leggero-mrc2cznz-7b4c2",
-      "title": "Toast snack con hummus e spinaci e pomodorini",
-      "description": "Spuntino piu sostanzioso ma ancora semplice da preparare.",
-      "calories": 406,
-      "protein": 13,
-      "carbs": 43,
+      "id": "recipe-snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone-mrcfg000-dm56q",
+      "title": "Cup di hummus con spinaci e pomodorini",
+      "description": "Snack rapido con buon equilibrio tra proteine e carboidrati.",
+      "calories": 415,
+      "protein": 14,
+      "carbs": 44,
       "fats": 20,
-      "duration": 7,
+      "duration": 6,
       "servings": 1,
       "difficulty": "Facile",
       "dietTypes": [
@@ -121,19 +137,19 @@
         "90 g di hummus",
         "120 g di frutta fresca",
         "120 g di spinaci e pomodorini",
-        "20 g di pesto leggero",
+        "18 g di salsa tahina e limone",
         "Sale, pepe e spezie a piacere"
       ],
       "instructions": [
         "Sistema hummus e spinaci e pomodorini in una bowl o lunch box.",
-        "Aggiungi spinaci e pomodorini e condisci con pesto leggero.",
+        "Aggiungi spinaci e pomodorini e condisci con salsa tahina e limone.",
         "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
         "Servi subito oppure conserva in frigo se vuoi prepararlo in anticipo."
       ],
-      "generatedAt": "2026-07-08T12:38:12.761Z",
+      "generatedAt": "2026-07-08T18:44:28.302Z",
       "prompt": "",
       "mode": "generated-local",
-      "signature": "snack-vegan-toast-snack-hummus-frutta-fresca-spinaci-e-pomodorini-pesto-leggero",
+      "signature": "snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone",
       "pantryMatches": [
         "Pepe nero",
         "Spinaci"
@@ -143,6 +159,18 @@
       "personalNote": "Suggerita per snack vegana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
     },
     "history": [
+      {
+        "id": "recipe-snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone-mrcfg000-dm56q",
+        "title": "Cup di hummus con spinaci e pomodorini",
+        "generatedAt": "2026-07-08T18:44:28.302Z",
+        "signature": "snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone"
+      },
+      {
+        "id": "recipe-snack-vegan-box-tofu-croccante-frutta-fresca-frutti-rossi-semi-di-chia-mrcffylm-gpv8k",
+        "title": "Snack box con tofu croccante e frutti rossi",
+        "generatedAt": "2026-07-08T18:44:26.387Z",
+        "signature": "snack-vegan-box-tofu-croccante-frutta-fresca-frutti-rossi-semi-di-chia"
+      },
       {
         "id": "recipe-snack-vegan-toast-snack-hummus-frutta-fresca-spinaci-e-pomodorini-pesto-leggero-mrc2cznz-7b4c2",
         "title": "Toast snack con hummus e spinaci e pomodorini",
@@ -166,21 +194,10 @@
         "title": "Wrap di hummus con spinaci e pomodorini",
         "generatedAt": "2026-07-08T12:38:05.771Z",
         "signature": "lunch-vegan-wrap-hummus-riso-integrale-spinaci-e-pomodorini-noci-tritate"
-      },
-      {
-        "id": "recipe-lunch-vegan-bowl-hummus-riso-integrale-spinaci-e-pomodorini-semi-di-chia-mrc2crid-jwy4c",
-        "title": "Hummus Bowl con riso integrale e spinaci e pomodorini",
-        "generatedAt": "2026-07-08T12:38:02.279Z",
-        "signature": "lunch-vegan-bowl-hummus-riso-integrale-spinaci-e-pomodorini-semi-di-chia"
-      },
-      {
-        "id": "recipe-lunch-vegan-pasta-tofu-croccante-riso-integrale-spinaci-e-pomodorini-semi-di-chia-mrc2co2i-2qzod",
-        "title": "Riso integrale con tofu croccante e spinaci e pomodorini",
-        "generatedAt": "2026-07-08T12:37:57.841Z",
-        "signature": "lunch-vegan-pasta-tofu-croccante-riso-integrale-spinaci-e-pomodorini-semi-di-chia"
       }
     ],
     "savedRecipeIds": [
+      "recipe-snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone-mrcfg000-dm56q",
       "recipe-dinner-vegetarian-stirfry-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-salsa-tahina-e-limone-mr6fuvd8-fvsu4",
       "recipe-dinner-vegetarian-traybake-ceci-speziati-riso-integrale-verdure-mediterranee-feta-mr6g4e7c-3igu9"
     ],
@@ -1348,6 +1365,90 @@
         "pantryNote": "Hai già in dispensa: Pepe nero, Spinaci.",
         "criteriaNote": "",
         "personalNote": "Suggerita per snack vegana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+      },
+      "recipe-snack-vegan-box-tofu-croccante-frutta-fresca-frutti-rossi-semi-di-chia-mrcffylm-gpv8k": {
+        "id": "recipe-snack-vegan-box-tofu-croccante-frutta-fresca-frutti-rossi-semi-di-chia-mrcffylm-gpv8k",
+        "title": "Snack box con tofu croccante e frutti rossi",
+        "description": "Idea pratica da portare fuori casa o in ufficio.",
+        "calories": 411,
+        "protein": 26,
+        "carbs": 39,
+        "fats": 18,
+        "duration": 5,
+        "servings": 1,
+        "difficulty": "Facile",
+        "dietTypes": [
+          "vegan"
+        ],
+        "mealTypes": [
+          "snack"
+        ],
+        "ingredients": [
+          "180 g di tofu croccante",
+          "120 g di frutta fresca",
+          "90 g di frutti rossi",
+          "10 g di semi di chia",
+          "Sale, pepe e spezie a piacere"
+        ],
+        "instructions": [
+          "Sistema tofu croccante e frutti rossi in una bowl o lunch box.",
+          "Aggiungi frutti rossi e condisci con semi di chia.",
+          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
+          "Servi subito oppure conserva in frigo se vuoi prepararlo in anticipo."
+        ],
+        "generatedAt": "2026-07-08T18:44:26.387Z",
+        "prompt": "",
+        "mode": "generated-local",
+        "signature": "snack-vegan-box-tofu-croccante-frutta-fresca-frutti-rossi-semi-di-chia",
+        "pantryMatches": [
+          "Pepe nero",
+          "Tofu affumicato"
+        ],
+        "pantryNote": "Hai già in dispensa: Pepe nero, Tofu affumicato.",
+        "criteriaNote": "",
+        "personalNote": "Suggerita per snack vegana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+      },
+      "recipe-snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone-mrcfg000-dm56q": {
+        "id": "recipe-snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone-mrcfg000-dm56q",
+        "title": "Cup di hummus con spinaci e pomodorini",
+        "description": "Snack rapido con buon equilibrio tra proteine e carboidrati.",
+        "calories": 415,
+        "protein": 14,
+        "carbs": 44,
+        "fats": 20,
+        "duration": 6,
+        "servings": 1,
+        "difficulty": "Facile",
+        "dietTypes": [
+          "vegan"
+        ],
+        "mealTypes": [
+          "snack"
+        ],
+        "ingredients": [
+          "90 g di hummus",
+          "120 g di frutta fresca",
+          "120 g di spinaci e pomodorini",
+          "18 g di salsa tahina e limone",
+          "Sale, pepe e spezie a piacere"
+        ],
+        "instructions": [
+          "Sistema hummus e spinaci e pomodorini in una bowl o lunch box.",
+          "Aggiungi spinaci e pomodorini e condisci con salsa tahina e limone.",
+          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
+          "Servi subito oppure conserva in frigo se vuoi prepararlo in anticipo."
+        ],
+        "generatedAt": "2026-07-08T18:44:28.302Z",
+        "prompt": "",
+        "mode": "generated-local",
+        "signature": "snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone",
+        "pantryMatches": [
+          "Pepe nero",
+          "Spinaci"
+        ],
+        "pantryNote": "Hai già in dispensa: Pepe nero, Spinaci.",
+        "criteriaNote": "",
+        "personalNote": "Suggerita per snack vegana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
       }
     },
     "chatMessages": [
@@ -1360,7 +1461,74 @@
     ]
   },
   "grocery": {
-    "items": [],
+    "items": [
+      {
+        "id": "462e0aa0-1be7-4ed0-8476-4a44f8c3f3b0",
+        "name": "Fagioli",
+        "quantity": "1 barattolo",
+        "expiryDate": "2027-09-16",
+        "category": "Dispensa",
+        "completed": false,
+        "barcode": "",
+        "source": "manual",
+        "nutriscoreGrade": ""
+      },
+      {
+        "id": "2ae44d71-66d1-4465-a224-e9befbf2b927",
+        "name": "Ceci secchi",
+        "quantity": "1 pacco",
+        "expiryDate": "2027-07-09",
+        "category": "Dispensa",
+        "completed": false,
+        "barcode": "",
+        "source": "manual",
+        "nutriscoreGrade": ""
+      },
+      {
+        "id": "70027c79-a769-43e7-8a40-466d801e04bb",
+        "name": "Succo d'arancia",
+        "quantity": "1",
+        "expiryDate": "2026-07-09",
+        "category": "Bevande",
+        "completed": true,
+        "barcode": "",
+        "source": "manual",
+        "nutriscoreGrade": ""
+      },
+      {
+        "id": "63c419c3-2c3d-4af1-97d8-4d3bbbf42dac",
+        "name": "Philadelphia",
+        "quantity": "1",
+        "expiryDate": "2026-07-09",
+        "category": "Latticini",
+        "completed": false,
+        "barcode": "",
+        "source": "manual",
+        "nutriscoreGrade": ""
+      },
+      {
+        "id": "98d72364-0bf2-49c5-995e-12847f79e865",
+        "name": "Farro soffiato",
+        "quantity": "1",
+        "expiryDate": "2026-07-09",
+        "category": "Cereali",
+        "completed": false,
+        "barcode": "",
+        "source": "manual",
+        "nutriscoreGrade": ""
+      },
+      {
+        "id": "398d6c46-033d-458c-af1b-ed0cb1e3c441",
+        "name": "Vongole in guscio",
+        "quantity": "1kg",
+        "expiryDate": "2027-07-12",
+        "category": "Carne e pesce",
+        "completed": false,
+        "barcode": "",
+        "source": "manual",
+        "nutriscoreGrade": ""
+      }
+    ],
     "pantry": [
       {
         "id": "4ba32ff5-dc75-4a99-9c9b-1ac9fe157db8",
@@ -1493,6 +1661,16 @@
         "expiryDate": ""
       },
       {
+        "id": "70027c79-a769-43e7-8a40-466d801e04bb",
+        "name": "Succo d'arancia",
+        "quantity": "1",
+        "expiryDate": "2026-07-09",
+        "category": "Bevande",
+        "barcode": "",
+        "source": "manual",
+        "nutriscoreGrade": ""
+      },
+      {
         "id": "2372b9d2-70dd-47c2-b6be-99a4267ea9c5",
         "name": "Tofu affumicato",
         "quantity": "2 confezioni",
@@ -1528,6 +1706,16 @@
         "quantity": "2",
         "category": "Latticini",
         "expiryDate": ""
+      },
+      {
+        "id": "8616ea66-ee07-404c-a2fd-0dd705b3e25b",
+        "name": "Zucca",
+        "quantity": "1",
+        "expiryDate": "",
+        "category": "Frutta e verdura",
+        "barcode": "",
+        "source": "manual",
+        "nutriscoreGrade": ""
       }
     ],
     "ar": {
@@ -1615,12 +1803,19 @@
     }
   },
   "progress": {
-    "selectedRange": "month",
+    "selectedRange": "week",
     "dailyLogs": [
       {
         "date": "2026-07-06",
         "weightKg": 65,
         "waterGlasses": null,
+        "calories": null,
+        "protein": null
+      },
+      {
+        "date": "2026-07-12",
+        "weightKg": null,
+        "waterGlasses": 5,
         "calories": null,
         "protein": null
       }
@@ -1649,6 +1844,18 @@
         "protein": 0,
         "weightKg": null,
         "capturedAt": "2026-07-07T10:02:39.066Z"
+      },
+      "2026-07-09": {
+        "calories": 0,
+        "protein": 0,
+        "weightKg": null,
+        "capturedAt": "2026-07-09T14:02:31.513Z"
+      },
+      "2026-07-12": {
+        "calories": 420,
+        "protein": 14,
+        "weightKg": null,
+        "capturedAt": "2026-07-12T15:50:41.931Z"
       }
     }
   },
@@ -1708,18 +1915,27 @@
           "duration": false,
           "distance": true
         },
-        "latestData": {}
+        "latestData": {},
+        "configured": false,
+        "athleteName": "",
+        "athleteId": null,
+        "acceptedScopes": [],
+        "lastSyncStatus": ""
       },
       "healthHub": {
-        "connected": false,
-        "lastSyncAt": "",
+        "connected": true,
+        "lastSyncAt": "2026-07-09T14:02:36.207Z",
         "permissions": {
           "activity": false,
           "steps": true,
           "weight": true,
           "sleep": true
         },
-        "latestData": {}
+        "latestData": {
+          "steps": 8120,
+          "weightKg": null,
+          "sleepHours": 7.4
+        }
       }
     },
     "syncPreferences": {
