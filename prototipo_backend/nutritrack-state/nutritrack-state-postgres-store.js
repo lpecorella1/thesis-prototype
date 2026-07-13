@@ -56,6 +56,7 @@ function getDatabaseConfig() {
     connectionString,
     enabled,
     demoUserEmail,
+    pg,
     available: Boolean(enabled && connectionString && pg),
     pgInstalled: Boolean(pg),
   };

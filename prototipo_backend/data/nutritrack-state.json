@@ -1,105 +1,21 @@
 {
   "nutrition": {
     "goals": {
-      "calories": 2000,
-      "protein": 150,
-      "carbs": 250,
-      "fats": 65
+      "calories": 1448,
+      "protein": 137,
+      "carbs": 135,
+      "fats": 40
     },
     "meals": [
       {
-        "id": "bbe6fc8a-2360-49fe-be36-bd1d501af60e",
-        "name": "Oatmeal with berries",
-        "date": "2026-07-03",
-        "time": "08:30",
-        "calories": 320,
-        "protein": 12,
-        "carbs": 54,
-        "fats": 6
-      },
-      {
-        "id": "65540f92-d12c-4d04-a4d8-50543be0842c",
-        "name": "Grilled chicken salad",
-        "date": "2026-07-03",
-        "time": "12:45",
-        "calories": 450,
-        "protein": 35,
-        "carbs": 25,
-        "fats": 18
-      },
-      {
-        "id": "2598837d-7e41-420c-aab2-cda464166a40",
-        "name": "Teglia di tempeh saltato e spinaci e pomodorini",
-        "date": "2026-07-04",
+        "id": "nt-mrj8onj5-ejl69z0av",
+        "name": "Yogurt greco con wrap integrale e frutti rossi",
+        "date": "2026-07-13",
         "time": "20:00",
-        "calories": 634,
-        "protein": 37,
-        "carbs": 70,
-        "fats": 24,
-        "barcode": "",
-        "source": "manual",
-        "brand": "",
-        "nutriscoreGrade": "",
-        "nutritionSource": "imported",
-        "nutritionSourceLabel": "Importato da Recipes"
-      },
-      {
-        "id": "8efb0f3f-6c6e-473d-a235-3f611e957635",
-        "name": "Teglia di ceci speziati e verdure mediterranee",
-        "date": "2026-07-04",
-        "time": "20:00",
-        "calories": 645,
-        "protein": 26,
-        "carbs": 94,
-        "fats": 19,
-        "barcode": "",
-        "source": "manual",
-        "brand": "",
-        "nutriscoreGrade": "",
-        "nutritionSource": "imported",
-        "nutritionSourceLabel": "Importato da Recipes"
-      },
-      {
-        "id": "e8221df6-7511-421f-9021-07e79c8c7397",
-        "name": "Stir-fry di tempeh saltato con spinaci e pomodorini",
-        "date": "2026-07-06",
-        "time": "20:00",
-        "calories": 643,
-        "protein": 38,
-        "carbs": 71,
-        "fats": 24,
-        "barcode": "",
-        "source": "manual",
-        "brand": "",
-        "nutriscoreGrade": "",
-        "nutritionSource": "imported",
-        "nutritionSourceLabel": "Importato da Recipes"
-      },
-      {
-        "id": "78aec4ef-f5b7-4945-87e9-aecbabb6f068",
-        "name": "Yogurt con mirtilli",
-        "date": "2026-07-06",
-        "time": "16:59",
-        "calories": 340,
-        "protein": 16,
-        "carbs": 39,
-        "fats": 11,
-        "barcode": "",
-        "source": "manual",
-        "brand": "",
-        "nutriscoreGrade": "",
-        "nutritionSource": "manual-correction",
-        "nutritionSourceLabel": "Corretto manualmente"
-      },
-      {
-        "id": "f0eb45a4-a7c2-46ca-93d4-4b59f3fb6589",
-        "name": "Cup di hummus con spinaci e pomodorini",
-        "date": "2026-07-12",
-        "time": "16:30",
-        "calories": 420,
-        "protein": 14,
-        "carbs": 44,
-        "fats": 20,
+        "calories": 382,
+        "protein": 30,
+        "carbs": 47,
+        "fats": 8,
         "barcode": "",
         "source": "manual",
         "brand": "",
@@ -111,192 +27,103 @@
   },
   "recipes": {
     "generator": {
-      "dietType": "vegan",
+      "dietType": "vegetarian",
       "caloriesTarget": "350",
-      "mealType": "snack",
+      "mealType": "dinner",
       "prompt": ""
     },
     "currentRecipe": {
-      "id": "recipe-snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone-mrcfg000-dm56q",
-      "title": "Cup di hummus con spinaci e pomodorini",
-      "description": "Snack rapido con buon equilibrio tra proteine e carboidrati.",
-      "calories": 415,
-      "protein": 14,
-      "carbs": 44,
-      "fats": 20,
-      "duration": 6,
-      "servings": 1,
+      "id": "recipe-dinner-vegetarian-plate-yogurt-greco-wrap-integrale-frutti-rossi-salsa-yogurt-e-senape-mrj8okwt-mhf0a",
+      "title": "Yogurt greco con wrap integrale e frutti rossi",
+      "description": "Cena completa e gestibile anche in settimana.",
+      "calories": 382,
+      "protein": 30,
+      "carbs": 47,
+      "fats": 8,
+      "duration": 28,
+      "servings": 2,
       "difficulty": "Facile",
       "dietTypes": [
-        "vegan"
+        "vegetarian"
       ],
       "mealTypes": [
-        "snack"
+        "dinner"
       ],
       "ingredients": [
-        "90 g di hummus",
-        "120 g di frutta fresca",
-        "120 g di spinaci e pomodorini",
-        "18 g di salsa tahina e limone",
+        "170 g di yogurt greco",
+        "1 wrap integrale",
+        "90 g di frutti rossi",
+        "35 g di salsa yogurt e senape",
         "Sale, pepe e spezie a piacere"
       ],
       "instructions": [
-        "Sistema hummus e spinaci e pomodorini in una bowl o lunch box.",
-        "Aggiungi spinaci e pomodorini e condisci con salsa tahina e limone.",
+        "Prepara yogurt greco e porta a cottura wrap integrale o l'accompagnamento scelto.",
+        "Aggiungi frutti rossi e condisci con salsa yogurt e senape.",
         "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-        "Servi subito oppure conserva in frigo se vuoi prepararlo in anticipo."
+        "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
       ],
-      "generatedAt": "2026-07-08T18:44:28.302Z",
+      "generatedAt": "2026-07-13T13:09:34.325Z",
       "prompt": "",
       "mode": "generated-local",
-      "signature": "snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone",
-      "pantryMatches": [
-        "Pepe nero",
-        "Spinaci"
-      ],
-      "pantryNote": "Hai già in dispensa: Pepe nero, Spinaci.",
+      "signature": "dinner-vegetarian-plate-yogurt-greco-wrap-integrale-frutti-rossi-salsa-yogurt-e-senape",
+      "pantryMatches": [],
+      "pantryNote": "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.",
       "criteriaNote": "",
-      "personalNote": "Suggerita per snack vegana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+      "personalNote": "Suggerita per cena vegetariana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
     },
     "history": [
       {
-        "id": "recipe-snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone-mrcfg000-dm56q",
-        "title": "Cup di hummus con spinaci e pomodorini",
-        "generatedAt": "2026-07-08T18:44:28.302Z",
-        "signature": "snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone"
+        "id": "recipe-dinner-vegetarian-plate-yogurt-greco-wrap-integrale-frutti-rossi-salsa-yogurt-e-senape-mrj8okwt-mhf0a",
+        "title": "Yogurt greco con wrap integrale e frutti rossi",
+        "generatedAt": "2026-07-13T13:09:34.325Z",
+        "signature": "dinner-vegetarian-plate-yogurt-greco-wrap-integrale-frutti-rossi-salsa-yogurt-e-senape"
       },
       {
-        "id": "recipe-snack-vegan-box-tofu-croccante-frutta-fresca-frutti-rossi-semi-di-chia-mrcffylm-gpv8k",
-        "title": "Snack box con tofu croccante e frutti rossi",
-        "generatedAt": "2026-07-08T18:44:26.387Z",
-        "signature": "snack-vegan-box-tofu-croccante-frutta-fresca-frutti-rossi-semi-di-chia"
+        "id": "recipe-dinner-vegetarian-bowl-yogurt-greco-patate-arrosto-cetriolo-e-pomodoro-semi-di-chia-mrj8ojwy-sce5g",
+        "title": "Power bowl di yogurt greco con patate arrosto",
+        "generatedAt": "2026-07-13T13:09:33.027Z",
+        "signature": "dinner-vegetarian-bowl-yogurt-greco-patate-arrosto-cetriolo-e-pomodoro-semi-di-chia"
       },
       {
-        "id": "recipe-snack-vegan-toast-snack-hummus-frutta-fresca-spinaci-e-pomodorini-pesto-leggero-mrc2cznz-7b4c2",
-        "title": "Toast snack con hummus e spinaci e pomodorini",
-        "generatedAt": "2026-07-08T12:38:12.761Z",
-        "signature": "snack-vegan-toast-snack-hummus-frutta-fresca-spinaci-e-pomodorini-pesto-leggero"
+        "id": "recipe-dinner-vegetarian-traybake-yogurt-greco-patate-arrosto-frutti-rossi-semi-di-chia-mrj8ojda-k7kj4",
+        "title": "Teglia di yogurt greco e frutti rossi",
+        "generatedAt": "2026-07-13T13:09:32.323Z",
+        "signature": "dinner-vegetarian-traybake-yogurt-greco-patate-arrosto-frutti-rossi-semi-di-chia"
       },
       {
-        "id": "recipe-lunch-vegan-pasta-tempeh-saltato-pasta-integrale-banana-a-rondelle-avocado-mrc2cw49-3ndvv",
-        "title": "Pasta integrale con tempeh saltato e banana a rondelle",
-        "generatedAt": "2026-07-08T12:38:08.260Z",
-        "signature": "lunch-vegan-pasta-tempeh-saltato-pasta-integrale-banana-a-rondelle-avocado"
+        "id": "recipe-dinner-vegetarian-traybake-yogurt-greco-patate-arrosto-cetriolo-e-pomodoro-salsa-yogurt-e-senape-mrj8oigp-dfwcf",
+        "title": "Teglia di yogurt greco e cetriolo e pomodoro",
+        "generatedAt": "2026-07-13T13:09:31.150Z",
+        "signature": "dinner-vegetarian-traybake-yogurt-greco-patate-arrosto-cetriolo-e-pomodoro-salsa-yogurt-e-senape"
       },
       {
-        "id": "recipe-lunch-vegan-pasta-hummus-wrap-integrale-spinaci-e-pomodorini-noci-tritate-mrc2cueq-9ph6o",
-        "title": "Wrap integrale con hummus e spinaci e pomodorini",
-        "generatedAt": "2026-07-08T12:38:05.985Z",
-        "signature": "lunch-vegan-pasta-hummus-wrap-integrale-spinaci-e-pomodorini-noci-tritate"
+        "id": "recipe-dinner-vegetarian-stirfry-yogurt-greco-wrap-integrale-cetriolo-e-pomodoro-salsa-yogurt-e-senape-mrj8ohlt-bxvhd",
+        "title": "Stir-fry di yogurt greco con cetriolo e pomodoro",
+        "generatedAt": "2026-07-13T13:09:30.041Z",
+        "signature": "dinner-vegetarian-stirfry-yogurt-greco-wrap-integrale-cetriolo-e-pomodoro-salsa-yogurt-e-senape"
       },
       {
-        "id": "recipe-lunch-vegan-wrap-hummus-riso-integrale-spinaci-e-pomodorini-noci-tritate-mrc2cu7d-7vz3l",
-        "title": "Wrap di hummus con spinaci e pomodorini",
-        "generatedAt": "2026-07-08T12:38:05.771Z",
-        "signature": "lunch-vegan-wrap-hummus-riso-integrale-spinaci-e-pomodorini-noci-tritate"
+        "id": "recipe-dinner-vegetarian-stirfry-yogurt-greco-patate-arrosto-frutti-rossi-salsa-yogurt-e-senape-mrj8oe0v-0a1q5",
+        "title": "Stir-fry di yogurt greco con frutti rossi",
+        "generatedAt": "2026-07-13T13:09:25.400Z",
+        "signature": "dinner-vegetarian-stirfry-yogurt-greco-patate-arrosto-frutti-rossi-salsa-yogurt-e-senape"
       }
     ],
-    "savedRecipeIds": [
-      "recipe-snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone-mrcfg000-dm56q",
-      "recipe-dinner-vegetarian-stirfry-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-salsa-tahina-e-limone-mr6fuvd8-fvsu4",
-      "recipe-dinner-vegetarian-traybake-ceci-speziati-riso-integrale-verdure-mediterranee-feta-mr6g4e7c-3igu9"
-    ],
+    "savedRecipeIds": [],
     "generatedRecipesById": {
-      "recipe-dinner-balanced-traybake-yogurt-greco-riso-integrale-cetriolo-e-pomodoro-salsa-yogurt-e-senape-mr6domrf-32zkx": {
-        "id": "recipe-dinner-balanced-traybake-yogurt-greco-riso-integrale-cetriolo-e-pomodoro-salsa-yogurt-e-senape-mr6domrf-32zkx",
-        "title": "Teglia di yogurt greco e cetriolo e pomodoro",
-        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
-        "calories": 414,
-        "protein": 29,
-        "carbs": 61,
-        "fats": 5,
-        "duration": 32,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "balanced"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "170 g di yogurt greco",
-          "150 g di riso integrale",
-          "160 g di cetriolo e pomodoro",
-          "35 g di salsa yogurt e senape",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara yogurt greco e porta a cottura riso integrale o l'accompagnamento scelto.",
-          "Aggiungi cetriolo e pomodoro e condisci con salsa yogurt e senape.",
-          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T13:08:34.529Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "dinner-balanced-traybake-yogurt-greco-riso-integrale-cetriolo-e-pomodoro-salsa-yogurt-e-senape",
-        "pantryMatches": [
-          "170 g di yogurt greco",
-          "150 g di riso integrale"
-        ],
-        "pantryNote": "Hai già in dispensa: 170 g di yogurt greco, 150 g di riso integrale.",
-        "personalNote": "Suggerita per cena bilanciata intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-balanced-stirfry-yogurt-greco-riso-integrale-frutti-rossi-salsa-yogurt-e-senape-mr6dore3-o426f": {
-        "id": "recipe-dinner-balanced-stirfry-yogurt-greco-riso-integrale-frutti-rossi-salsa-yogurt-e-senape-mr6dore3-o426f",
-        "title": "Stir-fry di yogurt greco con frutti rossi",
-        "description": "Cena rapida in padella con sapori netti e buon volume.",
-        "calories": 412,
-        "protein": 28,
-        "carbs": 62,
-        "fats": 5,
-        "duration": 20,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "balanced"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "170 g di yogurt greco",
-          "150 g di riso integrale",
-          "90 g di frutti rossi",
-          "35 g di salsa yogurt e senape",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara yogurt greco e porta a cottura riso integrale o l'accompagnamento scelto.",
-          "Aggiungi frutti rossi e condisci con salsa yogurt e senape.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T13:08:40.520Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "dinner-balanced-stirfry-yogurt-greco-riso-integrale-frutti-rossi-salsa-yogurt-e-senape",
-        "pantryMatches": [
-          "170 g di yogurt greco",
-          "150 g di riso integrale"
-        ],
-        "pantryNote": "Hai già in dispensa: 170 g di yogurt greco, 150 g di riso integrale.",
-        "personalNote": "Suggerita per cena bilanciata intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-balanced-traybake-yogurt-greco-wrap-integrale-spinaci-e-pomodorini-salsa-yogurt-e-senape-mr6dos9b-c88nj": {
-        "id": "recipe-dinner-balanced-traybake-yogurt-greco-wrap-integrale-spinaci-e-pomodorini-salsa-yogurt-e-senape-mr6dos9b-c88nj",
+      "recipe-dinner-vegetarian-traybake-yogurt-greco-wrap-integrale-spinaci-e-pomodorini-parmigiano-mrj8o6al-tvpsw": {
+        "id": "recipe-dinner-vegetarian-traybake-yogurt-greco-wrap-integrale-spinaci-e-pomodorini-parmigiano-mrj8o6al-tvpsw",
         "title": "Teglia di yogurt greco e spinaci e pomodorini",
         "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
-        "calories": 380,
-        "protein": 32,
-        "carbs": 44,
-        "fats": 8,
+        "calories": 396,
+        "protein": 33,
+        "carbs": 42,
+        "fats": 11,
         "duration": 32,
         "servings": 2,
         "difficulty": "Facile",
         "dietTypes": [
-          "balanced"
+          "vegetarian"
         ],
         "mealTypes": [
           "dinner"
@@ -305,39 +132,115 @@
           "170 g di yogurt greco",
           "1 wrap integrale",
           "120 g di spinaci e pomodorini",
+          "15 g di parmigiano",
+          "Sale, pepe e spezie a piacere"
+        ],
+        "instructions": [
+          "Prepara yogurt greco e porta a cottura wrap integrale o l'accompagnamento scelto.",
+          "Aggiungi spinaci e pomodorini e condisci con parmigiano.",
+          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
+          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
+        ],
+        "generatedAt": "2026-07-13T13:09:15.376Z",
+        "prompt": "",
+        "mode": "generated-local",
+        "signature": "dinner-vegetarian-traybake-yogurt-greco-wrap-integrale-spinaci-e-pomodorini-parmigiano",
+        "pantryMatches": [],
+        "pantryNote": "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.",
+        "criteriaNote": "",
+        "personalNote": "Suggerita per cena vegetariana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+      },
+      "recipe-dinner-vegetarian-stirfry-yogurt-greco-wrap-integrale-frutti-rossi-semi-di-chia-mrj8o77f-535zh": {
+        "id": "recipe-dinner-vegetarian-stirfry-yogurt-greco-wrap-integrale-frutti-rossi-semi-di-chia-mrj8o77f-535zh",
+        "title": "Stir-fry di yogurt greco con frutti rossi",
+        "description": "Cena rapida in padella con sapori netti e buon volume.",
+        "calories": 389,
+        "protein": 28,
+        "carbs": 49,
+        "fats": 10,
+        "duration": 20,
+        "servings": 2,
+        "difficulty": "Facile",
+        "dietTypes": [
+          "vegetarian"
+        ],
+        "mealTypes": [
+          "dinner"
+        ],
+        "ingredients": [
+          "170 g di yogurt greco",
+          "1 wrap integrale",
+          "90 g di frutti rossi",
+          "10 g di semi di chia",
+          "Sale, pepe e spezie a piacere"
+        ],
+        "instructions": [
+          "Prepara yogurt greco e porta a cottura wrap integrale o l'accompagnamento scelto.",
+          "Aggiungi frutti rossi e condisci con semi di chia.",
+          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
+          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
+        ],
+        "generatedAt": "2026-07-13T13:09:16.572Z",
+        "prompt": "",
+        "mode": "generated-local",
+        "signature": "dinner-vegetarian-stirfry-yogurt-greco-wrap-integrale-frutti-rossi-semi-di-chia",
+        "pantryMatches": [],
+        "pantryNote": "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.",
+        "criteriaNote": "",
+        "personalNote": "Suggerita per cena vegetariana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+      },
+      "recipe-dinner-vegetarian-traybake-yogurt-greco-wrap-integrale-funghi-e-zucchine-salsa-yogurt-e-senape-mrj8o9lz-ci3wl": {
+        "id": "recipe-dinner-vegetarian-traybake-yogurt-greco-wrap-integrale-funghi-e-zucchine-salsa-yogurt-e-senape-mrj8o9lz-ci3wl",
+        "title": "Teglia di yogurt greco e funghi e zucchine",
+        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
+        "calories": 400,
+        "protein": 33,
+        "carbs": 47,
+        "fats": 9,
+        "duration": 32,
+        "servings": 2,
+        "difficulty": "Facile",
+        "dietTypes": [
+          "vegetarian"
+        ],
+        "mealTypes": [
+          "dinner"
+        ],
+        "ingredients": [
+          "170 g di yogurt greco",
+          "1 wrap integrale",
+          "170 g di funghi e zucchine",
           "35 g di salsa yogurt e senape",
           "Sale, pepe e spezie a piacere"
         ],
         "instructions": [
           "Prepara yogurt greco e porta a cottura wrap integrale o l'accompagnamento scelto.",
-          "Aggiungi spinaci e pomodorini e condisci con salsa yogurt e senape.",
+          "Aggiungi funghi e zucchine e condisci con salsa yogurt e senape.",
           "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
           "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
         ],
-        "generatedAt": "2026-07-04T13:08:41.645Z",
+        "generatedAt": "2026-07-13T13:09:19.677Z",
         "prompt": "",
         "mode": "generated-local",
-        "signature": "dinner-balanced-traybake-yogurt-greco-wrap-integrale-spinaci-e-pomodorini-salsa-yogurt-e-senape",
-        "pantryMatches": [
-          "170 g di yogurt greco",
-          "120 g di spinaci e pomodorini"
-        ],
-        "pantryNote": "Hai già in dispensa: 170 g di yogurt greco, 120 g di spinaci e pomodorini.",
-        "personalNote": "Suggerita per cena bilanciata intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+        "signature": "dinner-vegetarian-traybake-yogurt-greco-wrap-integrale-funghi-e-zucchine-salsa-yogurt-e-senape",
+        "pantryMatches": [],
+        "pantryNote": "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.",
+        "criteriaNote": "",
+        "personalNote": "Suggerita per cena vegetariana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
       },
-      "recipe-dinner-balanced-plate-yogurt-greco-patate-arrosto-spinaci-e-pomodorini-parmigiano-mr6dp2qh-ujnnz": {
-        "id": "recipe-dinner-balanced-plate-yogurt-greco-patate-arrosto-spinaci-e-pomodorini-parmigiano-mr6dp2qh-ujnnz",
-        "title": "Yogurt greco con patate arrosto e spinaci e pomodorini",
-        "description": "Cena completa e gestibile anche in settimana.",
-        "calories": 416,
-        "protein": 31,
-        "carbs": 51,
-        "fats": 10,
-        "duration": 28,
+      "recipe-dinner-vegetarian-stirfry-yogurt-greco-patate-arrosto-frutti-rossi-salsa-yogurt-e-senape-mrj8oe0v-0a1q5": {
+        "id": "recipe-dinner-vegetarian-stirfry-yogurt-greco-patate-arrosto-frutti-rossi-salsa-yogurt-e-senape-mrj8oe0v-0a1q5",
+        "title": "Stir-fry di yogurt greco con frutti rossi",
+        "description": "Cena rapida in padella con sapori netti e buon volume.",
+        "calories": 402,
+        "protein": 28,
+        "carbs": 56,
+        "fats": 7,
+        "duration": 20,
         "servings": 2,
         "difficulty": "Facile",
         "dietTypes": [
-          "balanced"
+          "vegetarian"
         ],
         "mealTypes": [
           "dinner"
@@ -345,70 +248,183 @@
         "ingredients": [
           "170 g di yogurt greco",
           "220 g di patate arrosto",
-          "120 g di spinaci e pomodorini",
-          "15 g di parmigiano",
+          "90 g di frutti rossi",
+          "35 g di salsa yogurt e senape",
           "Sale, pepe e spezie a piacere"
         ],
         "instructions": [
           "Prepara yogurt greco e porta a cottura patate arrosto o l'accompagnamento scelto.",
-          "Aggiungi spinaci e pomodorini e condisci con parmigiano.",
+          "Aggiungi frutti rossi e condisci con salsa yogurt e senape.",
           "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
           "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
         ],
-        "generatedAt": "2026-07-04T13:08:55.243Z",
-        "prompt": "usa ingredienti in dispensa",
+        "generatedAt": "2026-07-13T13:09:25.400Z",
+        "prompt": "",
         "mode": "generated-local",
-        "signature": "dinner-balanced-plate-yogurt-greco-patate-arrosto-spinaci-e-pomodorini-parmigiano",
-        "pantryMatches": [
-          "170 g di yogurt greco",
-          "120 g di spinaci e pomodorini"
-        ],
-        "pantryNote": "Hai già in dispensa: 170 g di yogurt greco, 120 g di spinaci e pomodorini.",
-        "personalNote": "Suggerita per cena bilanciata intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+        "signature": "dinner-vegetarian-stirfry-yogurt-greco-patate-arrosto-frutti-rossi-salsa-yogurt-e-senape",
+        "pantryMatches": [],
+        "pantryNote": "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.",
+        "criteriaNote": "",
+        "personalNote": "Suggerita per cena vegetariana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
       },
-      "recipe-dinner-balanced-bowl-yogurt-greco-riso-integrale-cetriolo-e-pomodoro-semi-di-chia-mr6dp51y-1cpt1": {
-        "id": "recipe-dinner-balanced-bowl-yogurt-greco-riso-integrale-cetriolo-e-pomodoro-semi-di-chia-mr6dp51y-1cpt1",
-        "title": "Power bowl di yogurt greco con riso integrale",
-        "description": "Cena energizzante pensata per recupero e sazieta'.",
-        "calories": 421,
-        "protein": 27,
-        "carbs": 63,
-        "fats": 7,
-        "duration": 25,
+      "recipe-dinner-vegetarian-stirfry-yogurt-greco-wrap-integrale-cetriolo-e-pomodoro-salsa-yogurt-e-senape-mrj8ohlt-bxvhd": {
+        "id": "recipe-dinner-vegetarian-stirfry-yogurt-greco-wrap-integrale-cetriolo-e-pomodoro-salsa-yogurt-e-senape-mrj8ohlt-bxvhd",
+        "title": "Stir-fry di yogurt greco con cetriolo e pomodoro",
+        "description": "Cena rapida in padella con sapori netti e buon volume.",
+        "calories": 384,
+        "protein": 31,
+        "carbs": 46,
+        "fats": 8,
+        "duration": 20,
         "servings": 2,
-        "difficulty": "Media",
+        "difficulty": "Facile",
         "dietTypes": [
-          "balanced"
+          "vegetarian"
         ],
         "mealTypes": [
           "dinner"
         ],
         "ingredients": [
           "170 g di yogurt greco",
-          "150 g di riso integrale",
+          "1 wrap integrale",
+          "160 g di cetriolo e pomodoro",
+          "35 g di salsa yogurt e senape",
+          "Sale, pepe e spezie a piacere"
+        ],
+        "instructions": [
+          "Prepara yogurt greco e porta a cottura wrap integrale o l'accompagnamento scelto.",
+          "Aggiungi cetriolo e pomodoro e condisci con salsa yogurt e senape.",
+          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
+          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
+        ],
+        "generatedAt": "2026-07-13T13:09:30.041Z",
+        "prompt": "",
+        "mode": "generated-local",
+        "signature": "dinner-vegetarian-stirfry-yogurt-greco-wrap-integrale-cetriolo-e-pomodoro-salsa-yogurt-e-senape",
+        "pantryMatches": [],
+        "pantryNote": "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.",
+        "criteriaNote": "",
+        "personalNote": "Suggerita per cena vegetariana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+      },
+      "recipe-dinner-vegetarian-traybake-yogurt-greco-patate-arrosto-cetriolo-e-pomodoro-salsa-yogurt-e-senape-mrj8oigp-dfwcf": {
+        "id": "recipe-dinner-vegetarian-traybake-yogurt-greco-patate-arrosto-cetriolo-e-pomodoro-salsa-yogurt-e-senape-mrj8oigp-dfwcf",
+        "title": "Teglia di yogurt greco e cetriolo e pomodoro",
+        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
+        "calories": 404,
+        "protein": 29,
+        "carbs": 55,
+        "fats": 7,
+        "duration": 32,
+        "servings": 2,
+        "difficulty": "Facile",
+        "dietTypes": [
+          "vegetarian"
+        ],
+        "mealTypes": [
+          "dinner"
+        ],
+        "ingredients": [
+          "170 g di yogurt greco",
+          "220 g di patate arrosto",
+          "160 g di cetriolo e pomodoro",
+          "35 g di salsa yogurt e senape",
+          "Sale, pepe e spezie a piacere"
+        ],
+        "instructions": [
+          "Prepara yogurt greco e porta a cottura patate arrosto o l'accompagnamento scelto.",
+          "Aggiungi cetriolo e pomodoro e condisci con salsa yogurt e senape.",
+          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
+          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
+        ],
+        "generatedAt": "2026-07-13T13:09:31.150Z",
+        "prompt": "",
+        "mode": "generated-local",
+        "signature": "dinner-vegetarian-traybake-yogurt-greco-patate-arrosto-cetriolo-e-pomodoro-salsa-yogurt-e-senape",
+        "pantryMatches": [],
+        "pantryNote": "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.",
+        "criteriaNote": "",
+        "personalNote": "Suggerita per cena vegetariana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+      },
+      "recipe-dinner-vegetarian-traybake-yogurt-greco-patate-arrosto-frutti-rossi-semi-di-chia-mrj8ojda-k7kj4": {
+        "id": "recipe-dinner-vegetarian-traybake-yogurt-greco-patate-arrosto-frutti-rossi-semi-di-chia-mrj8ojda-k7kj4",
+        "title": "Teglia di yogurt greco e frutti rossi",
+        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
+        "calories": 409,
+        "protein": 26,
+        "carbs": 58,
+        "fats": 9,
+        "duration": 32,
+        "servings": 2,
+        "difficulty": "Facile",
+        "dietTypes": [
+          "vegetarian"
+        ],
+        "mealTypes": [
+          "dinner"
+        ],
+        "ingredients": [
+          "170 g di yogurt greco",
+          "220 g di patate arrosto",
+          "90 g di frutti rossi",
+          "10 g di semi di chia",
+          "Sale, pepe e spezie a piacere"
+        ],
+        "instructions": [
+          "Prepara yogurt greco e porta a cottura patate arrosto o l'accompagnamento scelto.",
+          "Aggiungi frutti rossi e condisci con semi di chia.",
+          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
+          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
+        ],
+        "generatedAt": "2026-07-13T13:09:32.323Z",
+        "prompt": "",
+        "mode": "generated-local",
+        "signature": "dinner-vegetarian-traybake-yogurt-greco-patate-arrosto-frutti-rossi-semi-di-chia",
+        "pantryMatches": [],
+        "pantryNote": "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.",
+        "criteriaNote": "",
+        "personalNote": "Suggerita per cena vegetariana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+      },
+      "recipe-dinner-vegetarian-bowl-yogurt-greco-patate-arrosto-cetriolo-e-pomodoro-semi-di-chia-mrj8ojwy-sce5g": {
+        "id": "recipe-dinner-vegetarian-bowl-yogurt-greco-patate-arrosto-cetriolo-e-pomodoro-semi-di-chia-mrj8ojwy-sce5g",
+        "title": "Power bowl di yogurt greco con patate arrosto",
+        "description": "Cena energizzante pensata per recupero e sazieta'.",
+        "calories": 411,
+        "protein": 27,
+        "carbs": 57,
+        "fats": 9,
+        "duration": 25,
+        "servings": 2,
+        "difficulty": "Media",
+        "dietTypes": [
+          "vegetarian"
+        ],
+        "mealTypes": [
+          "dinner"
+        ],
+        "ingredients": [
+          "170 g di yogurt greco",
+          "220 g di patate arrosto",
           "160 g di cetriolo e pomodoro",
           "10 g di semi di chia",
           "Sale, pepe e spezie a piacere"
         ],
         "instructions": [
-          "Prepara yogurt greco e porta a cottura riso integrale o l'accompagnamento scelto.",
+          "Prepara yogurt greco e porta a cottura patate arrosto o l'accompagnamento scelto.",
           "Aggiungi cetriolo e pomodoro e condisci con semi di chia.",
           "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
           "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
         ],
-        "generatedAt": "2026-07-04T13:08:58.230Z",
-        "prompt": "usa ingredienti in dispensa",
+        "generatedAt": "2026-07-13T13:09:33.027Z",
+        "prompt": "",
         "mode": "generated-local",
-        "signature": "dinner-balanced-bowl-yogurt-greco-riso-integrale-cetriolo-e-pomodoro-semi-di-chia",
-        "pantryMatches": [
-          "170 g di yogurt greco",
-          "150 g di riso integrale"
-        ],
-        "pantryNote": "Hai già in dispensa: 170 g di yogurt greco, 150 g di riso integrale.",
-        "personalNote": "Suggerita per cena bilanciata intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
+        "signature": "dinner-vegetarian-bowl-yogurt-greco-patate-arrosto-cetriolo-e-pomodoro-semi-di-chia",
+        "pantryMatches": [],
+        "pantryNote": "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.",
+        "criteriaNote": "",
+        "personalNote": "Suggerita per cena vegetariana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
       },
-      "recipe-dinner-vegetarian-plate-yogurt-greco-wrap-integrale-frutti-rossi-salsa-yogurt-e-senape-mr6dp8qf-gv7yl": {
-        "id": "recipe-dinner-vegetarian-plate-yogurt-greco-wrap-integrale-frutti-rossi-salsa-yogurt-e-senape-mr6dp8qf-gv7yl",
+      "recipe-dinner-vegetarian-plate-yogurt-greco-wrap-integrale-frutti-rossi-salsa-yogurt-e-senape-mrj8okwt-mhf0a": {
+        "id": "recipe-dinner-vegetarian-plate-yogurt-greco-wrap-integrale-frutti-rossi-salsa-yogurt-e-senape-mrj8okwt-mhf0a",
         "title": "Yogurt greco con wrap integrale e frutti rossi",
         "description": "Cena completa e gestibile anche in settimana.",
         "calories": 382,
@@ -437,1023 +453,19 @@
           "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
           "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
         ],
-        "generatedAt": "2026-07-04T13:09:02.997Z",
-        "prompt": "usa ingredienti in dispensa",
+        "generatedAt": "2026-07-13T13:09:34.325Z",
+        "prompt": "",
         "mode": "generated-local",
         "signature": "dinner-vegetarian-plate-yogurt-greco-wrap-integrale-frutti-rossi-salsa-yogurt-e-senape",
-        "pantryMatches": [
-          "170 g di yogurt greco"
-        ],
-        "pantryNote": "Hai già in dispensa: 170 g di yogurt greco.",
+        "pantryMatches": [],
+        "pantryNote": "Aggiungi ingredienti alla Shopping List o alla dispensa per suggerimenti ancora più mirati.",
+        "criteriaNote": "",
         "personalNote": "Suggerita per cena vegetariana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-pesto-leggero-mr6ed450-rbnuu": {
-        "id": "recipe-dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-pesto-leggero-mr6ed450-rbnuu",
-        "title": "Teglia di tempeh saltato e spinaci e pomodorini",
-        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
-        "calories": 634,
-        "protein": 37,
-        "carbs": 70,
-        "fats": 24,
-        "duration": 32,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "150 g di tempeh saltato",
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini",
-          "20 g di pesto leggero",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara tempeh saltato e porta a cottura riso integrale o l'accompagnamento scelto.",
-          "Aggiungi spinaci e pomodorini e condisci con pesto leggero.",
-          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T13:27:36.809Z",
-        "prompt": "usa ingredienti in dispensa",
-        "mode": "generated-local",
-        "signature": "dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-pesto-leggero",
-        "pantryMatches": [
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini"
-        ],
-        "pantryNote": "Hai già in dispensa: 150 g di riso integrale, 120 g di spinaci e pomodorini.",
-        "personalNote": "Suggerita per cena vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-mela-e-cannella-parmigiano-mr6ed76y-gy67h": {
-        "id": "recipe-dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-mela-e-cannella-parmigiano-mr6ed76y-gy67h",
-        "title": "Teglia di tempeh saltato e mela e cannella",
-        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
-        "calories": 646,
-        "protein": 37,
-        "carbs": 82,
-        "fats": 20,
-        "duration": 32,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "150 g di tempeh saltato",
-          "150 g di riso integrale",
-          "1 porzione di mela e cannella",
-          "15 g di parmigiano",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara tempeh saltato e porta a cottura riso integrale o l'accompagnamento scelto.",
-          "Aggiungi mela e cannella e condisci con parmigiano.",
-          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T13:27:40.750Z",
-        "prompt": "usa ingredienti in dispensa",
-        "mode": "generated-local",
-        "signature": "dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-mela-e-cannella-parmigiano",
-        "pantryMatches": [
-          "150 g di riso integrale"
-        ],
-        "pantryNote": "Hai già in dispensa: 150 g di riso integrale.",
-        "personalNote": "Suggerita per cena vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-vegetarian-traybake-ceci-speziati-riso-integrale-spinaci-e-pomodorini-avocado-mr6fuuya-gn6dt": {
-        "id": "recipe-dinner-vegetarian-traybake-ceci-speziati-riso-integrale-spinaci-e-pomodorini-avocado-mr6fuuya-gn6dt",
-        "title": "Teglia di ceci speziati e spinaci e pomodorini",
-        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
-        "calories": 630,
-        "protein": 22,
-        "carbs": 92,
-        "fats": 20,
-        "duration": 32,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "170 g di ceci speziati",
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini",
-          "70 g di avocado",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara ceci speziati e porta a cottura riso integrale o l'accompagnamento scelto.",
-          "Aggiungi spinaci e pomodorini e condisci con avocado.",
-          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T14:09:24.314Z",
-        "prompt": "usa ingredienti in dispensa",
-        "mode": "generated-local",
-        "signature": "dinner-vegetarian-traybake-ceci-speziati-riso-integrale-spinaci-e-pomodorini-avocado",
-        "pantryMatches": [
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini"
-        ],
-        "pantryNote": "Hai già in dispensa: 150 g di riso integrale, 120 g di spinaci e pomodorini.",
-        "personalNote": "Suggerita per cena vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-vegetarian-stirfry-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-salsa-tahina-e-limone-mr6fuvd8-fvsu4": {
-        "id": "recipe-dinner-vegetarian-stirfry-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-salsa-tahina-e-limone-mr6fuvd8-fvsu4",
-        "title": "Stir-fry di tempeh saltato con spinaci e pomodorini",
-        "description": "Cena rapida in padella con sapori netti e buon volume.",
-        "calories": 643,
-        "protein": 38,
-        "carbs": 71,
-        "fats": 24,
-        "duration": 20,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "150 g di tempeh saltato",
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini",
-          "18 g di salsa tahina e limone",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara tempeh saltato e porta a cottura riso integrale o l'accompagnamento scelto.",
-          "Aggiungi spinaci e pomodorini e condisci con salsa tahina e limone.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T14:09:24.858Z",
-        "prompt": "usa ingredienti in dispensa",
-        "mode": "generated-local",
-        "signature": "dinner-vegetarian-stirfry-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-salsa-tahina-e-limone",
-        "pantryMatches": [
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini"
-        ],
-        "pantryNote": "Hai già in dispensa: 150 g di riso integrale, 120 g di spinaci e pomodorini.",
-        "personalNote": "Suggerita per cena vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-vegetarian-traybake-ceci-speziati-pasta-integrale-spinaci-e-pomodorini-parmigiano-mr6fuvpk-b6wv2": {
-        "id": "recipe-dinner-vegetarian-traybake-ceci-speziati-pasta-integrale-spinaci-e-pomodorini-parmigiano-mr6fuvpk-b6wv2",
-        "title": "Teglia di ceci speziati e spinaci e pomodorini",
-        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
-        "calories": 654,
-        "protein": 32,
-        "carbs": 96,
-        "fats": 15,
-        "duration": 32,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "170 g di ceci speziati",
-          "85 g di pasta integrale",
-          "120 g di spinaci e pomodorini",
-          "15 g di parmigiano",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara ceci speziati e porta a cottura pasta integrale o l'accompagnamento scelto.",
-          "Aggiungi spinaci e pomodorini e condisci con parmigiano.",
-          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T14:09:25.288Z",
-        "prompt": "usa ingredienti in dispensa",
-        "mode": "generated-local",
-        "signature": "dinner-vegetarian-traybake-ceci-speziati-pasta-integrale-spinaci-e-pomodorini-parmigiano",
-        "pantryMatches": [
-          "120 g di spinaci e pomodorini"
-        ],
-        "pantryNote": "Hai già in dispensa: 120 g di spinaci e pomodorini.",
-        "personalNote": "Suggerita per cena vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-vegetarian-plate-tofu-croccante-riso-integrale-broccoli-e-carote-salsa-tahina-e-limone-mr6fuvve-mr51t": {
-        "id": "recipe-dinner-vegetarian-plate-tofu-croccante-riso-integrale-broccoli-e-carote-salsa-tahina-e-limone-mr6fuvve-mr51t",
-        "title": "Tofu croccante con riso integrale e broccoli e carote",
-        "description": "Cena completa e gestibile anche in settimana.",
-        "calories": 649,
-        "protein": 35,
-        "carbs": 72,
-        "fats": 26,
-        "duration": 28,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "180 g di tofu croccante",
-          "150 g di riso integrale",
-          "180 g di broccoli e carote",
-          "18 g di salsa tahina e limone",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara tofu croccante e porta a cottura riso integrale o l'accompagnamento scelto.",
-          "Aggiungi broccoli e carote e condisci con salsa tahina e limone.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T14:09:25.503Z",
-        "prompt": "usa ingredienti in dispensa",
-        "mode": "generated-local",
-        "signature": "dinner-vegetarian-plate-tofu-croccante-riso-integrale-broccoli-e-carote-salsa-tahina-e-limone",
-        "pantryMatches": [
-          "150 g di riso integrale"
-        ],
-        "pantryNote": "Hai già in dispensa: 150 g di riso integrale.",
-        "personalNote": "Suggerita per cena vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-funghi-e-zucchine-noci-tritate-mr6fxk5x-i4yuf": {
-        "id": "recipe-dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-funghi-e-zucchine-noci-tritate-mr6fxk5x-i4yuf",
-        "title": "Teglia di tempeh saltato e funghi e zucchine",
-        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
-        "calories": 646,
-        "protein": 38,
-        "carbs": 73,
-        "fats": 24,
-        "duration": 32,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "150 g di tempeh saltato",
-          "150 g di riso integrale",
-          "170 g di funghi e zucchine",
-          "12 g di noci tritate",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara tempeh saltato e porta a cottura riso integrale o l'accompagnamento scelto.",
-          "Aggiungi funghi e zucchine e condisci con noci tritate.",
-          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T14:11:30.293Z",
-        "prompt": "in meno di 15 minuti",
-        "mode": "generated-local",
-        "signature": "dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-funghi-e-zucchine-noci-tritate",
-        "pantryMatches": [
-          "150 g di riso integrale"
-        ],
-        "pantryNote": "Hai già in dispensa: 150 g di riso integrale.",
-        "personalNote": "Suggerita per cena vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-pesto-leggero-mr6fxm1j-jl21s": {
-        "id": "recipe-dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-pesto-leggero-mr6fxm1j-jl21s",
-        "title": "Teglia di tempeh saltato e spinaci e pomodorini",
-        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
-        "calories": 634,
-        "protein": 37,
-        "carbs": 70,
-        "fats": 24,
-        "duration": 32,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "150 g di tempeh saltato",
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini",
-          "20 g di pesto leggero",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara tempeh saltato e porta a cottura riso integrale o l'accompagnamento scelto.",
-          "Aggiungi spinaci e pomodorini e condisci con pesto leggero.",
-          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T14:11:32.733Z",
-        "prompt": "in meno di 15 minuti",
-        "mode": "generated-local",
-        "signature": "dinner-vegetarian-traybake-tempeh-saltato-riso-integrale-spinaci-e-pomodorini-pesto-leggero",
-        "pantryMatches": [
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini"
-        ],
-        "pantryNote": "Hai già in dispensa: 150 g di riso integrale, 120 g di spinaci e pomodorini.",
-        "personalNote": "Suggerita per cena vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-vegetarian-traybake-ceci-speziati-riso-integrale-verdure-mediterranee-feta-mr6g4e7c-3igu9": {
-        "id": "recipe-dinner-vegetarian-traybake-ceci-speziati-riso-integrale-verdure-mediterranee-feta-mr6g4e7c-3igu9",
-        "title": "Teglia di ceci speziati e verdure mediterranee",
-        "description": "Versione da forno con poca gestione e ottima resa per meal prep.",
-        "calories": 645,
-        "protein": 26,
-        "carbs": 94,
-        "fats": 19,
-        "duration": 32,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "170 g di ceci speziati",
-          "150 g di riso integrale",
-          "180 g di verdure mediterranee",
-          "35 g di feta",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara ceci speziati e porta a cottura riso integrale o l'accompagnamento scelto.",
-          "Aggiungi verdure mediterranee e condisci con feta.",
-          "Completa la teglia regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-04T14:16:49.206Z",
-        "prompt": "in meno di 15 minuti",
-        "mode": "generated-local",
-        "signature": "dinner-vegetarian-traybake-ceci-speziati-riso-integrale-verdure-mediterranee-feta",
-        "pantryMatches": [
-          "Riso integrale"
-        ],
-        "pantryNote": "Hai già in dispensa: Riso integrale.",
-        "personalNote": "Suggerita per cena vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-dinner-vegetarian-bowl-tempeh-saltato-patate-arrosto-spinaci-e-pomodorini-avocado-mr98noc8-m12z6": {
-        "id": "recipe-dinner-vegetarian-bowl-tempeh-saltato-patate-arrosto-spinaci-e-pomodorini-avocado-mr98noc8-m12z6",
-        "title": "Power bowl di tempeh saltato con patate arrosto",
-        "description": "Cena energizzante pensata per recupero e sazieta'.",
-        "calories": 650,
-        "protein": 36,
-        "carbs": 68,
-        "fats": 28,
-        "duration": 25,
-        "servings": 2,
-        "difficulty": "Media",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "dinner"
-        ],
-        "ingredients": [
-          "150 g di tempeh saltato",
-          "220 g di patate arrosto",
-          "120 g di spinaci e pomodorini",
-          "70 g di avocado",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Prepara tempeh saltato e porta a cottura patate arrosto o l'accompagnamento scelto.",
-          "Aggiungi spinaci e pomodorini e condisci con avocado.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-06T13:11:10.582Z",
-        "prompt": "in meno di 15 minuti",
-        "mode": "generated-local",
-        "signature": "dinner-vegetarian-bowl-tempeh-saltato-patate-arrosto-spinaci-e-pomodorini-avocado",
-        "pantryMatches": [
-          "Spinaci"
-        ],
-        "pantryNote": "Hai già in dispensa: Spinaci.",
-        "criteriaNote": "Non ho trovato una ricetta dentro il tempo richiesto, quindi ho scelto l'opzione più vicina.",
-        "personalNote": "Suggerita per cena vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "protein-omelette-wrap": {
-        "id": "protein-omelette-wrap",
-        "title": "Protein Omelette Wrap",
-        "description": "Wrap proteico con uova, spinaci e yogurt greco, pensato per un pranzo rapido.",
-        "calories": 510,
-        "protein": 34,
-        "carbs": 29,
-        "fats": 26,
-        "duration": 15,
-        "servings": 1,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "balanced",
-          "high-protein",
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "breakfast",
-          "lunch"
-        ],
-        "ingredients": [
-          "3 uova",
-          "1 tortilla integrale",
-          "80 g di spinaci",
-          "60 g di yogurt greco",
-          "1 cucchiaino di senape",
-          "Pomodorini a piacere",
-          "Pepe nero e paprika"
-        ],
-        "instructions": [
-          "Sbatti le uova con pepe e paprika.",
-          "Cuoci una frittata sottile in padella con gli spinaci.",
-          "Mescola yogurt greco e senape per creare la salsa.",
-          "Farcisci la tortilla con omelette, pomodorini e salsa.",
-          "Arrotola e servi subito oppure conserva per il meal prep."
-        ],
-        "generatedAt": "2026-07-06T13:11:13.459Z",
-        "prompt": "in meno di 15 minuti",
-        "mode": "seed-library",
-        "signature": "protein-omelette-wrap",
-        "pantryMatches": [
-          "Spinaci",
-          "Yogurt greco"
-        ],
-        "pantryNote": "Hai già in dispensa: Spinaci, Yogurt greco.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per pranzo vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-lunch-vegetarian-wrap-tempeh-saltato-riso-integrale-broccoli-e-carote-salsa-yogurt-e-senape-mr991cdo-f9f72": {
-        "id": "recipe-lunch-vegetarian-wrap-tempeh-saltato-riso-integrale-broccoli-e-carote-salsa-yogurt-e-senape-mr991cdo-f9f72",
-        "title": "Wrap di tempeh saltato con broccoli e carote",
-        "description": "Pranzo veloce e portabile, con buon bilanciamento dei macro.",
-        "calories": 636,
-        "protein": 41,
-        "carbs": 79,
-        "fats": 18,
-        "duration": 18,
-        "servings": 1,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "lunch"
-        ],
-        "ingredients": [
-          "150 g di tempeh saltato",
-          "150 g di riso integrale",
-          "180 g di broccoli e carote",
-          "35 g di salsa yogurt e senape",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Cuoci riso integrale e prepara tempeh saltato come componente principale.",
-          "Aggiungi broccoli e carote e condisci con salsa yogurt e senape.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-06T13:21:48.254Z",
-        "prompt": "in meno di 15 minuti",
-        "mode": "generated-local",
-        "signature": "lunch-vegetarian-wrap-tempeh-saltato-riso-integrale-broccoli-e-carote-salsa-yogurt-e-senape",
-        "pantryMatches": [
-          "Riso integrale",
-          "Yogurt greco"
-        ],
-        "pantryNote": "Hai già in dispensa: Riso integrale, Yogurt greco.",
-        "criteriaNote": "Non ho trovato una ricetta dentro il tempo richiesto, quindi ho scelto l'opzione più vicina.",
-        "personalNote": "Suggerita per pranzo vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-lunch-vegetarian-pasta-tofu-croccante-pasta-integrale-spinaci-e-pomodorini-salsa-yogurt-e-senape-mr9ar8m3-qahvt": {
-        "id": "recipe-lunch-vegetarian-pasta-tofu-croccante-pasta-integrale-spinaci-e-pomodorini-salsa-yogurt-e-senape-mr9ar8m3-qahvt",
-        "title": "Pasta integrale con tofu croccante e spinaci e pomodorini",
-        "description": "Versione smart di un comfort food, piu centrata sugli obiettivi nutrizionali.",
-        "calories": 628,
-        "protein": 40,
-        "carbs": 72,
-        "fats": 19,
-        "duration": 26,
-        "servings": 2,
-        "difficulty": "Media",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "lunch"
-        ],
-        "ingredients": [
-          "180 g di tofu croccante",
-          "85 g di pasta integrale",
-          "120 g di spinaci e pomodorini",
-          "35 g di salsa yogurt e senape",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Cuoci pasta integrale e prepara tofu croccante come componente principale.",
-          "Aggiungi spinaci e pomodorini e condisci con salsa yogurt e senape.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-06T14:09:56.071Z",
-        "prompt": "in meno di 15 minuti",
-        "mode": "generated-local",
-        "signature": "lunch-vegetarian-pasta-tofu-croccante-pasta-integrale-spinaci-e-pomodorini-salsa-yogurt-e-senape",
-        "pantryMatches": [
-          "Spinaci",
-          "Yogurt greco"
-        ],
-        "pantryNote": "Hai già in dispensa: Spinaci, Yogurt greco.",
-        "criteriaNote": "Non ho trovato una ricetta dentro il tempo richiesto, quindi ho scelto l'opzione più vicina.",
-        "personalNote": "Suggerita per pranzo vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-lunch-vegetarian-pasta-tofu-croccante-riso-integrale-mela-e-cannella-feta-mr9cjkw1-ta4wh": {
-        "id": "recipe-lunch-vegetarian-pasta-tofu-croccante-riso-integrale-mela-e-cannella-feta-mr9cjkw1-ta4wh",
-        "title": "Riso integrale con tofu croccante e mela e cannella",
-        "description": "Versione smart di un comfort food, piu centrata sugli obiettivi nutrizionali.",
-        "calories": 641,
-        "protein": 32,
-        "carbs": 75,
-        "fats": 24,
-        "duration": 26,
-        "servings": 2,
-        "difficulty": "Media",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "lunch"
-        ],
-        "ingredients": [
-          "180 g di tofu croccante",
-          "150 g di riso integrale",
-          "1 porzione di mela e cannella",
-          "35 g di feta",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Cuoci riso integrale e prepara tofu croccante come componente principale.",
-          "Aggiungi mela e cannella e condisci con feta.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-06T14:59:57.982Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "lunch-vegetarian-pasta-tofu-croccante-riso-integrale-mela-e-cannella-feta",
-        "pantryMatches": [
-          "Riso integrale",
-          "Tofu affumicato"
-        ],
-        "pantryNote": "Hai già in dispensa: Riso integrale, Tofu affumicato.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per pranzo vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-lunch-vegetarian-wrap-tofu-croccante-riso-integrale-broccoli-e-carote-pesto-leggero-mraul5gd-tfpt2": {
-        "id": "recipe-lunch-vegetarian-wrap-tofu-croccante-riso-integrale-broccoli-e-carote-pesto-leggero-mraul5gd-tfpt2",
-        "title": "Wrap di tofu croccante con broccoli e carote",
-        "description": "Pranzo veloce e portabile, con buon bilanciamento dei macro.",
-        "calories": 640,
-        "protein": 34,
-        "carbs": 71,
-        "fats": 26,
-        "duration": 18,
-        "servings": 1,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "lunch"
-        ],
-        "ingredients": [
-          "180 g di tofu croccante",
-          "150 g di riso integrale",
-          "180 g di broccoli e carote",
-          "20 g di pesto leggero",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Cuoci riso integrale e prepara tofu croccante come componente principale.",
-          "Aggiungi broccoli e carote e condisci con pesto leggero.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-07T16:12:50.586Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "lunch-vegetarian-wrap-tofu-croccante-riso-integrale-broccoli-e-carote-pesto-leggero",
-        "pantryMatches": [
-          "Riso integrale",
-          "Tofu affumicato"
-        ],
-        "pantryNote": "Hai già in dispensa: Riso integrale, Tofu affumicato.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per pranzo vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-lunch-vegetarian-salad-tempeh-saltato-riso-integrale-cetriolo-e-pomodoro-feta-mrc1zzco-u8ipg": {
-        "id": "recipe-lunch-vegetarian-salad-tempeh-saltato-riso-integrale-cetriolo-e-pomodoro-feta-mrc1zzco-u8ipg",
-        "title": "Insalata completa di tempeh saltato e cetriolo e pomodoro",
-        "description": "Pranzo fresco, leggero ma con una quota proteica credibile.",
-        "calories": 645,
-        "protein": 39,
-        "carbs": 71,
-        "fats": 23,
-        "duration": 16,
-        "servings": 1,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegetarian"
-        ],
-        "mealTypes": [
-          "lunch"
-        ],
-        "ingredients": [
-          "150 g di tempeh saltato",
-          "150 g di riso integrale",
-          "160 g di cetriolo e pomodoro",
-          "35 g di feta",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Cuoci riso integrale e prepara tempeh saltato come componente principale.",
-          "Aggiungi cetriolo e pomodoro e condisci con feta.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-08T12:28:05.997Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "lunch-vegetarian-salad-tempeh-saltato-riso-integrale-cetriolo-e-pomodoro-feta",
-        "pantryMatches": [
-          "Feta",
-          "Pepe nero",
-          "Riso integrale"
-        ],
-        "pantryNote": "Hai già in dispensa: Feta, Pepe nero, Riso integrale.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per pranzo vegetariana intorno a 650 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-lunch-vegan-pasta-tofu-croccante-riso-integrale-spinaci-e-pomodorini-semi-di-chia-mrc2co2i-2qzod": {
-        "id": "recipe-lunch-vegan-pasta-tofu-croccante-riso-integrale-spinaci-e-pomodorini-semi-di-chia-mrc2co2i-2qzod",
-        "title": "Riso integrale con tofu croccante e spinaci e pomodorini",
-        "description": "Versione smart di un comfort food, piu centrata sugli obiettivi nutrizionali.",
-        "calories": 557,
-        "protein": 32,
-        "carbs": 64,
-        "fats": 20,
-        "duration": 26,
-        "servings": 2,
-        "difficulty": "Media",
-        "dietTypes": [
-          "vegan"
-        ],
-        "mealTypes": [
-          "lunch"
-        ],
-        "ingredients": [
-          "180 g di tofu croccante",
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini",
-          "10 g di semi di chia",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Cuoci riso integrale e prepara tofu croccante come componente principale.",
-          "Aggiungi spinaci e pomodorini e condisci con semi di chia.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-08T12:37:57.841Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "lunch-vegan-pasta-tofu-croccante-riso-integrale-spinaci-e-pomodorini-semi-di-chia",
-        "pantryMatches": [
-          "Pepe nero",
-          "Riso integrale",
-          "Spinaci",
-          "Tofu affumicato"
-        ],
-        "pantryNote": "Hai già in dispensa: Pepe nero, Riso integrale, Spinaci, Tofu affumicato.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per pranzo vegana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-lunch-vegan-bowl-hummus-riso-integrale-spinaci-e-pomodorini-semi-di-chia-mrc2crid-jwy4c": {
-        "id": "recipe-lunch-vegan-bowl-hummus-riso-integrale-spinaci-e-pomodorini-semi-di-chia-mrc2crid-jwy4c",
-        "title": "Hummus Bowl con riso integrale e spinaci e pomodorini",
-        "description": "Piatto unico completo, adatto a pausa pranzo e meal prep.",
-        "calories": 517,
-        "protein": 17,
-        "carbs": 73,
-        "fats": 17,
-        "duration": 24,
-        "servings": 2,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegan"
-        ],
-        "mealTypes": [
-          "lunch"
-        ],
-        "ingredients": [
-          "90 g di hummus",
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini",
-          "10 g di semi di chia",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Cuoci riso integrale e prepara hummus come componente principale.",
-          "Aggiungi spinaci e pomodorini e condisci con semi di chia.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-08T12:38:02.279Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "lunch-vegan-bowl-hummus-riso-integrale-spinaci-e-pomodorini-semi-di-chia",
-        "pantryMatches": [
-          "Pepe nero",
-          "Riso integrale",
-          "Spinaci"
-        ],
-        "pantryNote": "Hai già in dispensa: Pepe nero, Riso integrale, Spinaci.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per pranzo vegana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-lunch-vegan-wrap-hummus-riso-integrale-spinaci-e-pomodorini-noci-tritate-mrc2cu7d-7vz3l": {
-        "id": "recipe-lunch-vegan-wrap-hummus-riso-integrale-spinaci-e-pomodorini-noci-tritate-mrc2cu7d-7vz3l",
-        "title": "Wrap di hummus con spinaci e pomodorini",
-        "description": "Pranzo veloce e portabile, con buon bilanciamento dei macro.",
-        "calories": 546,
-        "protein": 17,
-        "carbs": 71,
-        "fats": 21,
-        "duration": 18,
-        "servings": 1,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegan"
-        ],
-        "mealTypes": [
-          "lunch"
-        ],
-        "ingredients": [
-          "90 g di hummus",
-          "150 g di riso integrale",
-          "120 g di spinaci e pomodorini",
-          "12 g di noci tritate",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Cuoci riso integrale e prepara hummus come componente principale.",
-          "Aggiungi spinaci e pomodorini e condisci con noci tritate.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-08T12:38:05.771Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "lunch-vegan-wrap-hummus-riso-integrale-spinaci-e-pomodorini-noci-tritate",
-        "pantryMatches": [
-          "Pepe nero",
-          "Riso integrale",
-          "Spinaci"
-        ],
-        "pantryNote": "Hai già in dispensa: Pepe nero, Riso integrale, Spinaci.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per pranzo vegana intorno a 500 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-lunch-vegan-pasta-hummus-wrap-integrale-spinaci-e-pomodorini-noci-tritate-mrc2cueq-9ph6o": {
-        "id": "recipe-lunch-vegan-pasta-hummus-wrap-integrale-spinaci-e-pomodorini-noci-tritate-mrc2cueq-9ph6o",
-        "title": "Wrap integrale con hummus e spinaci e pomodorini",
-        "description": "Versione smart di un comfort food, piu centrata sugli obiettivi nutrizionali.",
-        "calories": 516,
-        "protein": 19,
-        "carbs": 56,
-        "fats": 24,
-        "duration": 26,
-        "servings": 2,
-        "difficulty": "Media",
-        "dietTypes": [
-          "vegan"
-        ],
-        "mealTypes": [
-          "lunch"
-        ],
-        "ingredients": [
-          "90 g di hummus",
-          "1 wrap integrale",
-          "120 g di spinaci e pomodorini",
-          "12 g di noci tritate",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Cuoci wrap integrale e prepara hummus come componente principale.",
-          "Aggiungi spinaci e pomodorini e condisci con noci tritate.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-08T12:38:05.985Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "lunch-vegan-pasta-hummus-wrap-integrale-spinaci-e-pomodorini-noci-tritate",
-        "pantryMatches": [
-          "Pepe nero",
-          "Spinaci"
-        ],
-        "pantryNote": "Hai già in dispensa: Pepe nero, Spinaci.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per pranzo vegana intorno a 500 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-lunch-vegan-pasta-tempeh-saltato-pasta-integrale-banana-a-rondelle-avocado-mrc2cw49-3ndvv": {
-        "id": "recipe-lunch-vegan-pasta-tempeh-saltato-pasta-integrale-banana-a-rondelle-avocado-mrc2cw49-3ndvv",
-        "title": "Pasta integrale con tempeh saltato e banana a rondelle",
-        "description": "Versione smart di un comfort food, piu centrata sugli obiettivi nutrizionali.",
-        "calories": 796,
-        "protein": 40,
-        "carbs": 101,
-        "fats": 27,
-        "duration": 26,
-        "servings": 2,
-        "difficulty": "Media",
-        "dietTypes": [
-          "vegan"
-        ],
-        "mealTypes": [
-          "lunch"
-        ],
-        "ingredients": [
-          "150 g di tempeh saltato",
-          "85 g di pasta integrale",
-          "1 banana a rondelle",
-          "70 g di avocado",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Cuoci pasta integrale e prepara tempeh saltato come componente principale.",
-          "Aggiungi banana a rondelle e condisci con avocado.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Impiatta e tieni da parte una porzione extra se vuoi usarla per meal prep."
-        ],
-        "generatedAt": "2026-07-08T12:38:08.260Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "lunch-vegan-pasta-tempeh-saltato-pasta-integrale-banana-a-rondelle-avocado",
-        "pantryMatches": [
-          "Pepe nero"
-        ],
-        "pantryNote": "Hai già in dispensa: Pepe nero.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per pranzo vegana intorno a 800 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-snack-vegan-toast-snack-hummus-frutta-fresca-spinaci-e-pomodorini-pesto-leggero-mrc2cznz-7b4c2": {
-        "id": "recipe-snack-vegan-toast-snack-hummus-frutta-fresca-spinaci-e-pomodorini-pesto-leggero-mrc2cznz-7b4c2",
-        "title": "Toast snack con hummus e spinaci e pomodorini",
-        "description": "Spuntino piu sostanzioso ma ancora semplice da preparare.",
-        "calories": 406,
-        "protein": 13,
-        "carbs": 43,
-        "fats": 20,
-        "duration": 7,
-        "servings": 1,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegan"
-        ],
-        "mealTypes": [
-          "snack"
-        ],
-        "ingredients": [
-          "90 g di hummus",
-          "120 g di frutta fresca",
-          "120 g di spinaci e pomodorini",
-          "20 g di pesto leggero",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Sistema hummus e spinaci e pomodorini in una bowl o lunch box.",
-          "Aggiungi spinaci e pomodorini e condisci con pesto leggero.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Servi subito oppure conserva in frigo se vuoi prepararlo in anticipo."
-        ],
-        "generatedAt": "2026-07-08T12:38:12.761Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "snack-vegan-toast-snack-hummus-frutta-fresca-spinaci-e-pomodorini-pesto-leggero",
-        "pantryMatches": [
-          "Pepe nero",
-          "Spinaci"
-        ],
-        "pantryNote": "Hai già in dispensa: Pepe nero, Spinaci.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per snack vegana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-snack-vegan-box-tofu-croccante-frutta-fresca-frutti-rossi-semi-di-chia-mrcffylm-gpv8k": {
-        "id": "recipe-snack-vegan-box-tofu-croccante-frutta-fresca-frutti-rossi-semi-di-chia-mrcffylm-gpv8k",
-        "title": "Snack box con tofu croccante e frutti rossi",
-        "description": "Idea pratica da portare fuori casa o in ufficio.",
-        "calories": 411,
-        "protein": 26,
-        "carbs": 39,
-        "fats": 18,
-        "duration": 5,
-        "servings": 1,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegan"
-        ],
-        "mealTypes": [
-          "snack"
-        ],
-        "ingredients": [
-          "180 g di tofu croccante",
-          "120 g di frutta fresca",
-          "90 g di frutti rossi",
-          "10 g di semi di chia",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Sistema tofu croccante e frutti rossi in una bowl o lunch box.",
-          "Aggiungi frutti rossi e condisci con semi di chia.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Servi subito oppure conserva in frigo se vuoi prepararlo in anticipo."
-        ],
-        "generatedAt": "2026-07-08T18:44:26.387Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "snack-vegan-box-tofu-croccante-frutta-fresca-frutti-rossi-semi-di-chia",
-        "pantryMatches": [
-          "Pepe nero",
-          "Tofu affumicato"
-        ],
-        "pantryNote": "Hai già in dispensa: Pepe nero, Tofu affumicato.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per snack vegana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
-      },
-      "recipe-snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone-mrcfg000-dm56q": {
-        "id": "recipe-snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone-mrcfg000-dm56q",
-        "title": "Cup di hummus con spinaci e pomodorini",
-        "description": "Snack rapido con buon equilibrio tra proteine e carboidrati.",
-        "calories": 415,
-        "protein": 14,
-        "carbs": 44,
-        "fats": 20,
-        "duration": 6,
-        "servings": 1,
-        "difficulty": "Facile",
-        "dietTypes": [
-          "vegan"
-        ],
-        "mealTypes": [
-          "snack"
-        ],
-        "ingredients": [
-          "90 g di hummus",
-          "120 g di frutta fresca",
-          "120 g di spinaci e pomodorini",
-          "18 g di salsa tahina e limone",
-          "Sale, pepe e spezie a piacere"
-        ],
-        "instructions": [
-          "Sistema hummus e spinaci e pomodorini in una bowl o lunch box.",
-          "Aggiungi spinaci e pomodorini e condisci con salsa tahina e limone.",
-          "Completa il piatto regolando sale, spezie ed eventuale succo di limone secondo gusto.",
-          "Servi subito oppure conserva in frigo se vuoi prepararlo in anticipo."
-        ],
-        "generatedAt": "2026-07-08T18:44:28.302Z",
-        "prompt": "",
-        "mode": "generated-local",
-        "signature": "snack-vegan-cup-hummus-frutta-fresca-spinaci-e-pomodorini-salsa-tahina-e-limone",
-        "pantryMatches": [
-          "Pepe nero",
-          "Spinaci"
-        ],
-        "pantryNote": "Hai già in dispensa: Pepe nero, Spinaci.",
-        "criteriaNote": "",
-        "personalNote": "Suggerita per snack vegana intorno a 350 kcal, con priorita a varieta e coerenza nutrizionale."
       }
     },
     "chatMessages": [
       {
-        "id": "7766db3b-69c8-4243-aeee-49c15bad3ef5",
+        "id": "nt-mrj87jkj-i2xgaqlj0",
         "role": "assistant",
         "content": "Ciao! Sono il tuo AI Recipe Assistant.\n\nPosso aiutarti con **ricette**, meal prep, sostituzioni ingredienti e idee coerenti con dispensa e obiettivi nutrizionali.\n\n---\n\nProva a chiedermi:\n- una cena veloce\n- una colazione high-protein\n- come usare quello che hai già in dispensa",
         "createdAt": "2026-06-23T16:24:00.000Z"
@@ -1463,66 +475,11 @@
   "grocery": {
     "items": [
       {
-        "id": "462e0aa0-1be7-4ed0-8476-4a44f8c3f3b0",
-        "name": "Fagioli",
-        "quantity": "1 barattolo",
-        "expiryDate": "2027-09-16",
-        "category": "Dispensa",
-        "completed": false,
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "2ae44d71-66d1-4465-a224-e9befbf2b927",
-        "name": "Ceci secchi",
-        "quantity": "1 pacco",
-        "expiryDate": "2027-07-09",
-        "category": "Dispensa",
-        "completed": false,
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "70027c79-a769-43e7-8a40-466d801e04bb",
-        "name": "Succo d'arancia",
+        "id": "nt-mrj8rzqc-ewr40lmfq",
+        "name": "Philadelphia veg",
         "quantity": "1",
-        "expiryDate": "2026-07-09",
-        "category": "Bevande",
-        "completed": true,
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "63c419c3-2c3d-4af1-97d8-4d3bbbf42dac",
-        "name": "Philadelphia",
-        "quantity": "1",
-        "expiryDate": "2026-07-09",
+        "expiryDate": "2026-08-04",
         "category": "Latticini",
-        "completed": false,
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "98d72364-0bf2-49c5-995e-12847f79e865",
-        "name": "Farro soffiato",
-        "quantity": "1",
-        "expiryDate": "2026-07-09",
-        "category": "Cereali",
-        "completed": false,
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "398d6c46-033d-458c-af1b-ed0cb1e3c441",
-        "name": "Vongole in guscio",
-        "quantity": "1kg",
-        "expiryDate": "2027-07-12",
-        "category": "Carne e pesce",
         "completed": false,
         "barcode": "",
         "source": "manual",
@@ -1531,188 +488,21 @@
     ],
     "pantry": [
       {
-        "id": "4ba32ff5-dc75-4a99-9c9b-1ac9fe157db8",
-        "name": "Carciofi",
-        "quantity": "1 mazzo",
-        "category": "Frutta e verdura",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": "",
-        "expiryDate": ""
-      },
-      {
-        "id": "a81d18d7-d490-4ae4-9077-c5776ec23af3",
-        "name": "Cioccolato fondente",
-        "quantity": "2",
-        "category": "Dispensa",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": "",
-        "expiryDate": ""
-      },
-      {
-        "id": "fcc24afb-205a-4988-aa1f-b05033eedb9d",
-        "name": "Dado vegetale",
-        "quantity": "1",
-        "expiryDate": "",
-        "category": "Dispensa",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "50aa90bc-33b2-4395-b6cb-feaa242641dc",
-        "name": "Fagiolina",
+        "id": "nt-mrj8rhm4-vwcum3fjr",
+        "name": "Riso basmati integrale",
         "quantity": "1kg",
-        "expiryDate": "2026-10-09",
-        "category": "Surgelati",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "941bbf88-665f-4023-8e0d-4de60b04ee2d",
-        "name": "Feta",
-        "quantity": "1",
-        "expiryDate": "",
-        "category": "Latticini",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "1f908581-591e-40f3-aba7-3cb7387490b0",
-        "name": "Latte di soia",
-        "quantity": "2 brick",
-        "category": "Bevande",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": "",
-        "expiryDate": ""
-      },
-      {
-        "id": "2128d34a-e3a8-43f8-b959-9bf943a11a03",
-        "name": "Lattuga",
-        "quantity": "1",
-        "category": "Frutta e verdura",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": "",
-        "expiryDate": ""
-      },
-      {
-        "id": "44ce6d90-f77e-495a-b6c4-612b022d3c4e",
-        "name": "Mele",
-        "quantity": "6",
-        "category": "Frutta e verdura",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": "",
-        "expiryDate": ""
-      },
-      {
-        "id": "ddf1c844-23aa-422a-80b7-4db0006cf140",
-        "name": "Paprika",
-        "quantity": "1",
-        "expiryDate": "",
+        "expiryDate": "2027-01-05",
         "category": "Dispensa",
         "barcode": "",
         "source": "manual",
         "nutriscoreGrade": ""
       },
       {
-        "id": "5b6523af-6b69-40eb-81f4-37ee74193a14",
-        "name": "Pepe nero",
+        "id": "nt-mrj8r463-36hhzreet",
+        "name": "Tofu al basilico",
         "quantity": "1",
-        "expiryDate": "",
+        "expiryDate": "2026-07-13",
         "category": "Dispensa",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "c370d572-df42-4c7a-ac88-8d0b1c37a72a",
-        "name": "Petto di pollo",
-        "quantity": "500 g",
-        "category": "Carne e pesce",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": "",
-        "expiryDate": ""
-      },
-      {
-        "id": "33555fdb-9168-4fe1-9034-964d23d8fe74",
-        "name": "Riso integrale",
-        "quantity": "1 confezione",
-        "category": "Cereali",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": "",
-        "expiryDate": ""
-      },
-      {
-        "id": "9203c17d-7810-4558-887f-4883ece9c87f",
-        "name": "Spinaci",
-        "quantity": "1 mazzo",
-        "category": "Frutta e verdura",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": "",
-        "expiryDate": ""
-      },
-      {
-        "id": "70027c79-a769-43e7-8a40-466d801e04bb",
-        "name": "Succo d'arancia",
-        "quantity": "1",
-        "expiryDate": "2026-07-09",
-        "category": "Bevande",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "2372b9d2-70dd-47c2-b6be-99a4267ea9c5",
-        "name": "Tofu affumicato",
-        "quantity": "2 confezioni",
-        "expiryDate": "2026-07-31",
-        "category": "Dispensa",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "82751c66-e354-4be3-b9b2-299d52e6d4e5",
-        "name": "Verdura lessa da cercare in frigo",
-        "quantity": "1",
-        "category": "Frutta e verdura",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": "",
-        "expiryDate": ""
-      },
-      {
-        "id": "2a4c3502-11e6-4040-9f20-412e4f8b09a0",
-        "name": "Vodka",
-        "quantity": "1",
-        "expiryDate": "",
-        "category": "Bevande",
-        "barcode": "",
-        "source": "manual",
-        "nutriscoreGrade": ""
-      },
-      {
-        "id": "9a6175b9-e563-4091-b93b-81a2ea6455cc",
-        "name": "Yogurt greco",
-        "quantity": "2",
-        "category": "Latticini",
-        "expiryDate": ""
-      },
-      {
-        "id": "8616ea66-ee07-404c-a2fd-0dd705b3e25b",
-        "name": "Zucca",
-        "quantity": "1",
-        "expiryDate": "",
-        "category": "Frutta e verdura",
         "barcode": "",
         "source": "manual",
         "nutriscoreGrade": ""
@@ -1732,155 +522,51 @@
         "license": "ODbL",
         "retrievalStrategy": "scan-live-then-index-official-dump"
       },
-      "productsByBarcode": {
-        "3017624010701": {
-          "source": "openfoodfacts",
-          "retrievalSource": "api",
-          "barcode": "3017624010701",
-          "name": "Nutella",
-          "brand": "Ferrero",
-          "category": "Dispensa",
-          "quantity": "400.0 g",
-          "serving": "100 g",
-          "calories": 539,
-          "protein": 6.3,
-          "carbs": 57.5,
-          "fats": 30.9,
-          "sugar": 56.3,
-          "fiber": null,
-          "nutriscoreGrade": "e",
-          "nutriscoreScore": 31,
-          "imageUrl": "https://images.openfoodfacts.org/images/products/301/762/401/0701/front_en.100.200.jpg",
-          "macroBasis": "100g",
-          "highlights": "Valori per 100 g/ml di prodotto",
-          "ragText": "Barcode 3017624010701. Prodotto Nutella. Brand Ferrero. Categoria Dispensa. Quantita 400.0 g. Porzione di riferimento 100 g. Calorie 539 kcal. Proteine 6.3 g. Carboidrati 57.5 g. Grassi 30.9 g. Zuccheri 56.3 g. Nutri-Score E. Punteggio Nutri-Score 31. Valori per 100 g/ml di prodotto"
-        },
-        "4008400401638": {
-          "source": "openfoodfacts",
-          "retrievalSource": "api",
-          "barcode": "4008400401638",
-          "name": "Prodotto senza nome",
-          "brand": "Nutella",
-          "category": "Dispensa",
-          "quantity": "",
-          "serving": "15g",
-          "calories": 80,
-          "protein": 0.9,
-          "carbs": 8.6,
-          "fats": 4.6,
-          "sugar": 8.4,
-          "fiber": 0,
-          "nutriscoreGrade": "e",
-          "nutriscoreScore": 31,
-          "imageUrl": "",
-          "macroBasis": "serving",
-          "highlights": "Valori per 100 g/ml di prodotto",
-          "ragText": "Barcode 4008400401638. Prodotto Prodotto senza nome. Brand Nutella. Categoria Dispensa. Porzione di riferimento 15g. Calorie 80 kcal. Proteine 0.9 g. Carboidrati 8.6 g. Grassi 4.6 g. Zuccheri 8.4 g. Fibre 0 g. Nutri-Score E. Punteggio Nutri-Score 31. Valori per 100 g/ml di prodotto"
-        },
-        "8003100000736": {
-          "source": "openfoodfacts",
-          "retrievalSource": "api",
-          "barcode": "8003100000736",
-          "name": "Crema spalmabile al Pistacchio",
-          "brand": "Saper di Sapori",
-          "category": "Dispensa",
-          "quantity": "200 g",
-          "serving": "100 g",
-          "calories": 602,
-          "protein": 8.1,
-          "carbs": 49,
-          "fats": 41,
-          "sugar": 46,
-          "fiber": 2.5,
-          "nutriscoreGrade": "e",
-          "nutriscoreScore": 31,
-          "imageUrl": "https://images.openfoodfacts.org/images/products/800/310/000/0736/front_it.9.200.jpg",
-          "macroBasis": "100g",
-          "highlights": "Valori per 100 g/ml di prodotto",
-          "ragText": "Barcode 8003100000736. Prodotto Crema spalmabile al Pistacchio. Brand Saper di Sapori. Categoria Dispensa. Quantita 200 g. Porzione di riferimento 100 g. Calorie 602 kcal. Proteine 8.1 g. Carboidrati 49 g. Grassi 41 g. Zuccheri 46 g. Fibre 2.5 g. Nutri-Score E. Punteggio Nutri-Score 31. Valori per 100 g/ml di prodotto"
-        }
-      }
+      "productsByBarcode": {}
     }
   },
   "progress": {
     "selectedRange": "week",
     "dailyLogs": [
       {
-        "date": "2026-07-06",
-        "weightKg": 65,
-        "waterGlasses": null,
-        "calories": null,
-        "protein": null
-      },
-      {
-        "date": "2026-07-12",
+        "date": "2026-07-13",
         "weightKg": null,
-        "waterGlasses": 5,
+        "waterGlasses": 3,
         "calories": null,
         "protein": null
       }
     ],
     "autoSnapshots": {
-      "2026-07-03": {
-        "calories": 770,
-        "protein": 47,
-        "weightKg": 74.7,
-        "capturedAt": "2026-07-03T15:46:39.319Z"
-      },
-      "2026-07-04": {
-        "calories": 1279,
-        "protein": 63,
-        "weightKg": 74.7,
-        "capturedAt": "2026-07-04T14:19:25.098Z"
-      },
-      "2026-07-06": {
-        "calories": 983,
-        "protein": 54,
-        "weightKg": null,
-        "capturedAt": "2026-07-06T15:04:54.506Z"
-      },
-      "2026-07-07": {
-        "calories": 0,
-        "protein": 0,
-        "weightKg": null,
-        "capturedAt": "2026-07-07T10:02:39.066Z"
-      },
-      "2026-07-09": {
-        "calories": 0,
-        "protein": 0,
-        "weightKg": null,
-        "capturedAt": "2026-07-09T14:02:31.513Z"
-      },
-      "2026-07-12": {
-        "calories": 420,
-        "protein": 14,
-        "weightKg": null,
-        "capturedAt": "2026-07-12T15:50:41.931Z"
+      "2026-07-13": {
+        "calories": 382,
+        "protein": 30,
+        "weightKg": 68.5,
+        "capturedAt": "2026-07-13T13:09:37.697Z"
       }
     }
   },
   "profile": {
     "personal": {
-      "fullName": "",
-      "age": null,
-      "gender": "",
-      "heightCm": null,
-      "currentWeightKg": null,
-      "targetWeightKg": null,
-      "activityLevel": "",
-      "dietType": ""
+      "fullName": "Letizia Pecorella",
+      "age": 24,
+      "gender": "female",
+      "heightCm": 162,
+      "currentWeightKg": 68.5,
+      "targetWeightKg": 63,
+      "activityLevel": "light",
+      "dietType": "vegetarian"
     },
     "medical": {
       "allergies": "",
       "medications": "",
-      "medicalConditions": "",
+      "medicalConditions": "PCOS",
       "bloodType": ""
     },
     "goals": {
-      "calories": 2000,
-      "protein": 150,
-      "carbs": 250,
-      "fats": 65,
+      "calories": 1448,
+      "protein": 137,
+      "carbs": 135,
+      "fats": 40,
       "water": 8
     }
   },
@@ -1892,8 +578,8 @@
         "lastSyncAt": "",
         "permissions": {
           "steps": true,
-          "workouts": false,
-          "calories": false
+          "workouts": true,
+          "calories": true
         },
         "latestData": {}
       },
@@ -1912,7 +598,7 @@
         "lastSyncAt": "",
         "permissions": {
           "workouts": true,
-          "duration": false,
+          "duration": true,
           "distance": true
         },
         "latestData": {},
@@ -1923,25 +609,21 @@
         "lastSyncStatus": ""
       },
       "healthHub": {
-        "connected": true,
-        "lastSyncAt": "2026-07-09T14:02:36.207Z",
+        "connected": false,
+        "lastSyncAt": "",
         "permissions": {
-          "activity": false,
+          "activity": true,
           "steps": true,
           "weight": true,
-          "sleep": true
+          "sleep": false
         },
-        "latestData": {
-          "steps": 8120,
-          "weightKg": null,
-          "sleepHours": 7.4
-        }
+        "latestData": {}
       }
     },
     "syncPreferences": {
       "autoSyncDaily": true,
       "importWorkoutCalories": true,
-      "useConnectedWeightInProfile": true
+      "useConnectedWeightInProfile": false
     }
   }
 }
