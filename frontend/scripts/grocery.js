@@ -156,6 +156,9 @@ function renderPantry() {
               <strong>${escapeHtml(item.name)}</strong>
               <span>${escapeHtml(item.quantity)}${item.expiryDate ? ` • Scad. ${escapeHtml(formatExpiryDate(item.expiryDate))}` : ""}</span>
               <small>${escapeHtml(item.category)}</small>
+              <button class="delete-btn pantry-delete-btn" type="button" aria-label="Rimuovi ${escapeHtml(item.name)} dalla dispensa" data-pantry-delete-id="${item.id}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
+              </button>
             </article>
           `
         )
@@ -405,11 +408,12 @@ async function startGroceryArCamera() {
 function setupGrocerySection() {
   const form = document.querySelector("[data-grocery-form]");
   const list = document.querySelector("[data-grocery-list]");
+  const pantryList = document.querySelector("[data-pantry-list]");
   const clearCompletedButton = document.querySelector("[data-clear-completed]");
   const arToggleButton = document.querySelector("[data-grocery-ar-toggle]");
   const arClearButton = document.querySelector("[data-grocery-ar-clear]");
 
-  if (!form || !list || !clearCompletedButton || !arToggleButton || !arClearButton) {
+  if (!form || !list || !pantryList || !clearCompletedButton || !arToggleButton || !arClearButton) {
     return;
   }
 
@@ -512,6 +516,19 @@ function setupGrocerySection() {
       renderGrocery();
       setGroceryFeedback(nextCompleted ? "Prodotto acquistato e salvato in dispensa." : "Prodotto nella lista della spesa.");
     }
+  });
+
+  pantryList.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest("[data-pantry-delete-id]");
+
+    if (!deleteButton) {
+      return;
+    }
+
+    appState.grocery.pantry = appState.grocery.pantry.filter((item) => item.id !== deleteButton.dataset.pantryDeleteId);
+    saveState();
+    renderPantry();
+    setGroceryFeedback("Prodotto rimosso dalla dispensa.");
   });
 
   arToggleButton.addEventListener("click", async () => {

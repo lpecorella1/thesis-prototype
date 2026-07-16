@@ -1,10 +1,14 @@
-const STRAVA_STATUS_API_PATH = "/api/strava/status";
+const DEVICES_STATE_API_PATH = "/api/devices/state";
+const SCALE_CONNECT_API_PATH = "/api/scale/connect";
+const SCALE_SYNC_API_PATH = "/api/scale/sync";
+const SCALE_DISCONNECT_API_PATH = "/api/scale/disconnect";
+const SCALE_PERMISSIONS_API_PATH = "/api/scale/permissions";
 const STRAVA_CONNECT_API_PATH = "/api/strava/connect";
 const STRAVA_SYNC_API_PATH = "/api/strava/sync";
 const STRAVA_DISCONNECT_API_PATH = "/api/strava/disconnect";
 
 const devicesRuntime = {
-  isHydratingStrava: false,
+  isHydratingDevices: false,
   isSyncingStrava: false,
   isDisconnectingStrava: false,
 };
@@ -23,6 +27,11 @@ function getDeviceConfig(deviceId) {
 
 function getDeviceState(deviceId) {
   return appState.devices.integrations[deviceId] || null;
+}
+
+function isDeviceUnavailable(deviceId) {
+  const deviceState = getDeviceState(deviceId);
+  return deviceId === "strava" && deviceState?.configured === false;
 }
 
 function getConnectedDevices() {
@@ -81,103 +90,27 @@ function buildEnabledPermissionSummary(device) {
   return `Dati: ${enabledPermissions.join(", ")}`;
 }
 
-function syncSmartwatchData() {
-  const mealsToday = getNutritionTotalsForDate(getTodayDateKey()).count;
-  const completedGroceryItems = appState.grocery.items.filter((item) => item.completed).length;
+function applyScaleState(scaleState) {
+  const deviceState = getDeviceState("scale");
 
-  return {
-    steps: 4200 + mealsToday * 850 + completedGroceryItems * 180,
-    workoutCalories: 180 + mealsToday * 35,
-  };
-}
-
-function syncScaleData() {
-  const weightKg = normalizeNumber(appState.profile.personal.currentWeightKg);
-  const bmi = calculateBmi(
-    normalizeNumber(appState.profile.personal.heightCm),
-    weightKg
-  );
-
-  return {
-    weightKg,
-    bmi: bmi ? Number(bmi.toFixed(1)) : null,
-    bodyFatPercent: weightKg == null ? null : Number((Math.max(14, 24 - (weightKg % 4))).toFixed(1)),
-  };
-}
-
-function syncStravaData() {
-  return {};
-}
-
-function syncHealthHubData() {
-  const profileWeight = normalizeNumber(appState.profile.personal.currentWeightKg);
-
-  return {
-    steps: 5600 + appState.grocery.pantry.length * 140,
-    weightKg: profileWeight,
-    sleepHours: 7.4,
-  };
-}
-
-function buildDeviceLatestData(deviceId) {
-  const builders = {
-    smartwatch: syncSmartwatchData,
-    scale: syncScaleData,
-    healthHub: syncHealthHubData,
-  };
-
-  return builders[deviceId] ? builders[deviceId]() : {};
-}
-
-function syncDevice(deviceId) {
-  const deviceState = getDeviceState(deviceId);
-
-  if (!deviceState?.connected) {
-    return false;
+  if (!deviceState || !scaleState || typeof scaleState !== "object") {
+    return;
   }
 
-  deviceState.lastSyncAt = new Date().toISOString();
-  deviceState.latestData = buildDeviceLatestData(deviceId);
+  deviceState.connected = Boolean(scaleState.connected);
+  deviceState.lastSyncAt = scaleState.lastSyncAt || "";
+  deviceState.latestData =
+    scaleState.latestData && typeof scaleState.latestData === "object" ? scaleState.latestData : {};
+  deviceState.providerMode = scaleState.providerMode || "mock";
+  deviceState.configured = scaleState.configured !== false;
+  deviceState.lastSyncStatus = scaleState.lastSyncStatus || "";
 
-  if (deviceId === "scale" && appState.devices.syncPreferences.useConnectedWeightInProfile) {
-    const syncedWeight = normalizeNumber(deviceState.latestData.weightKg);
-
-    if (syncedWeight != null) {
-      appState.profile.personal.currentWeightKg = syncedWeight;
-      captureTodayProgressSnapshot({ weightKg: syncedWeight });
-      renderProfile();
-      renderProgress();
-    }
+  if (scaleState.permissions && typeof scaleState.permissions === "object") {
+    deviceState.permissions = {
+      ...deviceState.permissions,
+      ...scaleState.permissions,
+    };
   }
-
-  saveState();
-  return true;
-}
-
-function connectDevice(deviceId) {
-  const deviceState = getDeviceState(deviceId);
-
-  if (!deviceState || deviceState.connected) {
-    return false;
-  }
-
-  deviceState.connected = true;
-  syncDevice(deviceId);
-  return true;
-}
-
-function disconnectDevice(deviceId) {
-  const deviceState = getDeviceState(deviceId);
-
-  if (!deviceState || !deviceState.connected) {
-    return false;
-  }
-
-  deviceState.connected = false;
-  deviceState.lastSyncAt = "";
-  deviceState.latestData = {};
-  saveState();
-  return true;
 }
 
 function applyStravaState(stravaState) {
@@ -198,8 +131,16 @@ function applyStravaState(stravaState) {
   deviceState.lastSyncStatus = stravaState.lastSyncStatus || "";
 }
 
-async function requestStravaState() {
-  const response = await fetch(STRAVA_STATUS_API_PATH, {
+function applyDevicesState(nextDevicesState) {
+  if (!nextDevicesState || typeof nextDevicesState !== "object") {
+    return;
+  }
+
+  appState.devices = normalizeDevicesState(nextDevicesState, { allowIntegrationState: true });
+}
+
+async function requestDevicesState() {
+  const response = await fetch(DEVICES_STATE_API_PATH, {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -207,35 +148,138 @@ async function requestStravaState() {
   });
 
   if (!response.ok) {
-    throw new Error(`Stato Strava non disponibile (${response.status}).`);
+    throw new Error(`Stato devices non disponibile (${response.status}).`);
   }
 
   const payload = await response.json();
-  return payload?.strava || null;
+  return payload?.devices || null;
 }
 
-async function hydrateStravaState() {
-  if (devicesRuntime.isHydratingStrava) {
+async function hydrateDevicesState() {
+  if (devicesRuntime.isHydratingDevices) {
     return;
   }
 
-  devicesRuntime.isHydratingStrava = true;
+  devicesRuntime.isHydratingDevices = true;
 
   try {
-    const stravaState = await requestStravaState();
+    const devicesState = await requestDevicesState();
 
-    if (!stravaState) {
+    if (!devicesState) {
       return;
     }
 
-    applyStravaState(stravaState);
+    applyDevicesState(devicesState);
     saveState();
     renderDevices();
   } catch (error) {
-    console.warn("Unable to hydrate Strava state.", error);
+    console.warn("Unable to hydrate devices state.", error);
   } finally {
-    devicesRuntime.isHydratingStrava = false;
+    devicesRuntime.isHydratingDevices = false;
   }
+}
+
+function applyScaleWeightToProfileIfEnabled() {
+  if (!appState.devices.syncPreferences.useConnectedWeightInProfile) {
+    return;
+  }
+
+  const scaleState = getDeviceState("scale");
+  const syncedWeight = normalizeNumber(scaleState?.latestData?.weightKg);
+
+  if (syncedWeight == null) {
+    return;
+  }
+
+  appState.profile.personal.currentWeightKg = syncedWeight;
+  captureTodayProgressSnapshot({ weightKg: syncedWeight });
+  renderProfile();
+  renderProgress();
+}
+
+function persistAndRenderDevices() {
+  saveState();
+  renderDevices();
+}
+
+async function connectScaleDevice() {
+  const response = await fetch(SCALE_CONNECT_API_PATH, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error || `Connessione bilancia fallita (${response.status}).`);
+  }
+
+  applyScaleState(payload?.scale || {});
+  applyScaleWeightToProfileIfEnabled();
+  persistAndRenderDevices();
+  return true;
+}
+
+async function syncScaleDevice() {
+  const response = await fetch(SCALE_SYNC_API_PATH, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error || `Sync bilancia fallito (${response.status}).`);
+  }
+
+  applyScaleState(payload?.scale || {});
+  applyScaleWeightToProfileIfEnabled();
+  persistAndRenderDevices();
+  return true;
+}
+
+async function disconnectScaleDevice() {
+  const response = await fetch(SCALE_DISCONNECT_API_PATH, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error || `Disconnessione bilancia fallita (${response.status}).`);
+  }
+
+  applyScaleState(payload?.scale || {});
+  persistAndRenderDevices();
+  return true;
+}
+
+async function updateScalePermissions(nextPermissions) {
+  const response = await fetch(SCALE_PERMISSIONS_API_PATH, {
+    method: "PUT",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      permissions: nextPermissions,
+    }),
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error || `Aggiornamento permessi bilancia fallito (${response.status}).`);
+  }
+
+  applyScaleState(payload?.scale || {});
+  saveState();
+  renderDevicesGrid();
+  renderDevicesPermissionsPanel();
+  return true;
 }
 
 async function syncStravaDevice() {
@@ -259,8 +303,7 @@ async function syncStravaDevice() {
     }
 
     applyStravaState(payload?.strava || {});
-    saveState();
-    renderDevices();
+    persistAndRenderDevices();
     return true;
   } finally {
     devicesRuntime.isSyncingStrava = false;
@@ -309,12 +352,47 @@ async function disconnectStravaDevice() {
       lastSyncStatus: "",
       latestData: {},
     });
-    saveState();
-    renderDevices();
+    persistAndRenderDevices();
     return true;
   } finally {
     devicesRuntime.isDisconnectingStrava = false;
   }
+}
+
+async function connectDeviceById(deviceId) {
+  if (deviceId === "strava") {
+    return connectStravaDevice();
+  }
+
+  if (deviceId === "scale") {
+    return connectScaleDevice();
+  }
+
+  return false;
+}
+
+async function syncDeviceById(deviceId) {
+  if (deviceId === "strava") {
+    return syncStravaDevice();
+  }
+
+  if (deviceId === "scale") {
+    return syncScaleDevice();
+  }
+
+  return false;
+}
+
+async function disconnectDeviceById(deviceId) {
+  if (deviceId === "strava") {
+    return disconnectStravaDevice();
+  }
+
+  if (deviceId === "scale") {
+    return disconnectScaleDevice();
+  }
+
+  return false;
 }
 
 function handleStravaCallbackParams() {
@@ -328,8 +406,8 @@ function handleStravaCallbackParams() {
   switchToTab(params.get("tab") || "profile");
 
   if (stravaResult === "connected") {
-    setDevicesFeedback("Strava collegato. Ora recupero lo stato aggiornato.");
-    hydrateStravaState();
+    setDevicesFeedback("Strava collegato. Ora recupero lo stato devices aggiornato.");
+    hydrateDevicesState();
   } else if (stravaResult === "error") {
     setDevicesFeedback(`Connessione Strava non completata: ${params.get("message") || "errore sconosciuto"}.`);
   }
@@ -347,7 +425,14 @@ function getDeviceMetaLines(device) {
   const deviceState = getDeviceState(device.id);
 
   if (!deviceState?.connected) {
-    if (device.id === "strava" && deviceState?.configured === false) {
+    if (device.id === "scale" && deviceState?.providerMode === "mock") {
+      return [
+        "Disponibile in ambiente locale",
+        "Connessione gestita dal backend NutriTrack",
+      ];
+    }
+
+    if (isDeviceUnavailable(device.id)) {
       return [
         "Backend Strava non configurato",
         "Imposta client id e client secret sul server",
@@ -364,15 +449,8 @@ function getDeviceMetaLines(device) {
 
   if (device.id === "scale" && deviceState.latestData.weightKg != null) {
     return [
-      syncLabel,
+      deviceState.providerMode === "mock" ? `Integrazione locale · ${syncLabel}` : syncLabel,
       `Peso: ${deviceState.latestData.weightKg} kg${deviceState.latestData.bmi != null ? ` · BMI ${deviceState.latestData.bmi}` : ""}`,
-    ];
-  }
-
-  if (device.id === "smartwatch" && deviceState.latestData.steps != null) {
-    return [
-      syncLabel,
-      `${deviceState.latestData.steps} passi · ${deviceState.latestData.workoutCalories} kcal attive`,
     ];
   }
 
@@ -380,13 +458,6 @@ function getDeviceMetaLines(device) {
     return [
       deviceState.athleteName ? `${deviceState.athleteName} · ${syncLabel}` : syncLabel,
       `${deviceState.latestData.activitiesCount || 0} attivita · ${deviceState.latestData.distanceKm} km · ${deviceState.latestData.durationMin} min`,
-    ];
-  }
-
-  if (device.id === "healthHub" && deviceState.latestData.steps != null) {
-    return [
-      syncLabel,
-      `${deviceState.latestData.steps} passi · sonno ${deviceState.latestData.sleepHours} h`,
     ];
   }
 
@@ -431,7 +502,7 @@ function renderDevicesGrid() {
       const deviceState = getDeviceState(device.id);
       const isConnected = Boolean(deviceState?.connected);
       const metaLines = getDeviceMetaLines(device);
-      const isUnavailable = device.id === "strava" && deviceState?.configured === false;
+      const isUnavailable = isDeviceUnavailable(device.id);
       const statusLabel = isConnected ? "Connesso" : isUnavailable ? "Da configurare" : device.disconnectedLabel;
 
       return `
@@ -594,16 +665,13 @@ function setupDevicesSection() {
 
   permissionsButton.addEventListener("click", () => {
     appState.devices.showPermissionsPanel = !appState.devices.showPermissionsPanel;
-    saveState();
     renderDevicesManagePermissionsButton();
     renderDevicesPermissionsPanel();
   });
 
-  addButton.addEventListener("click", () => {
+  addButton.addEventListener("click", async () => {
     const nextDevice = devicesCatalog.find((device) => {
-      const deviceState = getDeviceState(device.id);
-      const isUnavailable = device.id === "strava" && deviceState?.configured === false;
-      return !deviceState?.connected && !isUnavailable;
+      return !getDeviceState(device.id)?.connected && !isDeviceUnavailable(device.id);
     });
 
     if (!nextDevice) {
@@ -611,13 +679,15 @@ function setupDevicesSection() {
       return;
     }
 
-    if (nextDevice.id === "strava") {
-      connectStravaDevice();
+    try {
+      if (!await connectDeviceById(nextDevice.id)) {
+        return;
+      }
+    } catch (error) {
+      setDevicesFeedback(error.message || "Connessione integrazione non riuscita.");
       return;
     }
 
-    connectDevice(nextDevice.id);
-    renderDevices();
     setDevicesFeedback(`${nextDevice.title} collegato e sincronizzato.`);
   });
 
@@ -633,16 +703,15 @@ function setupDevicesSection() {
         return;
       }
 
-      if (device.id === "strava") {
-        connectStravaDevice();
+      try {
+        if (!await connectDeviceById(device.id)) {
+          return;
+        }
+      } catch (error) {
+        setDevicesFeedback(error.message || "Connessione integrazione non riuscita.");
         return;
       }
 
-      if (!connectDevice(device.id)) {
-        return;
-      }
-
-      renderDevices();
       setDevicesFeedback(`${device.title} collegato e sincronizzato.`);
       return;
     }
@@ -654,25 +723,15 @@ function setupDevicesSection() {
         return;
       }
 
-      if (device.id === "strava") {
-        try {
-          if (!await syncStravaDevice()) {
-            return;
-          }
-        } catch (error) {
-          setDevicesFeedback(error.message || "Sync Strava non riuscito.");
+      try {
+        if (!await syncDeviceById(device.id)) {
           return;
         }
-
-        setDevicesFeedback(`${device.title} sincronizzato.`);
+      } catch (error) {
+        setDevicesFeedback(error.message || "Sync integrazione non riuscito.");
         return;
       }
 
-      if (!syncDevice(device.id)) {
-        return;
-      }
-
-      renderDevices();
       setDevicesFeedback(`${device.title} sincronizzato.`);
       return;
     }
@@ -684,43 +743,50 @@ function setupDevicesSection() {
         return;
       }
 
-      if (device.id === "strava") {
-        try {
-          if (!await disconnectStravaDevice()) {
-            return;
-          }
-        } catch (error) {
-          setDevicesFeedback(error.message || "Disconnessione Strava non riuscita.");
+      try {
+        if (!await disconnectDeviceById(device.id)) {
           return;
         }
-
-        setDevicesFeedback(`${device.title} disconnesso.`);
+      } catch (error) {
+        setDevicesFeedback(error.message || "Disconnessione integrazione non riuscita.");
         return;
       }
 
-      if (!disconnectDevice(device.id)) {
-        return;
-      }
-
-      renderDevices();
       setDevicesFeedback(`${device.title} disconnesso.`);
     }
   });
 
-  permissionsPanel.addEventListener("change", (event) => {
+  permissionsPanel.addEventListener("change", async (event) => {
     const permissionToggle = event.target.closest("[data-device-permission]");
 
     if (!permissionToggle) {
       return;
     }
 
-    const deviceState = getDeviceState(permissionToggle.dataset.devicePermission);
+    const deviceId = permissionToggle.dataset.devicePermission;
+    const permissionKey = permissionToggle.dataset.devicePermissionKey;
+    const deviceState = getDeviceState(deviceId);
 
     if (!deviceState) {
       return;
     }
 
-    deviceState.permissions[permissionToggle.dataset.devicePermissionKey] = permissionToggle.checked;
+    if (deviceId === "scale") {
+      try {
+        await updateScalePermissions({
+          [permissionKey]: permissionToggle.checked,
+        });
+      } catch (error) {
+        permissionToggle.checked = !permissionToggle.checked;
+        setDevicesFeedback(error.message || "Aggiornamento permessi bilancia non riuscito.");
+        return;
+      }
+
+      setDevicesFeedback("Permessi bilancia aggiornati.");
+      return;
+    }
+
+    deviceState.permissions[permissionKey] = permissionToggle.checked;
     saveState();
     renderDevicesGrid();
     setDevicesFeedback("Permessi integrazione aggiornati.");
@@ -739,7 +805,8 @@ function setupDevicesSection() {
       const scaleState = getDeviceState("scale");
 
       if (scaleState?.connected) {
-        syncDevice("scale");
+        applyScaleWeightToProfileIfEnabled();
+        saveState();
       }
     } else {
       saveState();
@@ -751,7 +818,7 @@ function setupDevicesSection() {
 
   renderDevices();
   handleStravaCallbackParams();
-  hydrateStravaState();
+  hydrateDevicesState();
 }
 
 setupDevicesSection();

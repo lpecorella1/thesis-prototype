@@ -20,10 +20,7 @@ const requiredBootstrapKeys = [
   "NUTRITRACK_SYNC_DEBOUNCE_MS",
   "defaultRecipeTimestamp",
   "RECIPE_NUTRITION_SOURCE_LABEL",
-  "RECIPE_TOKEN_STOPWORDS",
-  "RECIPE_GENERIC_TOKENS",
   "nutritrackSyncRuntime",
-  "recipeLibrary",
   "groceryComparisonCatalog",
   "groceryNameToCatalogId",
   "groceryArRuntime",
@@ -360,17 +357,31 @@ function normalizeProgressSnapshots(snapshots) {
   }, {});
 }
 
-function normalizeDevicesState(devicesState) {
-  const defaultDevicesState = getDefaultDevicesState();
+function getPersistedDevicesUiState(devicesState) {
   const savedDevicesState = devicesState && typeof devicesState === "object" ? devicesState : {};
-  const savedIntegrations = savedDevicesState.integrations && typeof savedDevicesState.integrations === "object"
+  const defaultDevicesUiState = getDefaultDevicesUiState();
+
+  return {
+    syncPreferences:
+      savedDevicesState.syncPreferences && typeof savedDevicesState.syncPreferences === "object"
+        ? { ...savedDevicesState.syncPreferences }
+        : { ...defaultDevicesUiState.syncPreferences },
+  };
+}
+
+function normalizeDevicesIntegrationsState(devicesState, options = {}) {
+  const defaultIntegrationsState = getDefaultDevicesIntegrationsState();
+  const savedDevicesState = devicesState && typeof devicesState === "object" ? devicesState : {};
+  const sourceIntegrations = options.allowIntegrationState
+    && savedDevicesState.integrations
+    && typeof savedDevicesState.integrations === "object"
     ? savedDevicesState.integrations
     : {};
   const normalizedIntegrations = devicesCatalog.reduce((integrations, device) => {
-    const savedIntegration = savedIntegrations[device.id] && typeof savedIntegrations[device.id] === "object"
-      ? savedIntegrations[device.id]
+    const savedIntegration = sourceIntegrations[device.id] && typeof sourceIntegrations[device.id] === "object"
+      ? sourceIntegrations[device.id]
       : {};
-    const defaultIntegration = defaultDevicesState.integrations[device.id];
+    const defaultIntegration = defaultIntegrationsState[device.id];
 
     integrations[device.id] = {
       ...defaultIntegration,
@@ -394,14 +405,21 @@ function normalizeDevicesState(devicesState) {
     return integrations;
   }, {});
 
+  return normalizedIntegrations;
+}
+
+function normalizeDevicesState(devicesState, options = {}) {
+  const defaultDevicesState = getDefaultDevicesState();
+  const savedUiState = getPersistedDevicesUiState(devicesState);
+
   return {
     ...defaultDevicesState,
-    ...savedDevicesState,
-    showPermissionsPanel: Boolean(savedDevicesState.showPermissionsPanel),
-    integrations: normalizedIntegrations,
+    ...savedUiState,
+    showPermissionsPanel: false,
+    integrations: normalizeDevicesIntegrationsState(devicesState, options),
     syncPreferences: {
       ...defaultDevicesState.syncPreferences,
-      ...(savedDevicesState.syncPreferences || {}),
+      ...savedUiState.syncPreferences,
     },
   };
 }
@@ -609,7 +627,7 @@ function buildOpenFoodFactsRagRecord(product) {
     },
     source: {
       provider: "OpenFoodFacts",
-      acquisition: product.retrievalSource === "dataset" ? "official-dataset-fallback" : "live-api-lookup",
+      acquisition: product.retrievalSource === "dataset" ? "dataset-backed-catalog" : "live-api",
       officialDatasetPage: source.officialDatasetPage,
       officialProjectPage: source.officialProjectPage,
       license: source.license,
@@ -1458,12 +1476,22 @@ function initializeNutriTrackApp() {
   initializeNutriTrackApp.hasRun = true;
 
   syncNutritionGoalsFromProfile();
-  captureTodayProgressSnapshot();
-  saveState();
   setupBarcodeScanner();
   setupNutritionSection();
   setupProgressSection();
-  hydrateNutriTrackStateFromApi();
+  hydrateNutriTrackStateFromApi()
+    .then(() => {
+      syncNutritionGoalsFromProfile();
+      captureTodayProgressSnapshot();
+      saveState();
+      renderNutrition();
+    })
+    .catch(() => {
+      syncNutritionGoalsFromProfile();
+      captureTodayProgressSnapshot();
+      saveState();
+      renderNutrition();
+    });
 }
 
 initializeNutriTrackApp.hasRun = false;

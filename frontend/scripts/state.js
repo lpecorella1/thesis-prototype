@@ -105,6 +105,19 @@ function normalizeNutriTrackState(parsedState) {
   };
 }
 
+function buildPersistableNutriTrackState(state) {
+  if (!state || typeof state !== "object") {
+    return structuredClone(defaultState);
+  }
+
+  return {
+    ...state,
+    devices: {
+      ...getPersistedDevicesUiState(state.devices),
+    },
+  };
+}
+
 function loadNutriTrackStateFromLocalCache() {
   try {
     const savedState = localStorage.getItem(NUTRITRACK_LOCAL_STATE_CACHE_KEY);
@@ -121,7 +134,10 @@ function loadNutriTrackStateFromLocalCache() {
 }
 
 function saveNutriTrackStateToLocalCache() {
-  localStorage.setItem(NUTRITRACK_LOCAL_STATE_CACHE_KEY, JSON.stringify(appState));
+  localStorage.setItem(
+    NUTRITRACK_LOCAL_STATE_CACHE_KEY,
+    JSON.stringify(buildPersistableNutriTrackState(appState))
+  );
 }
 
 function renderNutriTrackState() {
@@ -146,7 +162,7 @@ async function persistNutriTrackStateToApi() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ state: appState }),
+      body: JSON.stringify({ state: buildPersistableNutriTrackState(appState) }),
     });
 
     if (!response.ok) {

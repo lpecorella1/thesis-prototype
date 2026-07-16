@@ -9,8 +9,6 @@ const crypto =
 
 const defaultRecipeTimestamp = "2026-06-23T16:24:00.000Z";
 const RECIPE_NUTRITION_SOURCE_LABEL = "Importato da Recipes";
-const RECIPE_TOKEN_STOPWORDS = new Set(["di", "e", "con", "al", "ai", "a", "da", "del", "della", "dei", "degli", "delle", "per", "su", "in", "o"]);
-const RECIPE_GENERIC_TOKENS = new Set(["integrale", "greco", "fresco", "fresca", "croccante", "light", "leggero", "leggera", "classico", "classica", "grigliato", "grigliata", "forno", "arrosto", "arrostita", "saltato", "saltata", "compatto", "misto", "mista"]);
 
 const recipeLibrary = [
   {
@@ -323,21 +321,6 @@ function getDefaultProgressState() {
 
 const devicesCatalog = [
   {
-    id: "smartwatch",
-    badgeClass: "badge-watch",
-    badgeLabel: "Wearable",
-    title: "Smartwatch",
-    description: "Monitora passi giornalieri, calorie bruciate, frequenza cardiaca e sessioni di attività.",
-    availableLabel: "Dati: passi, workout, calorie",
-    connectLabel: "Connetti Smartwatch",
-    disconnectedLabel: "Disponibile",
-    permissions: {
-      steps: { label: "Passi", defaultEnabled: true },
-      workouts: { label: "Workout", defaultEnabled: true },
-      calories: { label: "Calorie", defaultEnabled: true },
-    },
-  },
-  {
     id: "scale",
     badgeClass: "badge-scale",
     badgeLabel: "Metriche corpo",
@@ -367,52 +350,46 @@ const devicesCatalog = [
       distance: { label: "Distanza", defaultEnabled: true },
     },
   },
-  {
-    id: "healthHub",
-    badgeClass: "badge-health",
-    badgeLabel: "Health Hub",
-    title: "Google Fit / Apple Health",
-    description: "Centralizza metriche salute da più app e dispositivi in un'unica connessione.",
-    availableLabel: "Dati: attività, passi, peso, sonno",
-    connectLabel: "Connetti Health App",
-    disconnectedLabel: "Disponibile",
-    permissions: {
-      activity: { label: "Attività", defaultEnabled: true },
-      steps: { label: "Passi", defaultEnabled: true },
-      weight: { label: "Peso", defaultEnabled: true },
-      sleep: { label: "Sonno", defaultEnabled: false },
-    },
-  },
 ];
 
-function getDefaultDevicesState() {
+function getDefaultDevicesUiState() {
   return {
     showPermissionsPanel: false,
-    integrations: devicesCatalog.reduce((state, device) => {
-      state[device.id] = {
-        connected: false,
-        lastSyncAt: "",
-        permissions: Object.fromEntries(
-          Object.entries(device.permissions).map(([key, config]) => [key, config.defaultEnabled])
-        ),
-        latestData: {},
-        ...(device.id === "strava"
-          ? {
-              configured: false,
-              athleteName: "",
-              athleteId: null,
-              acceptedScopes: [],
-              lastSyncStatus: "",
-            }
-          : {}),
-      };
-      return state;
-    }, {}),
     syncPreferences: {
       autoSyncDaily: true,
       importWorkoutCalories: true,
       useConnectedWeightInProfile: false,
     },
+  };
+}
+
+function getDefaultDevicesIntegrationsState() {
+  return devicesCatalog.reduce((state, device) => {
+    state[device.id] = {
+      connected: false,
+      lastSyncAt: "",
+      permissions: Object.fromEntries(
+        Object.entries(device.permissions).map(([key, config]) => [key, config.defaultEnabled])
+      ),
+      latestData: {},
+      ...(device.id === "strava"
+        ? {
+            configured: false,
+            athleteName: "",
+            athleteId: null,
+            acceptedScopes: [],
+            lastSyncStatus: "",
+          }
+        : {}),
+    };
+    return state;
+  }, {});
+}
+
+function getDefaultDevicesState() {
+  return {
+    ...getDefaultDevicesUiState(),
+    integrations: getDefaultDevicesIntegrationsState(),
   };
 }
 
@@ -438,11 +415,11 @@ const defaultState = {
   datasets: {
     openFoodFacts: {
       source: {
-        mode: "official-api-now-official-dump-next",
+        mode: "official-api-with-cache",
         officialDatasetPage: "https://world.openfoodfacts.org/data",
         officialProjectPage: "https://world.openfoodfacts.org/",
         license: "ODbL",
-        retrievalStrategy: "scan-live-then-index-official-dump",
+        retrievalStrategy: "live-api-with-dataset-support",
       },
       productsByBarcode: {},
     },

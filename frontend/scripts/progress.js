@@ -218,74 +218,6 @@ function renderProgressStats(series) {
   `;
 }
 
-function renderProgressCurrentDayCard() {
-  const container = document.querySelector("[data-progress-current-day]");
-
-  if (!container) {
-    return;
-  }
-
-  const todayEntry = getResolvedProgressEntry(getTodayDateKey());
-  const waterGoal = normalizeNumber(appState.profile.goals.water) || 0;
-  const nutritionSourceLabel =
-    todayEntry.nutritionMealCount > 0
-      ? `${todayEntry.nutritionMealCount} ${todayEntry.nutritionMealCount === 1 ? "pasto registrato" : "pasti registrati"}`
-      : todayEntry.hasAutoSnapshot
-        ? "snapshot automatico salvato"
-        : "nessun pasto registrato";
-
-  container.innerHTML = `
-    <div class="progress-current-day-card">
-      <strong>Oggi</strong>
-      <span>Calorie: ${todayEntry.calories ?? "--"} kcal</span>
-      <span>Proteine: ${todayEntry.protein ?? "--"} g</span>
-      <span>Peso: ${todayEntry.weightKg == null ? "--" : `${todayEntry.weightKg.toFixed(1)} kg`}</span>
-      <span>Acqua: ${todayEntry.waterGlasses ?? "--"} / ${waterGoal || "--"} bicchieri</span>
-      <span>Dieta: ${nutritionSourceLabel}</span>
-    </div>
-  `;
-}
-
-function renderProgressSourceList() {
-  const container = document.querySelector("[data-progress-source-list]");
-
-  if (!container) {
-    return;
-  }
-
-  const todayEntry = getResolvedProgressEntry(getTodayDateKey());
-  const snapshot = getProgressAutoSnapshot(getTodayDateKey());
-  const items = [
-    {
-      title: "Dieta",
-      body:
-        todayEntry.nutritionMealCount > 0
-          ? `${todayEntry.nutritionMealCount} ${todayEntry.nutritionMealCount === 1 ? "pasto contribuisce" : "pasti contribuiscono"} ai grafici di oggi.`
-          : snapshot?.calories != null || snapshot?.protein != null
-            ? "Uso l'ultimo snapshot giornaliero salvato in automatico."
-            : "Nessun dato nutrizionale storico disponibile per oggi.",
-    },
-    {
-      title: "Dati",
-      body:
-        todayEntry.weightKg != null
-          ? `Peso corrente disponibile: ${todayEntry.weightKg.toFixed(1)} kg.`
-          : "Nessun peso disponibile dall'area Dati per oggi.",
-    },
-  ];
-
-  container.innerHTML = items
-    .map(
-      (item) => `
-        <article class="progress-source-item">
-          <strong>${escapeHtml(item.title)}</strong>
-          <span>${escapeHtml(item.body)}</span>
-        </article>
-      `
-    )
-    .join("");
-}
-
 function renderProgressCharts(series) {
   const calorieChart = document.querySelector("[data-progress-calorie-chart]");
   const weightChart = document.querySelector("[data-progress-weight-chart]");
@@ -341,8 +273,6 @@ function renderProgress() {
   }
 
   renderProgressStats(series);
-  renderProgressCurrentDayCard();
-  renderProgressSourceList();
   renderProgressCharts(series);
   syncProgressChartViewport();
 }

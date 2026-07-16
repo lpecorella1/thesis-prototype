@@ -28,6 +28,15 @@
       </header>
 
       <nav class="tabs" aria-label="Navigazione principale">
+        <button class="tab desktop-home-tab" type="button" data-tab-target="home">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 11.5 12 5l8 6.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+              <path d="M6.5 10.5V19h11v-8.5" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
+            </svg>
+          </span>
+          Home
+        </button>
         <button class="tab" type="button" data-tab-target="recipes">
           <span class="icon">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -70,6 +79,10 @@
       <main class="content">
         <section class="app-section" data-tab-panel="home">
           <section class="mobile-home">
+            <div class="mobile-home-hero desktop-home-hero">
+              <span class="mobile-home-kicker">Dashboard</span>
+            </div>
+
             <div class="home-cloud-grid">
               <button class="home-cloud cloud-recipes" type="button" data-home-target="recipes">
                 <span class="home-cloud-icon">
@@ -80,6 +93,7 @@
                 </span>
                 <strong>Le tue ricette</strong>
                 <span>Idee su cosa mangiare e utilizzo della dispensa.</span>
+                <small class="home-cloud-meta">Generatore rapido e assistant</small>
               </button>
 
               <button class="home-cloud cloud-grocery" type="button" data-home-target="grocery">
@@ -92,6 +106,7 @@
                 </span>
                 <strong>La tua spesa</strong>
                 <span>Lista degli acquisti, confronto prodotti e dispensa.</span>
+                <small class="home-cloud-meta">Acquisti, dispensa e prodotti</small>
               </button>
 
               <button class="home-cloud cloud-nutrition" type="button" data-home-target="nutrition">
@@ -103,6 +118,7 @@
                 </span>
                 <strong>La tua dieta</strong>
                 <span>Pasti, macronutrienti e progressi.</span>
+                <small class="home-cloud-meta">Obiettivo giornaliero e riepiloghi</small>
               </button>
 
               <button class="home-cloud cloud-profile" type="button" data-home-target="profile">
@@ -114,6 +130,7 @@
                 </span>
                 <strong>I tuoi dati</strong>
                 <span>Profilo, obiettivi e integrazioni collegate.</span>
+                <small class="home-cloud-meta">Impostazioni e dispositivi</small>
               </button>
             </div>
           </section>
@@ -436,7 +453,6 @@
                     <div class="lookup-head">
                       <button class="grocery-action-btn" type="button" data-open-barcode-scanner="nutrition">Scansiona prodotto</button>
                     </div>
-                    <p class="lookup-hint">Calorie e macronutrienti vengono stimati automaticamente e puoi correggerli dopo il salvataggio.</p>
                     <div class="lookup-result" data-off-nutrition-result></div>
                   </div>
                   <label class="field field-full">
@@ -495,16 +511,6 @@
             </div>
 
             <div class="progress-stats" data-progress-stats></div>
-            <div class="chart-split">
-              <article class="panel">
-                <h3>Riepilogo di oggi</h3>
-                <div data-progress-current-day></div>
-              </article>
-              <article class="panel">
-                <h3>Origine dei dati</h3>
-                <div class="progress-source-list" data-progress-source-list></div>
-              </article>
-            </div>
 
             <div class="progress-layout">
               <article class="panel">

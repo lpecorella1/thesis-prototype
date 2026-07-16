@@ -9,7 +9,7 @@ function switchToTab(target) {
 }
 
 function getDefaultTabTarget() {
-  return mobileHomeMediaQuery.matches ? "home" : "nutrition";
+  return "home";
 }
 
 tabs.forEach((tab) => {
@@ -54,6 +54,6 @@ mobileHomeMediaQuery.addEventListener("change", (event) => {
   const activeTab = document.querySelector(".app-section.is-active")?.dataset.tabPanel;
 
   if (!event.matches && activeTab === "home") {
-    switchToTab("nutrition");
+    switchToTab("home");
   }
 });

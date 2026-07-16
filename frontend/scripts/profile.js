@@ -41,7 +41,7 @@ function getActivityMultiplier(level) {
 function getActivityLabel(level) {
   const labels = {
     sedentary: "sedentario",
-    light: "poco attivo",
+    light: "leggero",
     moderate: "moderato",
     active: "attivo",
     "very-active": "molto attivo",
@@ -260,7 +260,7 @@ function setupProfileSection() {
     });
 
     if (!recommendations.calories) {
-      setProfileFeedback("Completa eta, altezza e peso prima di applicare le raccomandazioni.");
+      setProfileFeedback("Completa età, altezza e peso prima di applicare le raccomandazioni.");
       return;
     }
 

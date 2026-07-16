@@ -4,9 +4,24 @@
    solo quando lo schermo supera i breakpoint tablet/desktop. */
 
 @media (min-width: 841px) {
-  .app-section[data-tab-panel="home"],
   .section-mobile-nav {
     display: none !important;
+  }
+
+  .desktop-home-tab {
+    display: inline-flex;
+  }
+
+  .desktop-home-hero {
+    display: block;
+  }
+
+  .app-section[data-tab-panel="home"] {
+    display: none;
+  }
+
+  .app-section[data-tab-panel="home"].is-active {
+    display: block;
   }
 
   .hero {
@@ -65,6 +80,77 @@
 
   .content {
     padding: 34px 14px 40px;
+  }
+
+  .mobile-home {
+    gap: 26px;
+  }
+
+  .desktop-home-hero {
+    max-width: 780px;
+    padding: 12px 6px 4px;
+  }
+
+  .desktop-home-hero h2 {
+    max-width: 12ch;
+    font-size: clamp(2.5rem, 5vw, 4.1rem);
+    line-height: 0.95;
+  }
+
+  .desktop-home-hero p {
+    max-width: 62ch;
+    font-size: 1.02rem;
+  }
+
+  .home-cloud-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+
+  .home-cloud {
+    min-height: 220px;
+    padding: 24px 22px;
+    gap: 12px;
+    border-radius: 30px;
+    transition: transform 180ms ease, box-shadow 180ms ease;
+  }
+
+  .home-cloud:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 22px 36px rgba(18, 24, 38, 0.14);
+  }
+
+  .home-cloud strong {
+    font-size: 1.25rem;
+  }
+
+  .home-cloud > strong + span {
+    font-size: 0.94rem;
+    line-height: 1.45;
+  }
+
+  .home-cloud-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+  }
+
+  .home-cloud-icon svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .home-cloud-meta {
+    display: inline-flex;
+    align-self: flex-start;
+    margin-top: auto;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
   }
 
   .section-intro {
@@ -214,6 +300,17 @@
   .grocery-ar-layout {
     grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.8fr);
     gap: 18px;
+  }
+
+  /* Lo scanner barcode della spesa resta disponibile solo su mobile. */
+  [data-open-barcode-scanner="grocery"],
+  [data-open-barcode-scanner="nutrition"] {
+    display: none;
+  }
+
+  /* Il confronto prodotti con camera resta disponibile solo su mobile. */
+  .grocery-ar-panel {
+    display: none;
   }
 }
 

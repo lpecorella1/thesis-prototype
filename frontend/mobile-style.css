@@ -178,6 +178,12 @@ textarea {
   gap: 20px;
 }
 
+.desktop-home-tab,
+.home-cloud-meta,
+.desktop-home-hero {
+  display: none;
+}
+
 .mobile-home-hero {
   padding: 6px 2px 0;
 }
@@ -228,10 +234,10 @@ textarea {
   line-height: 1.14;
 }
 
-.home-cloud span:last-child {
+.home-cloud > strong + span {
   font-size: 0.7rem;
   opacity: 0.92;
-  line-height: 1.28;
+  line-height: 1.35;
 }
 
 .home-cloud-icon {
@@ -319,7 +325,7 @@ textarea {
 .section-links {
   display: flex;
   gap: 8px;
-  overflow-x: auto;
+  overflow-x: visible;
   padding-bottom: 2px;
   scrollbar-width: none;
 }
@@ -329,14 +335,18 @@ textarea {
 }
 
 .section-link {
-  flex: 0 0 auto;
-  min-height: 38px;
-  padding: 0 14px;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 6px;
   border-radius: 999px;
   background: var(--surface-muted);
+  border: 1px solid rgba(18, 24, 38, 0.08);
   color: var(--text-soft);
-  font-size: 0.84rem;
+  font-size: 0.72rem;
   font-weight: 700;
+  line-height: 1;
+  text-align: center;
 }
 
 .section-link.is-active {
@@ -1385,6 +1395,19 @@ textarea {
   min-width: 0;
 }
 
+[data-nutrition-form] .lookup-block {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  min-width: 0;
+}
+
+[data-nutrition-form] .lookup-head {
+  justify-content: flex-start;
+  min-width: 0;
+}
+
 [data-grocery-form] .field,
 [data-grocery-form] .field-full,
 [data-grocery-form] .grocery-form-row,
@@ -1799,10 +1822,16 @@ textarea {
   min-width: 0;
 }
 
-.pantry-list-head,
-.pantry-item {
+.pantry-list-head {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(110px, 0.7fr) minmax(120px, 0.8fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.pantry-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(110px, 0.7fr) minmax(120px, 0.8fr) auto;
   gap: 14px;
   align-items: center;
 }
@@ -1848,6 +1877,10 @@ textarea {
 .pantry-item small,
 .empty-pantry p {
   color: var(--text-muted);
+}
+
+.pantry-delete-btn {
+  justify-self: end;
 }
 
 /* Progress: cards, forms and charts */
@@ -2007,42 +2040,6 @@ textarea {
   flex-direction: row;
   align-items: center;
   flex-wrap: wrap;
-}
-
-.progress-source-panel {
-  background: linear-gradient(180deg, #fbfffd 0%, #f4fbf8 100%);
-}
-
-.progress-source-list {
-  display: grid;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.progress-source-item,
-.progress-current-day-card {
-  padding: 16px;
-  border: 1px solid #dce9e2;
-  border-radius: 14px;
-  background: #fff;
-}
-
-.progress-source-item strong,
-.progress-source-item span,
-.progress-current-day-card strong,
-.progress-current-day-card span {
-  display: block;
-}
-
-.progress-source-item span,
-.progress-current-day-card span {
-  margin-top: 6px;
-  color: var(--text-soft);
-  line-height: 1.45;
-}
-
-.progress-current-day {
-  margin-top: 16px;
 }
 
 .chart-head span {
@@ -2377,11 +2374,6 @@ textarea {
   background: #eef3f8;
 }
 
-.badge-watch {
-  color: #2860eb;
-  background: #eaf1ff;
-}
-
 .badge-scale {
   color: #8a54ff;
   background: #f2ecff;
@@ -2390,11 +2382,6 @@ textarea {
 .badge-app {
   color: #ff5c11;
   background: #fff1e8;
-}
-
-.badge-health {
-  color: #0f9d6a;
-  background: #e8fdf4;
 }
 
 .status-pill {
@@ -3256,10 +3243,10 @@ textarea {
   }
 
   .pantry-item {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
-      "name name"
-      "quantity category";
+      "name delete delete"
+      "quantity quantity category";
     gap: 3px 8px;
     padding: 6px 8px;
     align-items: start;
@@ -3278,6 +3265,16 @@ textarea {
     grid-area: category;
     text-align: right;
     max-width: 100%;
+  }
+
+  .pantry-delete-btn {
+    grid-area: delete;
+    width: 24px;
+    height: 24px;
+    min-height: 24px;
+    padding: 0;
+    justify-self: end;
+    align-self: start;
   }
 
   .pantry-item strong,
