@@ -1,5 +1,5 @@
 {
-  "name": "prototipo-backend",
+  "name": "nutritrack-backend",
   "version": "1.0.0",
   "private": true,
   "dependencies": {
@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "start:mobile": "node start-mobile.js"
+    "start:mobile": "node start-mobile.js",
+    "verify:postgres-primary": "node scripts/verify-postgres-primary.js"
   }
 }

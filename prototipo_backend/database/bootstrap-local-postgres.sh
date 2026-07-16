@@ -10,7 +10,7 @@ DB_USER="${DB_USER:-postgres}"
 DB_HOST="${DB_HOST:-localhost}"
 DB_PORT="${DB_PORT:-5432}"
 RESET_DB="${RESET_DB:-0}"
-MIGRATION_PATH="$SCRIPT_DIR/migrations/001_postgres_base.sql"
+MIGRATIONS_DIR="$SCRIPT_DIR/migrations"
 
 if [ ! -x "$PSQL_BIN" ]; then
   echo "psql non trovato: $PSQL_BIN" >&2
@@ -43,7 +43,10 @@ if [ "$DATABASE_EXISTS" = "0" ]; then
   "$PSQL_BIN" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c "CREATE DATABASE $DB_NAME"
 fi
 
-echo "Applico la migrazione iniziale..."
-"$PSQL_BIN" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$MIGRATION_PATH"
+echo "Applico le migrazioni..."
+for migration_path in "$MIGRATIONS_DIR"/*.sql; do
+  echo " - $(basename "$migration_path")"
+  "$PSQL_BIN" -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -f "$migration_path"
+done
 
 echo "Bootstrap completato per il database $DB_NAME."

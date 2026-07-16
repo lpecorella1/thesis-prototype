@@ -1,0 +1,2 @@
+ALTER TABLE device_connections
+ALTER COLUMN is_mock SET DEFAULT FALSE;

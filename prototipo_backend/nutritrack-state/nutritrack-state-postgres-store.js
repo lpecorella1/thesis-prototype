@@ -32,6 +32,59 @@ function normalizeTimestamp(value) {
   return normalizedValue || null;
 }
 
+function padNumber(value) {
+  return String(value).padStart(2, "0");
+}
+
+function formatDateKeyLocal(value) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  return `${date.getFullYear()}-${padNumber(date.getMonth() + 1)}-${padNumber(date.getDate())}`;
+}
+
+function normalizeDbNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  return Number(value);
+}
+
+function formatTimeKeyLocal(value) {
+  const date = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return `${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`;
+}
+
+function resolveMealConsumedAt(meal = {}) {
+  const directTimestamp = normalizeTimestamp(meal.timestamp || meal.consumedAt);
+
+  if (directTimestamp) {
+    return directTimestamp;
+  }
+
+  const mealDate = normalizeDate(meal.date);
+  const mealTime = normalizeString(meal.time);
+
+  if (mealDate && mealTime) {
+    return `${mealDate}T${mealTime}:00`;
+  }
+
+  if (mealDate) {
+    return `${mealDate}T12:00:00`;
+  }
+
+  return new Date().toISOString();
+}
+
 function getPgModule() {
   if (pgModule !== undefined) {
     return pgModule;
@@ -49,13 +102,17 @@ function getPgModule() {
 function getDatabaseConfig() {
   const connectionString = String(process.env.DATABASE_URL || "").trim();
   const enabled = String(process.env.NUTRITRACK_USE_POSTGRES || "").trim() === "1";
-  const demoUserEmail = String(process.env.NUTRITRACK_DEMO_USER_EMAIL || "demo@nutritrack.local").trim();
+  const localUserEmail = String(
+    process.env.NUTRITRACK_LOCAL_USER_EMAIL ||
+      process.env.NUTRITRACK_DEMO_USER_EMAIL ||
+      "app-local@nutritrack.local"
+  ).trim();
   const pg = getPgModule();
 
   return {
     connectionString,
     enabled,
-    demoUserEmail,
+    localUserEmail,
     pg,
     available: Boolean(enabled && connectionString && pg),
     pgInstalled: Boolean(pg),
@@ -112,7 +169,7 @@ function buildDatabaseStatus() {
 
   return {
     enabled: true,
-    mode: "hybrid_mirror",
+    mode: "hybrid_read_through",
     reason: "",
     pgInstalled: true,
   };
@@ -134,8 +191,8 @@ async function withClient(callback) {
   }
 }
 
-async function ensureDemoUser(client) {
-  const { demoUserEmail } = getDatabaseConfig();
+async function ensureLocalAppUser(client) {
+  const { localUserEmail } = getDatabaseConfig();
   const result = await client.query(
     `
       INSERT INTO users (email, password_hash)
@@ -144,10 +201,25 @@ async function ensureDemoUser(client) {
       DO UPDATE SET updated_at = CURRENT_TIMESTAMP
       RETURNING id
     `,
-    [demoUserEmail, "prototype-local-only"]
+    [localUserEmail, "local-app-bootstrap-account"]
   );
 
   return result.rows[0].id;
+}
+
+async function getLocalAppUserId(client) {
+  const { localUserEmail } = getDatabaseConfig();
+  const result = await client.query(
+    `
+      SELECT id
+      FROM users
+      WHERE email = $1
+      LIMIT 1
+    `,
+    [localUserEmail]
+  );
+
+  return result.rows[0]?.id || null;
 }
 
 async function replaceUserProfile(client, userId, profileState = {}) {
@@ -249,7 +321,7 @@ async function replaceNutritionMeals(client, userId, meals = []) {
         userId,
         normalizeString(meal.name) || "Pasto",
         normalizeString(meal.type),
-        normalizeTimestamp(meal.timestamp || meal.consumedAt) || new Date().toISOString(),
+        resolveMealConsumedAt(meal),
         normalizeNumber(meal.calories) || 0,
         normalizeNumber(meal.protein) || 0,
         normalizeNumber(meal.carbs) || 0,
@@ -272,9 +344,12 @@ async function replaceGroceryItems(client, userId, items = []) {
           item_name,
           quantity_label,
           category,
-          is_completed
+          is_completed,
+          barcode,
+          source,
+          nutriscore_grade
         )
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `,
       [
         userId,
@@ -282,6 +357,9 @@ async function replaceGroceryItems(client, userId, items = []) {
         normalizeString(item.quantity),
         normalizeString(item.category),
         normalizeBoolean(item.completed),
+        normalizeString(item.barcode),
+        normalizeString(item.source),
+        normalizeString(item.nutriscoreGrade),
       ]
     );
   }
@@ -298,16 +376,22 @@ async function replacePantryItems(client, userId, items = []) {
           item_name,
           quantity_label,
           category,
-          expires_on
+          expires_on,
+          barcode,
+          source,
+          nutriscore_grade
         )
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `,
       [
         userId,
         normalizeString(item.name) || "Prodotto",
         normalizeString(item.quantity),
         normalizeString(item.category),
-        normalizeDate(item.expiresOn),
+        normalizeDate(item.expiresOn || item.expiryDate),
+        normalizeString(item.barcode),
+        normalizeString(item.source),
+        normalizeString(item.nutriscoreGrade),
       ]
     );
   }
@@ -330,18 +414,22 @@ async function replaceProgressLogs(client, userId, dailyLogs = []) {
           log_date,
           weight_kg,
           water_glasses,
+          intake_calories,
+          protein_g,
           steps,
           burned_calories,
           note,
           source_type
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       `,
       [
         userId,
         logDate,
         normalizeNumber(log.weightKg),
         normalizeNumber(log.waterGlasses),
+        normalizeNumber(log.calories),
+        normalizeNumber(log.protein),
         normalizeNumber(log.steps),
         normalizeNumber(log.burnedCalories),
         normalizeString(log.note),
@@ -362,7 +450,7 @@ async function mirrorNutriTrackStateToPostgres(state) {
     await client.query("BEGIN");
 
     try {
-      const userId = await ensureDemoUser(client);
+      const userId = await ensureLocalAppUser(client);
       await replaceUserProfile(client, userId, state.profile);
       await replaceNutritionMeals(client, userId, state.nutrition?.meals);
       await replaceGroceryItems(client, userId, state.grocery?.items);
@@ -378,7 +466,231 @@ async function mirrorNutriTrackStateToPostgres(state) {
   return buildDatabaseStatus();
 }
 
+async function readUserProfile(client, userId) {
+  const result = await client.query(
+    `
+      SELECT
+        full_name,
+        age,
+        gender,
+        height_cm,
+        current_weight_kg,
+        target_weight_kg,
+        activity_level,
+        diet_type,
+        allergies,
+        medications,
+        medical_conditions,
+        blood_type,
+        daily_calories_goal,
+        daily_protein_goal,
+        daily_carbs_goal,
+        daily_fats_goal,
+        daily_water_goal
+      FROM user_profiles
+      WHERE user_id = $1
+      LIMIT 1
+    `,
+    [userId]
+  );
+
+  const row = result.rows[0];
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    personal: {
+      fullName: row.full_name || "",
+      age: normalizeDbNumber(row.age),
+      gender: row.gender || "",
+      heightCm: normalizeDbNumber(row.height_cm),
+      currentWeightKg: normalizeDbNumber(row.current_weight_kg),
+      targetWeightKg: normalizeDbNumber(row.target_weight_kg),
+      activityLevel: row.activity_level || "",
+      dietType: row.diet_type || "",
+    },
+    medical: {
+      allergies: row.allergies || "",
+      medications: row.medications || "",
+      medicalConditions: row.medical_conditions || "",
+      bloodType: row.blood_type || "",
+    },
+    goals: {
+      calories: normalizeDbNumber(row.daily_calories_goal),
+      protein: normalizeDbNumber(row.daily_protein_goal),
+      carbs: normalizeDbNumber(row.daily_carbs_goal),
+      fats: normalizeDbNumber(row.daily_fats_goal),
+      water: normalizeDbNumber(row.daily_water_goal),
+    },
+  };
+}
+
+async function readNutritionMeals(client, userId) {
+  const result = await client.query(
+    `
+      SELECT
+        id,
+        meal_name,
+        meal_type,
+        consumed_at,
+        calories,
+        protein_g,
+        carbs_g,
+        fats_g,
+        nutrition_source,
+        source_note
+      FROM nutrition_meals
+      WHERE user_id = $1
+      ORDER BY consumed_at ASC, id ASC
+    `,
+    [userId]
+  );
+
+  return {
+    meals: result.rows.map((row) => ({
+      id: String(row.id),
+      name: row.meal_name || "Pasto",
+      type: row.meal_type || "",
+      date: formatDateKeyLocal(row.consumed_at),
+      time: formatTimeKeyLocal(row.consumed_at),
+      timestamp: row.consumed_at instanceof Date ? row.consumed_at.toISOString() : String(row.consumed_at || ""),
+      calories: normalizeNumber(row.calories) || 0,
+      protein: normalizeNumber(row.protein_g) || 0,
+      carbs: normalizeNumber(row.carbs_g) || 0,
+      fats: normalizeNumber(row.fats_g) || 0,
+      nutritionSource: row.nutrition_source || "",
+      nutritionSourceLabel: row.nutrition_source || "",
+      sourceNote: row.source_note || "",
+    })),
+  };
+}
+
+async function readGroceryItems(client, userId) {
+  const result = await client.query(
+    `
+      SELECT
+        id,
+        item_name,
+        quantity_label,
+        category,
+        is_completed,
+        barcode,
+        source,
+        nutriscore_grade
+      FROM grocery_items
+      WHERE user_id = $1
+      ORDER BY id ASC
+    `,
+    [userId]
+  );
+
+  return result.rows.map((row) => ({
+    id: String(row.id),
+    name: row.item_name || "Prodotto",
+    quantity: row.quantity_label || "",
+    category: row.category || "",
+    completed: Boolean(row.is_completed),
+    expiryDate: "",
+    barcode: row.barcode || "",
+    source: row.source || "manual",
+    nutriscoreGrade: row.nutriscore_grade || "",
+  }));
+}
+
+async function readPantryItems(client, userId) {
+  const result = await client.query(
+    `
+      SELECT
+        id,
+        item_name,
+        quantity_label,
+        category,
+        expires_on,
+        barcode,
+        source,
+        nutriscore_grade
+      FROM pantry_items
+      WHERE user_id = $1
+      ORDER BY item_name ASC, id ASC
+    `,
+    [userId]
+  );
+
+  return result.rows.map((row) => ({
+    id: String(row.id),
+    name: row.item_name || "Prodotto",
+    quantity: row.quantity_label || "",
+    category: row.category || "",
+    expiryDate: formatDateKeyLocal(row.expires_on) || "",
+    barcode: row.barcode || "",
+    source: row.source || "manual",
+    nutriscoreGrade: row.nutriscore_grade || "",
+  }));
+}
+
+async function readProgressLogs(client, userId) {
+  const result = await client.query(
+    `
+      SELECT
+        log_date,
+        weight_kg,
+        water_glasses,
+        intake_calories,
+        protein_g
+      FROM progress_logs
+      WHERE user_id = $1
+      ORDER BY log_date ASC
+    `,
+    [userId]
+  );
+
+  return {
+    dailyLogs: result.rows.map((row) => ({
+      date: formatDateKeyLocal(row.log_date),
+      weightKg: normalizeDbNumber(row.weight_kg),
+      waterGlasses: normalizeDbNumber(row.water_glasses),
+      calories: normalizeDbNumber(row.intake_calories),
+      protein: normalizeDbNumber(row.protein_g),
+    })),
+  };
+}
+
+async function readNutriTrackStateFromPostgres() {
+  const databaseStatus = buildDatabaseStatus();
+
+  if (!databaseStatus.enabled) {
+    return null;
+  }
+
+  return withClient(async (client) => {
+    const userId = await getLocalAppUserId(client);
+
+    if (!userId) {
+      return null;
+    }
+
+    const profile = await readUserProfile(client, userId);
+    const nutrition = await readNutritionMeals(client, userId);
+    const groceryItems = await readGroceryItems(client, userId);
+    const pantryItems = await readPantryItems(client, userId);
+    const progress = await readProgressLogs(client, userId);
+
+    return {
+      profile,
+      nutrition,
+      grocery: {
+        items: groceryItems,
+        pantry: pantryItems,
+      },
+      progress,
+    };
+  });
+}
+
 module.exports = {
   buildDatabaseStatus,
   mirrorNutriTrackStateToPostgres,
+  readNutriTrackStateFromPostgres,
 };

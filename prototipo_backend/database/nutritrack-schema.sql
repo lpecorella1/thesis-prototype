@@ -110,6 +110,9 @@ CREATE TABLE grocery_items (
     quantity_label VARCHAR(100),
     category VARCHAR(100),
     is_completed BOOLEAN NOT NULL DEFAULT FALSE,
+    barcode VARCHAR(50),
+    source VARCHAR(50),
+    nutriscore_grade VARCHAR(5),
     linked_recipe_id BIGINT REFERENCES recipes(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -122,6 +125,9 @@ CREATE TABLE pantry_items (
     quantity_label VARCHAR(100),
     category VARCHAR(100),
     expires_on DATE,
+    barcode VARCHAR(50),
+    source VARCHAR(50),
+    nutriscore_grade VARCHAR(5),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -132,6 +138,8 @@ CREATE TABLE progress_logs (
     log_date DATE NOT NULL,
     weight_kg NUMERIC(5,2),
     water_glasses INTEGER,
+    intake_calories INTEGER,
+    protein_g NUMERIC(8,2),
     steps INTEGER,
     burned_calories INTEGER,
     sleep_hours NUMERIC(4,2),
@@ -142,6 +150,8 @@ CREATE TABLE progress_logs (
     CONSTRAINT progress_logs_user_date_uniq UNIQUE (user_id, log_date),
     CONSTRAINT progress_logs_weight_chk CHECK (weight_kg IS NULL OR weight_kg > 0),
     CONSTRAINT progress_logs_water_chk CHECK (water_glasses IS NULL OR water_glasses >= 0),
+    CONSTRAINT progress_logs_intake_calories_chk CHECK (intake_calories IS NULL OR intake_calories >= 0),
+    CONSTRAINT progress_logs_protein_chk CHECK (protein_g IS NULL OR protein_g >= 0),
     CONSTRAINT progress_logs_steps_chk CHECK (steps IS NULL OR steps >= 0),
     CONSTRAINT progress_logs_burned_calories_chk CHECK (burned_calories IS NULL OR burned_calories >= 0),
     CONSTRAINT progress_logs_sleep_chk CHECK (sleep_hours IS NULL OR sleep_hours >= 0)
@@ -170,7 +180,7 @@ CREATE TABLE device_connections (
     provider_key VARCHAR(50) NOT NULL REFERENCES device_providers(provider_key),
     external_account_id VARCHAR(255),
     connection_status connection_status_t NOT NULL DEFAULT 'configured',
-    is_mock BOOLEAN NOT NULL DEFAULT TRUE,
+    is_mock BOOLEAN NOT NULL DEFAULT FALSE,
     connected_at TIMESTAMPTZ,
     disconnected_at TIMESTAMPTZ,
     last_sync_attempt_at TIMESTAMPTZ,
@@ -236,10 +246,8 @@ CREATE TABLE openfoodfacts_products_cache (
 
 INSERT INTO device_providers (provider_key, device_type, display_name, supports_oauth, is_wearable)
 VALUES
-    ('smartwatch', 'smartwatch', 'Smartwatch', FALSE, TRUE),
     ('scale', 'scale', 'Bilancia digitale', FALSE, FALSE),
-    ('strava', 'fitness_app', 'Strava', TRUE, FALSE),
-    ('healthHub', 'health_hub', 'Google Fit / Apple Health', FALSE, FALSE)
+    ('strava', 'fitness_app', 'Strava', TRUE, FALSE)
 ON CONFLICT (provider_key) DO NOTHING;
 
 CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
