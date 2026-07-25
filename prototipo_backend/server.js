@@ -32,6 +32,7 @@ const {
   getScaleProvider,
   getScaleProviderId,
   readScaleConnection,
+  recordClientScaleMeasurement,
   syncScale,
   updateScalePermissions,
 } = require("./scale");
@@ -1495,6 +1496,25 @@ async function handleScalePermissionsUpdate(request, response) {
   }
 }
 
+async function handleScaleClientMeasurement(request, response) {
+  try {
+    const userContext = await resolveRequestUserContext(request);
+    const payload = await readJsonBody(request);
+    const currentConnection = await readScaleConnection(userContext);
+    const nextConnection = await recordClientScaleMeasurement(userContext, currentConnection, payload);
+
+    sendJson(response, 200, {
+      ok: true,
+      scale: buildPublicScaleState(nextConnection),
+    });
+  } catch (error) {
+    console.error("[Server] Errore registrazione misura bilancia client.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile registrare la misura della bilancia.",
+    });
+  }
+}
+
 const requestHandler = async (request, response) => {
   const requestUrl = new URL(request.url, `http://${request.headers.host}`);
   console.log("[Server] Richiesta HTTP in ingresso.", {
@@ -1594,6 +1614,11 @@ const requestHandler = async (request, response) => {
 
   if (request.method === "PUT" && requestUrl.pathname === "/api/scale/permissions") {
     await handleScalePermissionsUpdate(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/scale/client-measurement") {
+    await handleScaleClientMeasurement(request, response);
     return;
   }
 

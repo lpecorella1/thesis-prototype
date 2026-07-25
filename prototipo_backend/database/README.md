@@ -1,121 +1,130 @@
-# PostgreSQL database
+# Database PostgreSQL
 
-Questa cartella e la sorgente canonica della struttura dati Postgres del progetto.
+Uso questa cartella come riferimento canonico per la struttura dati PostgreSQL di NutriTrack. Le migrazioni sono la fonte operativa, mentre `nutritrack-schema.sql` è lo snapshot leggibile dello schema corrente.
 
 ## Struttura
 
-- `migrations/`: migrazioni SQL ordinate
-- `nutritrack-schema.sql`: snapshot leggibile dello schema corrente
+- `migrations/`: migrazioni SQL ordinate e incrementali.
+- `nutritrack-schema.sql`: schema completo aggiornato alla migrazione più recente.
+- `bootstrap-local-postgres.sh`: script di bootstrap per il database locale.
 
-## Principi
+## Cosa salvo in PostgreSQL
 
-1. I dati core dell'app stanno in tabelle relazionali con `PRIMARY KEY`, `FOREIGN KEY`, `UNIQUE`, `NOT NULL` e `CHECK`.
-2. `JSONB` è usato solo per payload esterni, metadata e cache flessibili.
-3. I dati dei device sono modellati come connessioni + sync runs + measurements.
-4. La lettura dell'app può restare graduale, ma la base dati di riferimento e Postgres.
+Ho portato su tabelle strutturate le aree principali dell'app:
 
-Nota:
+- utenti e sessioni: `users`, `user_sessions`;
+- profilo e obiettivi: `user_profiles`;
+- ricette e salvataggi: `recipes`, `saved_recipes`;
+- diario alimentare: `nutrition_meals`;
+- spesa e dispensa: `grocery_items`, `pantry_items`;
+- progressi giornalieri: `progress_logs`;
+- modello target per i device: `device_providers`, `device_connections`, `device_connection_permissions`, `device_sync_runs`, `device_measurements`;
+- cache prodotti: `openfoodfacts_products_cache`.
 
-- nello schema corrente `device_connections.is_mock` ha default `FALSE`
-- un provider mock va marcato esplicitamente, non assunto come default del sistema
+La tabella `device_connections` usa `is_mock DEFAULT FALSE`: quando lavoro con un provider simulato lo marco esplicitamente, invece di farlo diventare il comportamento implicito del sistema.
 
-## Ordine di bootstrap
+## Principi che sto seguendo
 
-1. creare il database locale
-2. applicare in ordine tutte le migrazioni presenti in `migrations/`
-3. impostare `DATABASE_URL`
-4. attivare `NUTRITRACK_USE_POSTGRES=1`
-5. avviare il backend e verificare `GET /api/database/status`
+1. Tengo il dominio principale in tabelle relazionali con `PRIMARY KEY`, `FOREIGN KEY`, `UNIQUE`, `NOT NULL` e `CHECK`.
+2. Uso `JSONB` solo per payload esterni, metadata, cache e dettagli che possono cambiare forma.
+3. Tengo separati dati applicativi, integrazioni device e cache esterne.
+4. Mantengo una migrazione graduale: il backend può ancora lavorare in locale senza PostgreSQL, ma quando `NUTRITRACK_USE_POSTGRES=1` la persistenza strutturata diventa primaria.
 
-In alternativa, quando Postgres locale è in esecuzione:
+## Bootstrap locale
 
-`./database/bootstrap-local-postgres.sh`
+Prima configuro `prototipo_backend/.env` partendo da `.env.example`, poi avvio PostgreSQL e lancio:
 
-Variabili utili:
+```bash
+cd prototipo_backend
+./database/bootstrap-local-postgres.sh
+```
+
+Per ricreare il database da zero:
+
+```bash
+RESET_DB=1 ./database/bootstrap-local-postgres.sh
+```
+
+Variabili utili per il bootstrap:
 
 - `PSQL_BIN`
 - `DB_NAME`
 - `DB_USER`
 - `DB_HOST`
 - `DB_PORT`
-- `RESET_DB=1` per ricreare il database da zero durante il bootstrap iniziale
+- `RESET_DB=1`
 
 ## Configurazione backend
 
-Usare `prototipo_backend/.env.example` come base per le variabili ambiente locali.
+Valori minimi per usare PostgreSQL:
 
-Valori minimi:
+```env
+DATABASE_URL=postgresql://USERNAME:PASSWORD@localhost:5432/nutritrack
+NUTRITRACK_USE_POSTGRES=1
+NUTRITRACK_APP_MODE=single-user-local
+NUTRITRACK_LOCAL_USER_EMAIL=app-local@nutritrack.local
+```
 
-- `DATABASE_URL=postgresql://...`
-- `NUTRITRACK_USE_POSTGRES=1`
-- `NUTRITRACK_LOCAL_USER_EMAIL=app-local@nutritrack.local`
+Le modalità runtime sono due:
 
-Nota:
+- `single-user-local`: sviluppo locale senza login, agganciato a un utente implicito definito da `NUTRITRACK_LOCAL_USER_EMAIL`;
+- `authenticated-user`: login, registrazione, cookie di sessione e dati risolti per utente autenticato.
 
-- `NUTRITRACK_DEMO_USER_EMAIL` resta supportata come variabile legacy, ma il backend usa il concetto di single-user locale invece di utente demo implicito.
-- con Postgres attivo, la scrittura è ora `Postgres-first`; il file JSON legacy conserva solo i blocchi non ancora migrati, non più lo stato completo dell'app.
+`NUTRITRACK_DEMO_USER_EMAIL` è ancora accettata come variabile legacy, ma nei nuovi riferimenti uso `NUTRITRACK_LOCAL_USER_EMAIL`.
 
-## Split attuale della persistenza
+## Persistenza attuale
 
-Il backend usa tre livelli distinti, con ruoli diversi:
+Con PostgreSQL attivo, `GET /api/nutritrack/state` ricompone lo stato partendo dalle tabelle strutturate e restituisce anche metadata `storage`.
 
-### 1. Postgres strutturato
-
-Fonte primaria per le sezioni core già migrate:
+Le sezioni primarie coperte da PostgreSQL sono:
 
 - `profile`
-- `nutrition.meals`
-- `grocery.items`
-- `grocery.pantry`
-- `progress.dailyLogs`
-
-### 2. File dedicati ai provider device
-
-Lo stato operativo delle integrazioni device non passa oggi dal blob legacy:
-
-- `prototipo_backend/data/scale-connection.json` per il provider `scale`
-
-Questo livello è backend-owned e viene esposto al frontend tramite `GET /api/devices/state`.
-
-### 3. Legacy UI/cache file
-
-`prototipo_backend/data/nutritrack-state.json` non è più una fonte completa dello stato app.
-Con Postgres attivo conserva solo blocchi non ancora migrati oppure puramente UX/cache:
-
+- `nutrition`
+- `grocery`
+- `progress`
 - `recipes`
 - `datasets`
-- `nutrition.goals`
+
+Il file `prototipo_backend/data/nutritrack-state.json` non è più la fonte completa dell'app quando PostgreSQL è attivo. Lo uso per i blocchi residui di UI/cache o per la modalità `file_only`, in particolare:
+
+- `recipes.generator`
+- `recipes.currentRecipe`
+- `recipes.chatMessages`
+- `datasets.openFoodFacts.source`
+- `devices.showPermissionsPanel`
 - `grocery.ar`
 - `progress.autoSnapshots`
 
-Nota importante:
+## Device
 
-- `devices.integrations.*` non vive più nel file legacy
-- le tabelle device in Postgres esistono come base target del modello futuro, ma non sono ancora la persistenza attiva dei provider correnti
+Il modello SQL dei device è già pronto come destinazione strutturata, ma il provider `scale` usa ancora uno stato backend dedicato su file:
 
-## Verifica minima consigliata
+```text
+prototipo_backend/data/scale-connection.json
+```
 
-Dopo il bootstrap:
+Il frontend non legge direttamente quel file: passa sempre da `GET /api/devices/state` e dalle route `/api/scale/*`.
 
-1. avviare il backend
-2. chiamare `GET /api/database/status`
-3. eseguire un salvataggio su `PUT /api/nutritrack/state` per backfill iniziale dei dati legacy
-4. controllare che Postgres popoli:
-   - `user_profiles`
-   - `nutrition_meals`
-   - `grocery_items`
-   - `pantry_items`
-   - `progress_logs`
-5. eseguire `npm run verify:postgres-primary`
+## Verifica minima
 
-Lo script `verify:postgres-primary` controlla che:
+Dopo il bootstrap controllo:
 
-- `GET /api/database/status` riporti `postgres_primary`
-- `GET /api/nutritrack/state` riporti `primarySource=postgres_primary`
-- le sezioni `profile`, `nutrition`, `grocery`, `progress`, `recipes` e `datasets` risultino coperte da Postgres
+1. `GET /api/database/status`
+2. `GET /api/nutritrack/state`
+3. `PUT /api/nutritrack/state` per un primo salvataggio/backfill
+4. popolamento delle tabelle principali
+5. `npm run verify:postgres-primary`
 
-Non verifica ancora il layer device: quello oggi va controllato separatamente tramite `GET /api/devices/state` e le route `/api/scale/*`.
+Lo script `verify:postgres-primary` verifica che:
 
-Puoi cambiare endpoint con `NUTRITRACK_BASE_URL`, ad esempio:
+- il database sia in modalità `postgres_primary`;
+- `GET /api/nutritrack/state` abbia `primarySource=postgres_primary`;
+- `profile`, `nutrition`, `grocery`, `progress`, `recipes` e `datasets` risultino coperte da PostgreSQL.
 
-`NUTRITRACK_BASE_URL=http://127.0.0.1:3000 npm run verify:postgres-primary`
+Per lo smoke test locale senza PostgreSQL uso:
+
+```bash
+npm run verify:runtime-smoke
+```
+
+Questo controllo avvia un backend isolato in `file_only`, legge stato e device, registra una misura bilancia lato client e verifica un round-trip di salvataggio dello stato.

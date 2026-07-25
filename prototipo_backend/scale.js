@@ -42,6 +42,10 @@ async function updateScalePermissions(userContext, currentConnection, nextPermis
   return getScaleProvider().updatePermissions(currentConnection, nextPermissions, userContext);
 }
 
+async function recordClientScaleMeasurement(userContext, currentConnection, measurementPayload) {
+  return getScaleProvider().recordMeasurement(currentConnection, measurementPayload, userContext);
+}
+
 module.exports = {
   buildPublicScaleState,
   connectScale,
@@ -49,6 +53,7 @@ module.exports = {
   getScaleProvider,
   getScaleProviderId,
   readScaleConnection: readScaleConnectionForUser,
+  recordClientScaleMeasurement,
   syncScale,
   updateScalePermissions,
 };

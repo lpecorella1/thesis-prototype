@@ -97,11 +97,48 @@ function buildScaleLatestData(profileState = {}) {
   };
 }
 
+function normalizeClientMeasurement(measurementPayload = {}) {
+  const safePayload = measurementPayload && typeof measurementPayload === "object" ? measurementPayload : {};
+  const measurement = safePayload.measurement && typeof safePayload.measurement === "object"
+    ? safePayload.measurement
+    : {};
+  const weightKg = Number(measurement.weightKg);
+  const bmi = Number(measurement.bmi);
+  const bodyFatPercent = Number(measurement.bodyFatPercent);
+  const measuredAt = measurement.measuredAt && !Number.isNaN(new Date(measurement.measuredAt).getTime())
+    ? new Date(measurement.measuredAt).toISOString()
+    : new Date().toISOString();
+
+  if (!Number.isFinite(weightKg) || weightKg <= 0 || weightKg > 500) {
+    const error = new Error("Peso bilancia non valido.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return {
+    providerMode: safePayload.providerMode === "standard_ble" ? "standard_ble" : "client_measurement",
+    deviceName: typeof safePayload.device?.name === "string" ? safePayload.device.name.slice(0, 120) : "Bilancia",
+    measuredAt,
+    latestData: {
+      weightKg: Number(weightKg.toFixed(1)),
+      bmi: Number.isFinite(bmi) && bmi > 0 ? Number(bmi.toFixed(1)) : null,
+      bodyFatPercent:
+        Number.isFinite(bodyFatPercent) && bodyFatPercent >= 0 && bodyFatPercent <= 100
+          ? Number(bodyFatPercent.toFixed(1))
+          : null,
+    },
+    sourcePayload:
+      measurement.sourcePayload && typeof measurement.sourcePayload === "object"
+        ? measurement.sourcePayload
+        : {},
+  };
+}
+
 function buildPublicScaleState(connection) {
   const safeConnection = connection && typeof connection === "object" ? connection : cloneDefaultConnection();
 
   return {
-    providerMode: "mock",
+    providerMode: safeConnection.providerMode || "mock",
     configured: true,
     connected: Boolean(safeConnection.connected),
     lastSyncAt: safeConnection.lastSyncAt || "",
@@ -181,11 +218,35 @@ async function updatePermissions(currentConnection, nextPermissions, userContext
   return nextConnection;
 }
 
+async function recordMeasurement(currentConnection, measurementPayload, userContext) {
+  const normalizedMeasurement = normalizeClientMeasurement(measurementPayload);
+  const nextConnection = {
+    ...cloneDefaultConnection(),
+    ...(currentConnection && typeof currentConnection === "object" ? currentConnection : {}),
+    providerMode: normalizedMeasurement.providerMode,
+    connected: true,
+    lastSyncAt: normalizedMeasurement.measuredAt,
+    latestData: normalizedMeasurement.latestData,
+    lastSyncStatus: "synced",
+    metadata: {
+      ...(currentConnection?.metadata && typeof currentConnection.metadata === "object"
+        ? currentConnection.metadata
+        : {}),
+      deviceName: normalizedMeasurement.deviceName,
+      lastSourcePayload: normalizedMeasurement.sourcePayload,
+    },
+  };
+
+  await writeScaleConnection(nextConnection, userContext);
+  return nextConnection;
+}
+
 module.exports = {
   buildPublicScaleState,
   connect,
   disconnect,
   providerId: "mock",
+  recordMeasurement,
   readScaleConnection: readScaleConnectionForUser,
   sync,
   updatePermissions,

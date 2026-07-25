@@ -30,7 +30,7 @@
 
 [7\. Gap di ricerca e posizionamento del progetto 8](#_Toc232430853)
 
-[8\. Cosa si propone questo progetto 9](#_Toc232430854)
+[8\. Cosa propongo con questo progetto 9](#_Toc232430854)
 
 [8.1 Gli obiettivi principali 9](#_Toc232430855)
 
@@ -73,7 +73,7 @@ Nel contesto della gestione dello spreco alimentare domestico, diversi studi<sup
 
 Per affrontare questo problema, lo studio preso in causa propone un sistema integrato basato su tecnologie IoT e algoritmi di raccomandazione, in grado di monitorare automaticamente gli alimenti disponibili e suggerire ricette in funzione della loro disponibilità e prossimità alla scadenza. In questo senso, la raccomandazione non si limita a proporre contenuti pertinenti, ma assume un ruolo strategico nella riduzione dello spreco.
 
-I risultati dello studio dimostrano un impatto significativo, con una riduzione dello spreco alimentare domestico di circa il 30% e un utilizzo ottimale degli ingredienti nell'81% dei casi. Tuttavia, l'interazione con il sistema rimane vincolata a un'interfaccia tradizionale, che richiede all'utente un coinvolgimento attivo e strutturato: in questo contesto si inserisce il presente lavoro, che mira a estendere tali approcci attraverso l'integrazione di un agente conversazionale, capace di supportare l'utente in modo più naturale e proattivo nella gestione del cibo domestico, trasformando la raccomandazione da strumento passivo a processo dialogico e adattivo.
+I risultati dello studio dimostrano un impatto significativo, con una riduzione dello spreco alimentare domestico di circa il 30% e un utilizzo ottimale degli ingredienti nell'81% dei casi. Tuttavia, l'interazione con il sistema rimane vincolata a un'interfaccia tradizionale, che richiede all'utente un coinvolgimento attivo e strutturato: in questo contesto inserisco il mio lavoro, con l'obiettivo di estendere questi approcci attraverso l'integrazione di un agente conversazionale capace di supportare l'utente in modo più naturale e proattivo nella gestione del cibo domestico, trasformando la raccomandazione da strumento passivo a processo dialogico e adattivo.
 
 Un ulteriore contributo nel campo della gestione intelligente del cibo domestico è rappresentato dai sistemi di raccomandazione ibridi orientati al _meal planning_, che combinano tecniche di _content-based_ e _collaborative filtering_ per fornire suggerimenti personalizzati. In questo ambito, la raccomandazione non si limita alla selezione di singole ricette, ma si estende alla pianificazione complessiva dei pasti e all'ottimizzazione della spesa alimentare, introducendo una dimensione sistemica nella riduzione dello spreco<sup>[\[2\]](#footnote-2)</sup>.
 
@@ -158,39 +158,39 @@ Un secondo nodo riguarda l'engagement, di cui si è osservato in senso positivo 
 
 Anche la dimensione della privacy è particolarmente delicata. Un sistema di gestione alimentare avanzato potrebbe trattare anche dati sanitari (allergie, diete, peso), preferenze personali e abitudini quotidiane, configurandosi come un'infrastruttura informativa sensibile. La letteratura sottolinea l'importanza di garantire trasparenza algoritmica, controllo dell'utente sui dati e adeguate misure di sicurezza nei sistemi cloud.
 
-Infine, si osserva una carenza di soluzioni che combinino in modo integrato inventario dinamico, _recommendation context-aware_ e interazione conversazionale avanzata. Molti sistemi rimangono confinati a una sola di queste dimensioni, senza sviluppare un'architettura realmente unificata. Qui si colloca il contributo potenziale di questo progetto: integrazione di LLM (attraverso libreria di GPT) per generazione conversazionale adattiva.
+Infine, osservo una carenza di soluzioni che combinino in modo integrato inventario dinamico, _recommendation context-aware_ e interazione conversazionale avanzata. Molti sistemi rimangono confinati a una sola di queste dimensioni, senza sviluppare un'architettura realmente unificata. Qui colloco il contributo potenziale del mio progetto: l'integrazione di un LLM per una generazione conversazionale adattiva.
 
 - Gap di ricerca e posizionamento del progetto
 
 Lo stato dell'arte evidenzia una frammentazione tra sistemi hardware-oriented basati su IoT, applicazioni di inventory management manuale, chatbot nutrizionali e recommender relativamente statici. Manca ancora un sistema capace di integrare inventario domestico, routine contestuale, preferenze e vincoli sanitari in un ambiente conversazionale fluido e adattivo.
 
-Il progetto proposto si colloca all'intersezione tra _ambient intelligence_, _Human-Computer Interaction_, _conversational_ AI, _recommendation systems_ e _smart home systems_. L'elemento distintivo risiede nell'integrazione di un modello linguistico avanzato, con l'obiettivo di costruire un ecosistema capace non solo di monitorare, ma di dialogare, suggerire ed apprendere nel tempo.
+Colloco il progetto all'intersezione tra _ambient intelligence_, _Human-Computer Interaction_, _conversational_ AI, _recommendation systems_ e _smart home systems_. L'elemento distintivo risiede nell'integrazione di un modello linguistico avanzato, con l'obiettivo di costruire un ecosistema capace non solo di monitorare, ma di dialogare, suggerire e apprendere nel tempo.
 
-L'obiettivo di questa analisi è innanzitutto di identificare gli attori che agiscono sulla scena (p.e. utente singolo, famiglia, caregiver…), ma in secondo luogo aprire la strada per definire le task primarie dell'applicazione web (controllare le scorte alimentari, pianificare i pasti, generare eventuale lista spesa…), al fine di progettare un sistema conversazionale realmente centrato sull'utente.
+Con questa analisi voglio innanzitutto identificare gli attori che agiscono sulla scena (p.e. utente singolo, famiglia, caregiver…), e poi definire i task primari dell'applicazione web (controllare le scorte alimentari, pianificare i pasti, generare la lista della spesa…), così da progettare un sistema conversazionale realmente centrato sull'utente.
 
-- Cosa si propone questo progetto
+- Cosa propongo con questo progetto
   - Gli obiettivi principali
 
-L'applicazione proposta nasce dall'esigenza di colmare il divario individuato nello stato dell'arte tra infrastrutture IoT orientate al monitoraggio materiale, sistemi di raccomandazione focalizzati su logiche algoritmiche isolate e agenti conversazionali prevalentemente dedicati al coaching sanitario. L'obiettivo generale è progettare e prototipare un sistema conversazionale integrato, capace di connettere inventario, preferenze, vincoli nutrizionali e routine quotidiane in un unico ecosistema dialogico.
+Propongo questa applicazione per colmare il divario individuato nello stato dell'arte tra infrastrutture IoT orientate al monitoraggio materiale, sistemi di raccomandazione focalizzati su logiche algoritmiche isolate e agenti conversazionali prevalentemente dedicati al coaching sanitario. Il mio obiettivo generale è progettare e prototipare un sistema conversazionale integrato, capace di connettere inventario, preferenze, vincoli nutrizionali e routine quotidiane in un unico ecosistema dialogico.
 
-In primo luogo, l'applicazione si propone di ridurre il carico cognitivo associato alla gestione del cibo in ambito domestico. La pianificazione dei pasti, il controllo delle scorte, la verifica delle scadenze e la generazione della lista della spesa costituiscono attività frammentate, spesso distribuite nel tempo e affidate alla memoria individuale. In questo modo, si tenta di trasferire parte del carico mentale all'agente conversazionale che, attraverso l'interazione in linguaggio naturale, consenta un accesso rapido alle informazioni rilevanti, favorendo decisioni informate e tempestive.
+In primo luogo, voglio ridurre il carico cognitivo associato alla gestione del cibo in ambito domestico. La pianificazione dei pasti, il controllo delle scorte, la verifica delle scadenze e la generazione della lista della spesa costituiscono attività frammentate, spesso distribuite nel tempo e affidate alla memoria individuale. Con l'agente conversazionale provo quindi a trasferire parte di questo carico mentale al sistema, usando l'interazione in linguaggio naturale per consentire un accesso rapido alle informazioni rilevanti e favorire decisioni informate e tempestive.
 
-Un secondo obiettivo riguarda l'integrazione tra dimensione logistica e dimensione decisionale. A differenza di molte soluzioni esistenti, che trattano separatamente inventario e raccomandazione, l'applicazione mira a costruire un modello dinamico in cui le raccomandazioni - ricette, pianificazione settimanale, suggerimenti per la spesa - emergano dall'interazione tra dati aggiornati sulle scorte, preferenze espresse dall'utente e vincoli contestuali. L'agente non si limita quindi a suggerire i contenuti, ma negozia soluzioni situate, adattandosi alla disponibilità reale delle risorse, o ad eventuali ripensamenti da parte dell'utente.
+Un secondo obiettivo riguarda l'integrazione tra dimensione logistica e dimensione decisionale. A differenza di molte soluzioni esistenti, che trattano separatamente inventario e raccomandazione, voglio costruire un modello dinamico in cui le raccomandazioni - ricette, pianificazione settimanale, suggerimenti per la spesa - emergano dall'interazione tra dati aggiornati sulle scorte, preferenze espresse dall'utente e vincoli contestuali. L'agente non si limita quindi a suggerire contenuti, ma negozia soluzioni situate, adattandosi alla disponibilità reale delle risorse o a eventuali ripensamenti da parte dell'utente.
 
-Un ulteriore obiettivo è la promozione di comportamenti alimentari più sostenibili, sia dal punto di vista ambientale sia economico. L'integrazione tra monitoraggio delle scadenze e suggerimenti contestuali può contribuire alla riduzione dello spreco alimentare, mentre la pianificazione assistita della spesa può favorire una maggiore consapevolezza nei consumi. In questo senso, il sistema si configura non solo come strumento organizzativo, ma come dispositivo di supporto orientato a suggerire scelte più responsabili.
+Un ulteriore obiettivo è promuovere comportamenti alimentari più sostenibili, sia dal punto di vista ambientale sia economico. L'integrazione tra monitoraggio delle scadenze e suggerimenti contestuali può contribuire alla riduzione dello spreco alimentare, mentre la pianificazione assistita della spesa può favorire una maggiore consapevolezza nei consumi. In questo senso, progetto il sistema non solo come strumento organizzativo, ma come dispositivo di supporto orientato a suggerire scelte più responsabili.
 
-Parallelamente, l'applicazione intende valorizzare la dimensione conversazionale come modalità primaria di interazione: non sostituire completamente le interfacce tradizionali, ma superare la rigidità dei form strutturati introducendo l'interazione dialogica per gestire ambiguità, richieste parziali e preferenze implicite.
+Parallelamente, intendo valorizzare la dimensione conversazionale come modalità primaria di interazione: non per sostituire completamente le interfacce tradizionali, ma per superare la rigidità dei form strutturati introducendo l'interazione dialogica nella gestione di ambiguità, richieste parziali e preferenze implicite.
 
 - 1. Gli obiettivi trasversali
 
 Un aspetto laterale ma non secondario riguarda la progettazione responsabile del sistema, considerata la natura potenzialmente sensibile dei dati trattati secondo principi di trasparenza e controllo da parte dell'utente, che deve mantenere consapevolezza e _agency_ rispetto ai processi decisionali supportati dall'intelligenza artificiale, evitando dinamiche opache o eccessivamente prescrittive.
 
-Infine, il progetto si propone di contribuire sul piano metodologico alla riflessione sull'integrazione tra IA conversazionale e sistemi di _smart home_. L'obiettivo non è soltanto implementare una soluzione tecnica, ma esplorare un modello di interazione in cui l'agente conversazionale operi come nodo centrale di coordinamento tra dati eterogenei, algoritmi di raccomandazione e pratiche situate. In questa prospettiva, l'applicazione rappresenta un caso di studio per comprendere come i modelli linguistici di grandi dimensioni possano essere integrati in ecosistemi domestici intelligenti in modo coerente, sostenibile e centrato sull'utente.
+Infine, con questo progetto voglio contribuire sul piano metodologico alla riflessione sull'integrazione tra IA conversazionale e sistemi di _smart home_. Il mio obiettivo non è soltanto implementare una soluzione tecnica, ma esplorare un modello di interazione in cui l'agente conversazionale operi come nodo centrale di coordinamento tra dati eterogenei, algoritmi di raccomandazione e pratiche situate. In questa prospettiva, considero l'applicazione come un caso di studio per comprendere come i modelli linguistici di grandi dimensioni possano essere integrati in ecosistemi domestici intelligenti in modo coerente, sostenibile e centrato sull'utente.
 
 - Task Analysis
   - Notazione utilizzata
 
-La progettazione del lavoro è supportata da una task analysis, finalizzata a scomporre in maniera sistematica le attività che l'utente deve svolgere per gestire la propria alimentazione domestica attraverso il sistema. Tale analisi è stata formalizzata mediante la notazione _ConcurTaskTrees_ (CTT), che consente di rappresentare sia la struttura gerarchica dei task sia la loro natura operativa.
+Supporto la progettazione del lavoro con una task analysis, finalizzata a scomporre in maniera sistematica le attività che l'utente deve svolgere per gestire la propria alimentazione domestica attraverso il sistema. Ho formalizzato l'analisi mediante la notazione _ConcurTaskTrees_ (CTT), che consente di rappresentare sia la struttura gerarchica dei task sia la loro natura operativa.
 
 In particolare, i task sono stati classificati secondo quattro categorie:
 
@@ -210,11 +210,11 @@ Inoltre, gli operatori temporali vengono classificati come segue:
 - Opzionalità: \[T\]
 - Ordine indipendente: T1 |=| T2
 
-L'intero modello è organizzato attorno al task principale di livello più alto, "gestire l'alimentazione domestica", articolato in cinque sotto-task poi ulteriormente sotto-categorizzati: "accesso e configurazione", "gestione degli alimenti", "pianificazione dei pasti", "gestione della spesa" e "monitoraggio nutrizionale".
+Ho organizzato l'intero modello attorno al task principale di livello più alto, "gestire l'alimentazione domestica", articolato in cinque sotto-task poi ulteriormente sotto-categorizzati: "accesso e configurazione", "gestione degli alimenti", "pianificazione dei pasti", "gestione della spesa" e "monitoraggio nutrizionale".
 
 La task analysis evidenzia come l'applicazione non si limiti alla registrazione delle informazioni, ma si configuri come un sistema proattivo di supporto decisionale. In particolare, i task di tipo Application - che includono le componenti di intelligenza artificiale - svolgono un ruolo chiave nel ridurre il carico cognitivo dell'utente, automatizzando processi complessi e fornendo suggerimenti personalizzati, pur mantenendo l'utente al centro delle decisioni finali.
 
-L'obiettivo principale è quello di integrare in un unico ecosistema digitale funzioni che, nelle applicazioni attualmente disponibili, risultano spesso separate: tracciamento nutrizionale, scansione dei prodotti, gestione degli alimenti presenti in casa e pianificazione della spesa.
+Il mio obiettivo principale è integrare in un unico ecosistema digitale funzioni che, nelle applicazioni attualmente disponibili, risultano spesso separate: tracciamento nutrizionale, scansione dei prodotti, gestione degli alimenti presenti in casa e pianificazione della spesa.
 
 - 1. Accesso e configurazione
 
@@ -351,9 +351,9 @@ Task principale: **Monitoraggio nutrizionale** (Abstraction Task): Registrazione
 - Application Task: Invio notifiche per registrazione pasti \[\] Invio promemoria idratazione \[\] Suggerimento automatico per il mantenimento delle abitudini alimentari corrette.
 - Progettazione concreta del wireframe attraverso Figma
 
-La fase di progettazione grafica preliminare dell'interfaccia è stata supportata dalla piattaforma web Figma, nella sua realizzazione. Il prototipo ad alta fedeltà consente di tradurre i requisiti funzionali individuati nella _task analysis_ in un modello interattivo.
+Ho usato Figma per supportare la fase di progettazione grafica preliminare dell'interfaccia. Il prototipo ad alta fedeltà traduce i requisiti funzionali individuati nella _task analysis_ in un modello interattivo.
 
-Le figure che seguono, mostrano alcune delle pagine del prototipo, attraverso cui risulta possibile verificare il flusso di navigazione tra le cinque sezioni in cui è stata suddivisa la piattaforma.
+Le figure che seguono mostrano alcune pagine del prototipo e permettono di verificare il flusso di navigazione tra le cinque sezioni in cui ho suddiviso la piattaforma.
 
 - 1. **Nutrition**
 
@@ -378,7 +378,7 @@ La quinta e ultima sezione permette all'utente di salvare i dati personali, medi
 - Utilizzo dei dataset per un approccio RAG
   - **Open Food Facts**
 
-Si tratta di un database globale, aperto e collaborativo che contiene i dati di milioni di prodotti confezionati da tutto il mondo. Include codici a barre (EAN), ingredienti, allergeni e tabelle nutrizionali. Nel progetto il dataset ufficiale OpenFoodFacts puo essere impiegato in due modi complementari: come sorgente live per il recupero immediato dei prodotti tramite barcode scanning e come dump/export ufficiale per costruire una knowledge base locale a supporto di un approccio RAG. In questo secondo caso, i record possono essere normalizzati in documenti strutturati contenenti barcode, nome prodotto, marca, categoria, valori nutrizionali, Nutri-Score e metadati di provenienza, cosi da ridurre il rischio di allucinazioni nelle raccomandazioni nutrizionali e nelle funzioni di inventory management → [link dataset](https://world.openfoodfacts.org/data) + [link al sito](https://it.openfoodfacts.org/).
+Si tratta di un database globale, aperto e collaborativo che contiene i dati di milioni di prodotti confezionati da tutto il mondo. Include codici a barre (EAN), ingredienti, allergeni e tabelle nutrizionali. Nel progetto posso impiegare il dataset ufficiale OpenFoodFacts in due modi complementari: come sorgente live per il recupero immediato dei prodotti tramite barcode scanning e come dump/export ufficiale per costruire una knowledge base locale a supporto di un approccio RAG. In questo secondo caso, posso normalizzare i record in documenti strutturati contenenti barcode, nome prodotto, marca, categoria, valori nutrizionali, Nutri-Score e metadati di provenienza, così da ridurre il rischio di allucinazioni nelle raccomandazioni nutrizionali e nelle funzioni di inventory management → [link dataset](https://world.openfoodfacts.org/data) + [link al sito](https://it.openfoodfacts.org/).
 
 - 1. **Recipe1M+. A Dataset for Learning Cross-Modal Embeddings for Cooking Recipes and Food Images**
 

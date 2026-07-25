@@ -1,78 +1,79 @@
-# Postgres data architecture
+# Architettura dati PostgreSQL
 
-Questa nota riassume come stiamo impostando il database del progetto usando Postgres come base primaria, con una struttura adatta a crescere senza diventare fragile.
+Ho scelto PostgreSQL per togliere lo stato principale dell'app da un unico blob JSON e portarlo dentro un modello più controllabile. L'obiettivo non è rendere tutto rigido subito, ma avere una base dati che mi permetta di crescere senza perdere coerenza tra profilo, dieta, dispensa, ricette e progressi.
 
-## Principi adottati
+## Principi
 
-### 1. Il core applicativo resta relazionale
+### Core relazionale
 
-Per utenti, profili, pasti, grocery, pantry, progressi e ricette usiamo tabelle relazionali con vincoli espliciti. La motivazione e allineata alla documentazione ufficiale PostgreSQL: `CHECK`, `NOT NULL`, `UNIQUE`, `PRIMARY KEY` e `FOREIGN KEY` servono proprio a impedire stati inconsistenti del dato e sono preferibili a controlli sparsi solo nel codice applicativo.
+Per i dati centrali uso tabelle relazionali e vincoli espliciti. In questo modo controllo a livello database relazioni, unicità, valori obbligatori e limiti numerici, invece di affidare tutta la consistenza al codice del backend.
 
-### 2. JSONB solo dove la struttura e davvero variabile
-
-Per payload di provider esterni, metadata di sync e cache OpenFoodFacts usiamo `JSONB`, non colonne testuali generiche. La documentazione PostgreSQL dice che, in generale, la maggior parte delle applicazioni dovrebbe preferire `jsonb` a `json`, perche e piu efficiente da processare e indicizzare.
-
-### 3. Device data modellati come osservazioni
-
-Per i device non salviamo solo "connesso / non connesso". Ci servono almeno:
-
-- il provider collegato
-- lo stato della connessione
-- i permessi concessi
-- i singoli tentativi di sync
-- i dati misurati con timestamp
-
-Questa scelta e coerente con la logica del modello HL7 FHIR:
-
-- `Observation` descrive misurazioni e semplici osservazioni su paziente o device
-- `Observation.device` collega la misura al device che l'ha generata
-- `Device` rappresenta l'istanza del dispositivo o della sorgente che produce il dato
-
-Non stiamo implementando FHIR completo nel database, ma usiamo quella struttura concettuale per non perdere provenienza, temporalita e auditabilita.
-
-## Scelte di schema
-
-### Core tables
+Le aree core sono:
 
 - `users`
+- `user_sessions`
 - `user_profiles`
 - `recipes`
+- `saved_recipes`
 - `nutrition_meals`
 - `grocery_items`
 - `pantry_items`
 - `progress_logs`
-- `saved_recipes`
 
-### Device layer
+### JSONB solo dove serve flessibilità
 
-- `device_providers`
-- `device_connections`
-- `device_connection_permissions`
-- `device_sync_runs`
-- `device_measurements`
+Uso `JSONB` per payload esterni, metadata e cache perché lì la struttura può cambiare più facilmente. Non lo uso come scorciatoia per evitare di modellare il dominio principale.
 
-Nota sullo stato corrente:
+I casi principali sono:
 
-- questo e il modello target della persistenza device
-- il runtime attuale non usa ancora queste tabelle per `scale`
-- oggi `scale` usa un provider backend dedicato file-based, mentre il frontend legge tutto tramite `GET /api/devices/state`
+- `recipes.recipe_payload`
+- `device_connections.metadata`
+- `device_sync_runs.payload_summary`
+- `device_measurements.source_payload`
+- `openfoodfacts_products_cache.nutriments`
+- `openfoodfacts_products_cache.source_payload`
 
-### External knowledge / cache
+### Device come osservazioni
 
-- `openfoodfacts_products_cache`
+Per i device non mi basta sapere se una sorgente è collegata. Voglio distinguere:
 
-## Perche questa organizzazione e piu robusta
+- provider configurato;
+- stato della connessione;
+- permessi concessi;
+- tentativi di sincronizzazione;
+- misurazioni importate o registrate;
+- payload originale, quando serve per audit o debug.
 
-- evita blob JSON unici come fonte di verita per tutto
-- mantiene i dati queryable e indicizzabili
-- separa chiaramente dominio, integrazioni e cache
-- rende piu semplice capire se un'integrazione funziona davvero oppure no
-- permette una migrazione graduale del backend, ma con una base dati gia corretta
+Il modello è ispirato al modo in cui HL7 FHIR separa `Device` e `Observation`: non sto implementando FHIR completo, ma mantengo la stessa attenzione a provenienza, timestamp e tracciabilità della misura.
 
-## Fonti
+## Stato runtime attuale
 
-- PostgreSQL docs, constraints: https://www.postgresql.org/docs/current/ddl-constraints.html
-- PostgreSQL docs, JSON types: https://www.postgresql.org/docs/current/datatype-json.html
-- PostgreSQL docs, CREATE TYPE: https://www.postgresql.org/docs/current/sql-createtype.html
+Oggi PostgreSQL è già la sorgente primaria per:
+
+- profilo;
+- pasti;
+- lista della spesa;
+- dispensa;
+- progressi;
+- ricette salvate e generate;
+- metadati dataset.
+
+Il file JSON legacy resta solo per blocchi residui di UI/cache quando PostgreSQL è attivo. In modalità `file_only`, invece, resta utile per lavorare localmente senza database.
+
+Il layer device è a metà strada in modo intenzionale: lo schema SQL è pronto, ma il provider `scale` usa ancora un file dedicato lato backend. Così posso stabilizzare l'interfaccia pubblica (`GET /api/devices/state` e `/api/scale/*`) prima di spostare anche quel provider sulle tabelle device.
+
+## Perché questa scelta è più solida
+
+- riduco il rischio di stati incoerenti nel JSON;
+- posso interrogare e indicizzare i dati importanti;
+- separo dati utente, cache esterne e integrazioni;
+- preparo la modalità autenticata senza cambiare il modello dati ogni volta;
+- mantengo comunque una modalità locale leggera per sviluppo e demo.
+
+## Fonti tecniche
+
+- PostgreSQL, constraints: https://www.postgresql.org/docs/current/ddl-constraints.html
+- PostgreSQL, JSON types: https://www.postgresql.org/docs/current/datatype-json.html
+- PostgreSQL, `CREATE TYPE`: https://www.postgresql.org/docs/current/sql-createtype.html
 - HL7 FHIR Observation: https://www.hl7.org/fhir/observation.html
 - HL7 FHIR Device: https://www.hl7.org/fhir/device.html

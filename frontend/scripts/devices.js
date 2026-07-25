@@ -3,9 +3,11 @@ const SCALE_CONNECT_API_PATH = "/api/scale/connect";
 const SCALE_SYNC_API_PATH = "/api/scale/sync";
 const SCALE_DISCONNECT_API_PATH = "/api/scale/disconnect";
 const SCALE_PERMISSIONS_API_PATH = "/api/scale/permissions";
+const SCALE_CLIENT_MEASUREMENT_API_PATH = "/api/scale/client-measurement";
 
 const devicesRuntime = {
   isHydratingDevices: false,
+  scaleBleDevice: null,
 };
 
 function getDeviceConfig(deviceId) {
@@ -152,7 +154,144 @@ function persistAndRenderDevices() {
   renderDevices();
 }
 
-async function connectScaleDevice() {
+function isStandardBleScaleAvailable() {
+  return Boolean(window.isSecureContext && navigator.bluetooth?.requestDevice);
+}
+
+function parseGattDateTime(dataView, offset) {
+  if (offset + 7 > dataView.byteLength) {
+    return null;
+  }
+
+  const year = dataView.getUint16(offset, true);
+  const month = dataView.getUint8(offset + 2);
+  const day = dataView.getUint8(offset + 3);
+  const hours = dataView.getUint8(offset + 4);
+  const minutes = dataView.getUint8(offset + 5);
+  const seconds = dataView.getUint8(offset + 6);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day, hours, minutes, seconds).toISOString();
+}
+
+function parseWeightScaleMeasurement(dataView) {
+  const flags = dataView.getUint8(0);
+  const usesImperialUnits = Boolean(flags & 0x01);
+  const hasTimestamp = Boolean(flags & 0x02);
+  const hasUserId = Boolean(flags & 0x04);
+  const hasBmiAndHeight = Boolean(flags & 0x08);
+
+  let offset = 1;
+  const rawWeight = dataView.getUint16(offset, true);
+  offset += 2;
+
+  const weightKg = usesImperialUnits ? rawWeight * 0.01 * 0.45359237 : rawWeight * 0.005;
+  let measuredAt = new Date().toISOString();
+  let bmi = null;
+
+  if (hasTimestamp) {
+    measuredAt = parseGattDateTime(dataView, offset) || measuredAt;
+    offset += 7;
+  }
+
+  if (hasUserId) {
+    offset += 1;
+  }
+
+  if (hasBmiAndHeight && offset + 3 < dataView.byteLength) {
+    bmi = dataView.getUint16(offset, true) * 0.1;
+  }
+
+  return {
+    weightKg: Number(weightKg.toFixed(1)),
+    bmi: bmi == null ? null : Number(bmi.toFixed(1)),
+    bodyFatPercent: null,
+    measuredAt,
+    sourcePayload: {
+      flags,
+      usesImperialUnits,
+      hasTimestamp,
+      hasUserId,
+      hasBmiAndHeight,
+    },
+  };
+}
+
+function waitForWeightScaleMeasurement(characteristic, timeoutMs = 45000) {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(() => {
+      characteristic.removeEventListener("characteristicvaluechanged", handleMeasurement);
+      reject(new Error("Nessuna misurazione ricevuta dalla bilancia entro 45 secondi."));
+    }, timeoutMs);
+
+    function handleMeasurement(event) {
+      window.clearTimeout(timeout);
+      characteristic.removeEventListener("characteristicvaluechanged", handleMeasurement);
+
+      try {
+        resolve(parseWeightScaleMeasurement(event.target.value));
+      } catch (error) {
+        reject(new Error("Misurazione BLE ricevuta ma non leggibile."));
+      }
+    }
+
+    characteristic.addEventListener("characteristicvaluechanged", handleMeasurement);
+  });
+}
+
+async function requestStandardBleScaleMeasurement() {
+  if (!isStandardBleScaleAvailable()) {
+    throw new Error("Web Bluetooth non disponibile in questo browser o contesto.");
+  }
+
+  const device = await navigator.bluetooth.requestDevice({
+    filters: [{ services: ["weight_scale"] }],
+    optionalServices: ["body_composition"],
+  });
+
+  devicesRuntime.scaleBleDevice = device;
+  const server = await device.gatt.connect();
+  const service = await server.getPrimaryService("weight_scale");
+  const characteristic = await service.getCharacteristic("weight_measurement");
+  const measurementPromise = waitForWeightScaleMeasurement(characteristic);
+  await characteristic.startNotifications();
+
+  return {
+    device,
+    measurement: await measurementPromise,
+  };
+}
+
+async function submitClientScaleMeasurement(device, measurement) {
+  const response = await fetch(SCALE_CLIENT_MEASUREMENT_API_PATH, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      providerMode: "standard_ble",
+      device: {
+        name: device?.name || "Bilancia BLE",
+      },
+      measurement,
+    }),
+  });
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error || `Registrazione misura bilancia fallita (${response.status}).`);
+  }
+
+  applyScaleState(payload?.scale || {});
+  persistAndRenderDevices();
+  return true;
+}
+
+async function connectBackendScaleDevice() {
   const response = await fetch(SCALE_CONNECT_API_PATH, {
     method: "POST",
     headers: {
@@ -170,7 +309,23 @@ async function connectScaleDevice() {
   return true;
 }
 
+async function connectScaleDevice() {
+  if (!isStandardBleScaleAvailable()) {
+    return connectBackendScaleDevice();
+  }
+
+  const { device, measurement } = await requestStandardBleScaleMeasurement();
+  return submitClientScaleMeasurement(device, measurement);
+}
+
 async function syncScaleDevice() {
+  const scaleState = getDeviceState("scale");
+
+  if (scaleState?.providerMode === "standard_ble" && isStandardBleScaleAvailable()) {
+    const { device, measurement } = await requestStandardBleScaleMeasurement();
+    return submitClientScaleMeasurement(device, measurement);
+  }
+
   const response = await fetch(SCALE_SYNC_API_PATH, {
     method: "POST",
     headers: {
@@ -432,7 +587,9 @@ function setupDevicesSection() {
         if (!await connectDeviceById(device.id)) {
           return;
         }
-      } catch {
+      } catch (error) {
+        console.warn("Unable to connect device.", error);
+        window.alert(error?.message || "Connessione dispositivo non riuscita.");
         return;
       }
       return;

@@ -62,6 +62,27 @@ async function main() {
     const databaseStatusPayload = await fetchJson(`${baseUrl}/api/database/status`);
     const statePayload = await fetchJson(`${baseUrl}/api/nutritrack/state`);
     const devicesPayload = await fetchJson(`${baseUrl}/api/devices/state`);
+    const clientScalePayload = await fetchJson(`${baseUrl}/api/scale/client-measurement`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        providerMode: "standard_ble",
+        device: {
+          name: "Smoke Test BLE Scale",
+        },
+        measurement: {
+          weightKg: 72.4,
+          bmi: 23.1,
+          bodyFatPercent: null,
+          measuredAt: "2026-07-25T09:00:00.000Z",
+          sourcePayload: {
+            flags: 10,
+          },
+        },
+      }),
+    });
     const writePayload = await fetchJson(`${baseUrl}/api/nutritrack/state`, {
       method: "PUT",
       headers: {
@@ -99,6 +120,8 @@ async function main() {
     );
     assert(statePayload.runtime?.summary === "single_user_local", "Unexpected runtime summary on state read.");
     assert(devicesPayload.runtime?.usesImplicitLocalUser === true, "Devices payload should expose local-user runtime.");
+    assert(clientScalePayload.scale?.providerMode === "standard_ble", "Client scale measurement did not use BLE mode.");
+    assert(clientScalePayload.scale?.latestData?.weightKg === 72.4, "Client scale measurement did not persist weight.");
     assert(writePayload.ok === true, "State write did not succeed.");
     assert(
       readBackPayload.state?.profile?.personal?.fullName === "Smoke Test User",
