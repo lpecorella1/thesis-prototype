@@ -1,6 +1,6 @@
 # NutriTrack
 
-Sto sviluppando NutriTrack come applicazione web per gestire alimentazione, dispensa, spesa, ricette e progressi nutrizionali in un unico flusso. Il progetto nasce come prototipo di tesi, ma la parte applicativa è ormai organizzata come una base locale strutturata: frontend statico, backend Node.js, persistenza PostgreSQL opzionale e integrazioni AI.
+Applicazione web per gestire alimentazione, dispensa, spesa, ricette e progressi nutrizionali in un unico flusso. Il progetto nasce come prototipo tesi, la parte applicativa è organizzata come base locale strutturata: frontend statico, backend Node.js, persistenza PostgreSQL opzionale e integrazioni AI.
 
 ## Cosa contiene
 
