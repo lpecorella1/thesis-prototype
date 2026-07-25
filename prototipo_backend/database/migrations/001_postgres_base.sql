@@ -36,7 +36,10 @@ CREATE TABLE user_profiles (
     allergies TEXT,
     medications TEXT,
     medical_conditions TEXT,
-    blood_type VARCHAR(10),
+    dietary_preferences TEXT,
+    primary_objective VARCHAR(80),
+    secondary_objective VARCHAR(80),
+    health_focus VARCHAR(80),
     daily_calories_goal INTEGER,
     daily_protein_goal INTEGER,
     daily_carbs_goal INTEGER,
@@ -246,8 +249,7 @@ CREATE TABLE openfoodfacts_products_cache (
 
 INSERT INTO device_providers (provider_key, device_type, display_name, supports_oauth, is_wearable)
 VALUES
-    ('scale', 'scale', 'Bilancia digitale', FALSE, FALSE),
-    ('strava', 'fitness_app', 'Strava', TRUE, FALSE)
+    ('scale', 'scale', 'Bilancia digitale', FALSE, FALSE)
 ON CONFLICT (provider_key) DO NOTHING;
 
 CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);

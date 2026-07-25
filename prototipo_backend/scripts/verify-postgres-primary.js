@@ -26,15 +26,14 @@ async function main() {
   const storage = statePayload.storage || {};
 
   assert(database.enabled === true, "Database status is not enabled.");
-  assert(database.mode === "hybrid_read_through", `Unexpected database mode: ${database.mode || "missing"}.`);
-  assert(
-    storage.primarySource === "postgres_structured_sections_complete",
-    `Unexpected storage primarySource: ${storage.primarySource || "missing"}.`
-  );
+  assert(database.mode === "postgres_primary", `Unexpected database mode: ${database.mode || "missing"}.`);
+  assert(storage.primarySource === "postgres_primary", `Unexpected storage primarySource: ${storage.primarySource || "missing"}.`);
   assert(storage.postgresStructuredStateComplete === true, "Structured Postgres state is not complete.");
   assert(
     Array.isArray(storage.postgresPrimarySections) &&
-      ["profile", "nutrition", "grocery", "progress"].every((section) => storage.postgresPrimarySections.includes(section)),
+      ["profile", "nutrition", "grocery", "progress", "recipes", "datasets"].every((section) =>
+        storage.postgresPrimarySections.includes(section)
+      ),
     "Postgres primary sections are incomplete."
   );
 

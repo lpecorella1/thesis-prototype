@@ -1,7 +1,9 @@
 const fs = require("fs/promises");
 const path = require("path");
 
-const nutritrackStateDataDir = path.join(__dirname, "..", "data");
+const nutritrackStateDataDir = process.env.NUTRITRACK_DATA_DIR
+  ? path.resolve(process.env.NUTRITRACK_DATA_DIR)
+  : path.join(__dirname, "..", "data");
 const nutritrackStateFilePath = path.join(nutritrackStateDataDir, "nutritrack-state.json");
 
 async function ensureNutriTrackStateDataDir() {

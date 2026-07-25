@@ -14,16 +14,72 @@
     <link rel="stylesheet" href="desktop.css?v=20260706" />
   </head>
   <body>
-    <div class="app-shell">
+    <section class="auth-shell" data-auth-shell hidden>
+      <div class="auth-card">
+        <div class="auth-card-copy">
+          <span class="auth-kicker">NutriTrack</span>
+          <h1>Accedi ai tuoi dati da qualsiasi dispositivo</h1>
+        </div>
+
+        <div class="auth-form-panel">
+          <div class="auth-mode-switch" aria-label="Selezione modalità autenticazione">
+            <button class="auth-mode-btn is-active" type="button" data-auth-mode-toggle="login">Accedi</button>
+            <button class="auth-mode-btn" type="button" data-auth-mode-toggle="register">Registrati</button>
+          </div>
+
+          <form class="auth-form" data-auth-form novalidate>
+            <input type="hidden" name="mode" value="login" />
+            <label class="field" data-auth-register-only hidden>
+              <span>Nome</span>
+              <input type="text" name="firstName" autocomplete="given-name" maxlength="75" placeholder="Mario" />
+            </label>
+            <label class="field" data-auth-register-only hidden>
+              <span>Cognome</span>
+              <input type="text" name="lastName" autocomplete="family-name" maxlength="75" placeholder="Rossi" />
+            </label>
+            <label class="field">
+              <span>Email</span>
+              <input type="email" name="email" autocomplete="email" required placeholder="nome@esempio.com" />
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input
+                type="password"
+                name="password"
+                autocomplete="current-password"
+                required
+                minlength="8"
+                placeholder="Almeno 8 caratteri"
+              />
+            </label>
+            <p class="auth-hint" data-auth-hint>Inserisci le tue credenziali per entrare nell'app.</p>
+            <p class="auth-feedback" data-auth-feedback aria-live="polite"></p>
+            <button class="primary-btn primary-btn-blue auth-submit" type="submit" data-auth-submit>Accedi</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <div class="app-shell" data-app-shell hidden>
       <header class="hero">
         <div>
           <h1>NutriTrack</h1>
           <p>Il tuo alleato per cucina, acquisti, dieta e gestione dei dati alimentari.</p>
         </div>
 
-        <div class="goal-panel">
-          <span>Obiettivo di oggi</span>
-          <strong data-calorie-goal-display>2000 kcal</strong>
+        <div class="hero-side-panels">
+          <div class="session-panel" data-session-panel>
+            <div class="session-panel-copy">
+              <span class="session-panel-label">Ciao</span>
+              <strong data-session-user-label>Sviluppo locale</strong>
+            </div>
+            <button class="soft-btn session-logout-btn" type="button" data-auth-logout hidden>Esci</button>
+          </div>
+
+          <div class="goal-panel" data-hero-goal-panel>
+            <span>Obiettivo di oggi</span>
+            <strong data-calorie-goal-display>-</strong>
+          </div>
         </div>
       </header>
 
@@ -210,7 +266,6 @@
                 </label>
                 <div class="field field-full recipe-form-row">
                   <button class="wide-white-btn" type="submit">Genera ricetta</button>
-                  <p class="save-hint recipe-feedback" data-recipe-feedback aria-live="polite"></p>
                 </div>
               </form>
             </article>
@@ -280,7 +335,6 @@
           <div class="section-head">
           </div>
 
-
           <section class="grocery-summary">
             <div>
               <div class="summary-title"><h2>Shopping List</h2></div>
@@ -336,7 +390,6 @@
                   </label>
                   <div class="field field-full grocery-form-row">
                     <button class="primary-btn primary-btn-green" type="submit">Aggiungi</button>
-                    <p class="save-hint" data-grocery-feedback aria-live="polite"></p>
                   </div>
                 </form>
               </article>
@@ -412,7 +465,6 @@
           <div class="section-head">
           </div>
 
-
           <div class="stats-grid">
             <article class="stat-card">
               <h2>Calorie</h2>
@@ -465,7 +517,6 @@
                   </label>
                   <div class="field field-full nutrition-form-row">
                     <button class="primary-btn primary-btn-blue" type="submit">Aggiungi</button>
-                    <p class="save-hint" data-nutrition-feedback aria-live="polite"></p>
                   </div>
                 </form>
               </article>
@@ -494,7 +545,6 @@
                   <div class="field field-full nutrition-form-row">
                     <button class="primary-btn primary-btn-blue" type="submit">Salva correzione</button>
                     <button class="soft-btn" type="button" data-nutrition-edit-cancel>Annulla</button>
-                    <p class="save-hint" data-nutrition-edit-feedback aria-live="polite"></p>
                   </div>
                 </form>
               </article>
@@ -540,7 +590,6 @@
                   <div class="field field-full progress-form-row">
                     <button class="primary-btn primary-btn-blue" type="submit">Salva</button>
                     <button class="soft-btn progress-soft-btn" type="button" data-progress-delete-log>Reset</button>
-                    <p class="save-hint" data-progress-feedback aria-live="polite"></p>
                   </div>
                 </form>
               </article>
@@ -550,21 +599,19 @@
               <div class="chart-head"><h3>Andamento calorie</h3><span>kcal / giorno</span></div>
               <div class="chart-scroll-shell">
                 <div class="chart-scroll-track">
-                  <svg class="line-chart" viewBox="0 0 760 250" aria-hidden="true" data-progress-calorie-chart></svg>
+                  <svg class="line-chart" viewBox="0 0 760 260" aria-hidden="true" data-progress-calorie-chart></svg>
                 </div>
               </div>
             </article>
 
-            <div class="chart-split">
-              <article class="panel chart-panel">
-                <div class="chart-head"><h3>Andamento peso</h3><span>kg</span></div>
-                <div class="chart-scroll-shell">
-                  <div class="chart-scroll-track">
-                    <svg class="line-chart compact" viewBox="0 0 560 230" aria-hidden="true" data-progress-weight-chart></svg>
-                  </div>
+            <article class="panel chart-panel">
+              <div class="chart-head"><h3>Andamento peso</h3><span>kg</span></div>
+              <div class="chart-scroll-shell">
+                <div class="chart-scroll-track">
+                  <svg class="line-chart compact" viewBox="0 0 760 260" aria-hidden="true" data-progress-weight-chart></svg>
                 </div>
-              </article>
-            </div>
+              </div>
+            </article>
 
             <article class="panel chart-panel">
               <div class="chart-head"><h3>Assunzione acqua</h3><span>bicchieri / giorno</span></div>
@@ -656,22 +703,62 @@
                 <label class="field"><span>Allergie</span><textarea name="allergies" rows="4" placeholder="Es. frutta secca, lattosio"></textarea></label>
                 <label class="field"><span>Farmaci attuali</span><textarea name="medications" rows="4" placeholder="Indica eventuali farmaci che stai assumendo..."></textarea></label>
                 <label class="field"><span>Condizioni mediche</span><textarea name="medicalConditions" rows="4" placeholder="Indica eventuali condizioni mediche (diabete, ipertensione, ecc.)..."></textarea></label>
-                <label class="field"><span>Gruppo sanguigno</span>
-                  <select name="bloodType">
+                <label class="field"><span>Preferenze alimentari</span><textarea name="dietaryPreferences" rows="4" placeholder="Es. vegetariana, senza lattosio, pochi zuccheri..."></textarea></label>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>Obiettivi</h3>
+                <p>Personalizza il tuo percorso nutrizionale.</p>
+              </div>
+              <div class="form-grid">
+                <label class="field">
+                  <span>Obiettivo principale</span>
+                  <select name="primaryObjective" required>
                     <option value="">Seleziona</option>
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                    <option value="unknown">Unknown</option>
+                    <option value="weight-loss">Perdere peso</option>
+                    <option value="weight-maintenance">Mantenere il peso</option>
+                    <option value="weight-gain">Aumentare di peso</option>
+                    <option value="eat-better">Mangiare meglio</option>
+                    <option value="muscle-gain">Aumentare la massa muscolare</option>
+                    <option value="energy-wellbeing">Avere più energia e benessere</option>
+                    <option value="health-support">Supportare una specifica esigenza di salute</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Obiettivo secondario</span>
+                  <select name="secondaryObjective">
+                    <option value="">Nessun obiettivo secondario</option>
+                    <option value="meal-regularity">Mangiare con più regolarità</option>
+                    <option value="meal-quality">Migliorare la qualità dei pasti</option>
+                    <option value="satiety">Sentirmi più sazio/a</option>
+                    <option value="hunger-management">Ridurre fame nervosa o abbuffate</option>
+                    <option value="training-support">Supportare allenamento e recupero</option>
+                    <option value="digestion">Migliorare digestione e benessere intestinale</option>
+                  </select>
+                </label>
+                <label class="field field-full" data-health-focus-field hidden>
+                  <span>Focus salute</span>
+                  <select name="healthFocus">
+                    <option value="">Seleziona</option>
+                    <option value="glycemia">Glicemia</option>
+                    <option value="cholesterol">Colesterolo</option>
+                    <option value="blood-pressure">Pressione</option>
+                    <option value="digestion">Digestione</option>
+                    <option value="intolerances">Intolleranze o sensibilità</option>
                   </select>
                 </label>
               </div>
             </article>
+
+            <div class="save-row">
+              <span class="save-confirmation" data-profile-save-confirmation aria-live="polite" aria-hidden="true">
+                <span class="save-confirmation-icon" aria-hidden="true">✓</span>
+                <span>Profilo salvato</span>
+              </span>
+              <button class="primary-btn primary-btn-blue save-btn" type="button" data-profile-save-button>Salva</button>
+            </div>
 
             <article class="ai-profile-panel">
               <div class="panel-heading">
@@ -699,44 +786,25 @@
                 <label class="field"><span>Grassi (g)</span><input type="number" name="goalFats" min="0" step="1" required /></label>
                 <label class="field"><span>Acqua (bicchieri)</span><input type="number" name="goalWater" min="0" step="1" required /></label>
               </div>
+              <div class="save-row" data-daily-goals-save-row>
+                <span class="save-confirmation" data-goals-save-confirmation aria-live="polite" aria-hidden="true">
+                  <span class="save-confirmation-icon" aria-hidden="true">✓</span>
+                  <span>Obiettivi salvati</span>
+                </span>
+                <button class="primary-btn primary-btn-blue save-btn" type="button" data-goals-save-button>Salva</button>
+              </div>
             </article>
-
-            <div class="save-row">
-              <p class="save-hint profile-feedback" data-profile-feedback aria-live="polite"></p>
-              <button class="primary-btn primary-btn-blue save-btn" type="submit">Salva</button>
-            </div>
           </form>
 
           <section class="integrated-subsection" data-devices-section>
-            <section class="devices-hero">
-              <div class="panel-heading">
-                <h2>Integrazioni e dispositivi</h2>
-                <p>Collega wearable, bilance smart e fitness app per mantenere aggiornati automaticamente i dati che alimentano il resto dell’app.</p>
-              </div>
-              <div class="devices-summary" data-devices-summary></div>
-            </section>
-
             <section class="section-head">
-              <h2>Le tue integrazioni</h2>
-              <div class="inline-actions">
-                <button class="primary-btn primary-btn-blue" type="button" data-devices-add><span>+</span>Aggiungi dispositivo</button>
-              </div>
+              <h2>Connetti la tua bilancia</h2>
             </section>
-
-            <p class="save-hint" data-devices-feedback aria-live="polite"></p>
 
             <div class="devices-grid" data-devices-grid></div>
 
-            <article class="panel sync-panel">
-              <div class="section-head compact">
-                <h2>Preferenze sync</h2>
-              </div>
-              <div class="sync-options" data-devices-sync-options></div>
-            </article>
-
             <section class="devices-permissions-section">
               <section class="section-head compact">
-                <h2>Permessi integrazioni</h2>
                 <div class="inline-actions">
                   <button class="soft-btn devices-soft" type="button" data-devices-manage-permissions>Gestisci permessi ↓</button>
                 </div>
@@ -776,6 +844,7 @@
     <script src="scripts/state.js"></script>
     <script src="scripts/navigation.js"></script>
     <script src="app.js"></script>
+    <script src="scripts/auth.js"></script>
     <script src="scripts/grocery.js"></script>
     <script src="scripts/devices.js"></script>
     <script src="scripts/progress.js"></script>

@@ -1,7 +1,9 @@
 const fs = require("fs/promises");
 const path = require("path");
+const { buildUserStorageKey } = require("./user-storage");
 
-const SCALE_CONNECTION_PATH = path.join(__dirname, "data", "scale-connection.json");
+const scaleDataDir = path.join(__dirname, "data");
+const legacyScaleConnectionPath = path.join(scaleDataDir, "scale-connection.json");
 
 const DEFAULT_SCALE_CONNECTION = Object.freeze({
   connected: false,
@@ -20,8 +22,17 @@ function cloneDefaultConnection() {
 }
 
 async function readScaleConnection() {
+  return readScaleConnectionForUser(null);
+}
+
+function getScaleConnectionPath(userContext) {
+  const storageKey = buildUserStorageKey(userContext);
+  return path.join(scaleDataDir, "users", storageKey, "scale-connection.json");
+}
+
+async function readConnectionFile(filePath) {
   try {
-    const fileContent = await fs.readFile(SCALE_CONNECTION_PATH, "utf8");
+    const fileContent = await fs.readFile(filePath, "utf8");
     const parsed = JSON.parse(fileContent);
 
     return {
@@ -38,16 +49,33 @@ async function readScaleConnection() {
     };
   } catch (error) {
     if (error.code === "ENOENT") {
-      return cloneDefaultConnection();
+      return null;
     }
 
     throw error;
   }
 }
 
-async function writeScaleConnection(connection) {
-  await fs.mkdir(path.dirname(SCALE_CONNECTION_PATH), { recursive: true });
-  await fs.writeFile(SCALE_CONNECTION_PATH, JSON.stringify(connection, null, 2));
+async function readScaleConnectionForUser(userContext) {
+  const connectionPath = getScaleConnectionPath(userContext);
+  const connection = await readConnectionFile(connectionPath);
+
+  if (connection) {
+    return connection;
+  }
+
+  if (userContext?.type === "authenticated_user") {
+    return cloneDefaultConnection();
+  }
+
+  const legacyConnection = await readConnectionFile(legacyScaleConnectionPath);
+  return legacyConnection || cloneDefaultConnection();
+}
+
+async function writeScaleConnection(connection, userContext) {
+  const connectionPath = getScaleConnectionPath(userContext);
+  await fs.mkdir(path.dirname(connectionPath), { recursive: true });
+  await fs.writeFile(connectionPath, JSON.stringify(connection, null, 2));
 }
 
 function buildScaleLatestData(profileState = {}) {
@@ -91,7 +119,7 @@ function buildPublicScaleState(connection) {
   };
 }
 
-async function connect(profileState, currentConnection) {
+async function connect(profileState, currentConnection, userContext) {
   const nextConnection = {
     ...cloneDefaultConnection(),
     ...(currentConnection && typeof currentConnection === "object" ? currentConnection : {}),
@@ -101,11 +129,11 @@ async function connect(profileState, currentConnection) {
     lastSyncStatus: "connected",
   };
 
-  await writeScaleConnection(nextConnection);
+  await writeScaleConnection(nextConnection, userContext);
   return nextConnection;
 }
 
-async function sync(profileState, currentConnection) {
+async function sync(profileState, currentConnection, userContext) {
   const nextConnection = {
     ...cloneDefaultConnection(),
     ...(currentConnection && typeof currentConnection === "object" ? currentConnection : {}),
@@ -115,11 +143,11 @@ async function sync(profileState, currentConnection) {
     lastSyncStatus: currentConnection?.connected ? "synced" : "not_connected",
   };
 
-  await writeScaleConnection(nextConnection);
+  await writeScaleConnection(nextConnection, userContext);
   return nextConnection;
 }
 
-async function disconnect(currentConnection) {
+async function disconnect(currentConnection, userContext) {
   const nextConnection = {
     ...cloneDefaultConnection(),
     ...(currentConnection && typeof currentConnection === "object" ? currentConnection : {}),
@@ -129,11 +157,11 @@ async function disconnect(currentConnection) {
     lastSyncStatus: "disconnected",
   };
 
-  await writeScaleConnection(nextConnection);
+  await writeScaleConnection(nextConnection, userContext);
   return nextConnection;
 }
 
-async function updatePermissions(currentConnection, nextPermissions) {
+async function updatePermissions(currentConnection, nextPermissions, userContext) {
   const safePermissions = nextPermissions && typeof nextPermissions === "object" ? nextPermissions : {};
   const nextConnection = {
     ...cloneDefaultConnection(),
@@ -149,7 +177,7 @@ async function updatePermissions(currentConnection, nextPermissions) {
     },
   };
 
-  await writeScaleConnection(nextConnection);
+  await writeScaleConnection(nextConnection, userContext);
   return nextConnection;
 }
 
@@ -158,7 +186,7 @@ module.exports = {
   connect,
   disconnect,
   providerId: "mock",
-  readScaleConnection,
+  readScaleConnection: readScaleConnectionForUser,
   sync,
   updatePermissions,
 };

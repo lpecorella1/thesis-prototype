@@ -54,8 +54,8 @@ Non stiamo implementando FHIR completo nel database, ma usiamo quella struttura 
 Nota sullo stato corrente:
 
 - questo e il modello target della persistenza device
-- il runtime attuale non usa ancora queste tabelle per `scale` e `strava`
-- oggi `scale` e `strava` usano provider backend dedicati file-based, mentre il frontend legge tutto tramite `GET /api/devices/state`
+- il runtime attuale non usa ancora queste tabelle per `scale`
+- oggi `scale` usa un provider backend dedicato file-based, mentre il frontend legge tutto tramite `GET /api/devices/state`
 
 ### External knowledge / cache
 

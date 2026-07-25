@@ -1,4 +1,4 @@
-require("dotenv").config({ path: require("path").join(__dirname, ".env") });
+require("./backend-env");
 
 const http = require("http");
 const https = require("https");
@@ -15,15 +15,16 @@ const {
 } = require("./nutritrack-state/nutritrack-state-repository");
 const { buildRecipesAssistantContext } = require("./recipes-assistant-context");
 const {
-  buildAuthorizeUrl,
-  buildPublicStravaState,
-  consumeAuthorizationState,
-  exchangeAuthorizationCode,
-  getStravaConfig,
-  readStravaConnection,
-  revokeStravaConnection,
-  syncStravaActivities,
-} = require("./strava");
+  authenticateUser,
+  buildAuthCookie,
+  buildClearedAuthCookie,
+  createUserAccount,
+  createUserSession,
+  readAuthenticatedSessionFromRequest,
+  revokeUserSessionByToken,
+} = require("./auth");
+const { resolveRequestUserContext } = require("./request-user-context");
+const { getRuntimeConfig } = require("./runtime-config");
 const {
   buildPublicScaleState,
   connectScale,
@@ -69,31 +70,10 @@ const DEVICE_DEFAULTS = Object.freeze({
       },
       latestData: {},
     },
-    strava: {
-      providerMode: "real",
-      connected: false,
-      lastSyncAt: "",
-      permissions: {
-        workouts: true,
-        duration: true,
-        distance: true,
-      },
-      latestData: {},
-      configured: false,
-      athleteName: "",
-      athleteId: null,
-      acceptedScopes: [],
-      lastSyncStatus: "",
-    },
-  },
-  syncPreferences: {
-    autoSyncDaily: true,
-    importWorkoutCalories: true,
-    useConnectedWeightInProfile: false,
   },
 });
 
-function sendJson(response, statusCode, payload) {
+function sendJson(response, statusCode, payload, extraHeaders = {}) {
   console.log("[Server] Invio risposta JSON.", {
     statusCode,
     keys: payload && typeof payload === "object" ? Object.keys(payload) : []
@@ -102,7 +82,8 @@ function sendJson(response, statusCode, payload) {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
+    "Access-Control-Allow-Headers": "Content-Type",
+    ...extraHeaders,
   });
   response.end(JSON.stringify(payload));
 }
@@ -139,7 +120,7 @@ function normalizeDeviceIntegration(baseIntegration, savedIntegration = {}) {
   return normalizedIntegration;
 }
 
-function buildDevicesStatePayload(savedDevicesState = {}, stravaState = null) {
+function buildDevicesStatePayload(savedDevicesState = {}) {
   const defaultDevicesState = cloneJson(DEVICE_DEFAULTS);
   const safeSavedDevicesState = savedDevicesState && typeof savedDevicesState === "object" ? savedDevicesState : {};
   const savedIntegrations =
@@ -152,38 +133,10 @@ function buildDevicesStatePayload(savedDevicesState = {}, stravaState = null) {
     showPermissionsPanel: false,
     integrations: {
       scale: normalizeDeviceIntegration(defaultDevicesState.integrations.scale, savedIntegrations.scale),
-      strava: normalizeDeviceIntegration(defaultDevicesState.integrations.strava, savedIntegrations.strava),
-    },
-    syncPreferences: {
-      ...defaultDevicesState.syncPreferences,
-      ...(safeSavedDevicesState.syncPreferences || {}),
     },
   };
 
-  if (stravaState && typeof stravaState === "object") {
-    devicesState.integrations.strava = {
-      ...devicesState.integrations.strava,
-      connected: Boolean(stravaState.connected),
-      lastSyncAt: stravaState.lastSyncAt || "",
-      providerMode: "real",
-      latestData: stravaState.latestData && typeof stravaState.latestData === "object" ? stravaState.latestData : {},
-      configured: Boolean(stravaState.configured),
-      athleteName: stravaState.athleteName || "",
-      athleteId: stravaState.athleteId || null,
-      acceptedScopes: Array.isArray(stravaState.acceptedScopes) ? stravaState.acceptedScopes : [],
-      lastSyncStatus: stravaState.lastSyncStatus || "",
-    };
-  }
-
   return devicesState;
-}
-
-function redirectTo(response, location) {
-  response.writeHead(302, {
-    Location: location,
-    "Access-Control-Allow-Origin": "*",
-  });
-  response.end();
 }
 
 function sendFile(response, filePath) {
@@ -241,6 +194,48 @@ function readJsonBody(request) {
 
     request.on("error", reject);
   });
+}
+
+function getRuntimeUserPayload(runtime, session) {
+  if (runtime.identityMode === "authenticated_user") {
+    return session
+      ? {
+          id: session.userId,
+          email: session.email,
+          fullName: session.fullName || null,
+          mode: "authenticated_user",
+        }
+      : null;
+  }
+
+  return {
+    email: String(
+      process.env.NUTRITRACK_LOCAL_USER_EMAIL ||
+        process.env.NUTRITRACK_DEMO_USER_EMAIL ||
+        "app-local@nutritrack.local"
+    ).trim(),
+    mode: "single_user_local",
+  };
+}
+
+function ensureAuthenticatedUserMode() {
+  const runtime = getRuntimeConfig();
+
+  if (runtime.identityMode !== "authenticated_user") {
+    const error = new Error("Autenticazione disponibile solo in modalita authenticated-user.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return runtime;
+}
+
+function getSessionTokenFromRequest(request) {
+  return String(request.headers.cookie || "")
+    .split(";")
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith("nutritrack_session="))
+    ?.slice("nutritrack_session=".length);
 }
 
 function stringifyContextBlock(label, value) {
@@ -766,6 +761,7 @@ function buildRecipeGenerationMessages(filters, context = {}) {
   const recentRecipes = Array.isArray(context.recentRecipes) ? context.recentRecipes.slice(0, 6) : [];
   const recentMeals = Array.isArray(context.recentMeals) ? context.recentMeals.slice(0, 8) : [];
   const groceryItems = Array.isArray(context.groceryItems) ? context.groceryItems.slice(0, 16) : [];
+  const goalSummary = String(context.profile?.goalSummary || "").trim();
   const contextMessage = [
     stringifyContextBlock("Pantry prioritizzata", pantry),
     stringifyContextBlock("Ingredienti in shopping list", groceryItems),
@@ -782,6 +778,10 @@ function buildRecipeGenerationMessages(filters, context = {}) {
     filters.prompt ? `Vincoli e preferenze dell'utente: ${filters.prompt}` : "",
     "I dati utente presenti nel contesto applicativo provengono dallo stato reale dell'app salvato a database e devono essere usati come vincoli effettivi di generazione, non come semplici suggerimenti.",
     "Se nel profilo utente sono presenti allergie, condizioni mediche, preferenze alimentari, obiettivi nutrizionali o altri vincoli personali, la ricetta deve rispettarli esplicitamente.",
+    goalSummary ? `Obiettivi di profilo da considerare come vincoli reali: ${goalSummary}.` : "",
+    context.profile?.primaryObjectiveLabel
+      ? "La ricetta deve essere coerente prima di tutto con l'obiettivo principale del profilo, non solo con il target calorico."
+      : "",
     pantry.length > 0
       ? "Usa la dispensa reale come sorgente principale degli ingredienti. Se possibile privilegia gli elementi con scadenza piu vicina."
       : "La dispensa e' vuota: proponi comunque una ricetta realistica e coerente con i vincoli.",
@@ -834,7 +834,7 @@ function buildRecipeGenerationMessages(filters, context = {}) {
     {
       role: "system",
       content:
-        "Sei un motore di generazione ricette per un'app di meal planning e puoi anche generare liste della spesa sulla base delle abitudini di acquisto dell'utente e sulla base dei dati profilo inseriti. Devi creare una singola ricetta completa, concreta e fattibile usando soprattutto gli ingredienti reali della dispensa quando presenti. Devi trattare il contesto applicativo come fonte attendibile dei dati utente salvati a database. Allergie, condizioni mediche, preferenze alimentari, obiettivi nutrizionali e vincoli personali sono vincoli reali e devono essere rispettati nella ricetta proposta. I prompt dell'utente sono vincoli prioritari. Se alcuni ingredienti in dispensa hanno scadenza ravvicinata, privilegiali in modo esplicito. Le macro e le calorie possono essere stimate ma devono essere plausibili. Non usare testo fuori dal JSON richiesto."
+        "Sei un motore di generazione ricette per un'app di meal planning e puoi anche generare liste della spesa sulla base delle abitudini di acquisto dell'utente e sulla base dei dati profilo inseriti. Devi creare una singola ricetta completa, concreta e fattibile usando soprattutto gli ingredienti reali della dispensa quando presenti. Devi trattare il contesto applicativo come fonte attendibile dei dati utente salvati a database. Allergie, condizioni mediche, preferenze alimentari, obiettivi nutrizionali e vincoli personali sono vincoli reali e devono essere rispettati nella ricetta proposta. Gli obiettivi di profilo, incluso l'obiettivo principale e l'eventuale focus salute, devono orientare davvero la scelta degli ingredienti, la struttura del piatto e il profilo nutrizionale della ricetta. I prompt dell'utente sono vincoli prioritari. Se alcuni ingredienti in dispensa hanno scadenza ravvicinata, privilegiali in modo esplicito. Le macro e le calorie possono essere stimate ma devono essere plausibili. Non usare testo fuori dal JSON richiesto."
     },
     ...(contextMessage
       ? [
@@ -917,13 +917,134 @@ function normalizeGeneratedRecipePayload(payload, filters, context = {}) {
   };
 }
 
+async function handleAuthSessionRead(request, response) {
+  try {
+    const runtime = getRuntimeConfig();
+    const session = runtime.identityMode === "authenticated_user" ? await readAuthenticatedSessionFromRequest(request) : null;
+
+    sendJson(response, 200, {
+      authenticated: runtime.identityMode === "authenticated_user" ? Boolean(session) : true,
+      user: getRuntimeUserPayload(runtime, session),
+      runtime,
+    });
+  } catch (error) {
+    console.error("[Server] Errore lettura sessione auth.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile leggere la sessione utente.",
+    });
+  }
+}
+
+async function handleAuthRegister(request, response) {
+  try {
+    const runtime = ensureAuthenticatedUserMode();
+    const payload = await readJsonBody(request);
+    const user = await createUserAccount({
+      email: payload?.email,
+      password: payload?.password,
+      firstName: payload?.firstName,
+      lastName: payload?.lastName,
+    });
+    const session = await createUserSession(user, request);
+
+    sendJson(
+      response,
+      201,
+      {
+        ok: true,
+        authenticated: true,
+        user: getRuntimeUserPayload(runtime, {
+          userId: user.id,
+          email: user.email,
+          fullName: user.fullName,
+        }),
+        runtime,
+      },
+      {
+        "Set-Cookie": buildAuthCookie(session.token, session.expiresAt),
+      }
+    );
+  } catch (error) {
+    console.error("[Server] Errore registrazione utente.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile creare l'account.",
+    });
+  }
+}
+
+async function handleAuthLogin(request, response) {
+  try {
+    const runtime = ensureAuthenticatedUserMode();
+    const payload = await readJsonBody(request);
+    const user = await authenticateUser({
+      email: payload?.email,
+      password: payload?.password,
+    });
+    const session = await createUserSession(user, request);
+
+    sendJson(
+      response,
+      200,
+      {
+        ok: true,
+        authenticated: true,
+        user: getRuntimeUserPayload(runtime, {
+          userId: user.id,
+          email: user.email,
+          fullName: user.fullName,
+        }),
+        runtime,
+      },
+      {
+        "Set-Cookie": buildAuthCookie(session.token, session.expiresAt),
+      }
+    );
+  } catch (error) {
+    console.error("[Server] Errore login utente.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile effettuare il login.",
+    });
+  }
+}
+
+async function handleAuthLogout(request, response) {
+  try {
+    const runtime = getRuntimeConfig();
+    const rawToken = getSessionTokenFromRequest(request);
+
+    if (runtime.identityMode === "authenticated_user" && rawToken) {
+      await revokeUserSessionByToken(decodeURIComponent(rawToken));
+    }
+
+    sendJson(
+      response,
+      200,
+      {
+        ok: true,
+        authenticated: false,
+        user: null,
+        runtime,
+      },
+      {
+        "Set-Cookie": buildClearedAuthCookie(),
+      }
+    );
+  } catch (error) {
+    console.error("[Server] Errore logout utente.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile effettuare il logout.",
+    });
+  }
+}
+
 async function handleApiChat(request, response) {
   try {
     const body = await readJsonBody(request);
     const message = String(body.message || "").trim();
     const history = Array.isArray(body.history) ? body.history : [];
     const legacyContext = body.context && typeof body.context === "object" ? body.context : {};
-    const nutritrackState = await getNutriTrackState();
+    const userContext = await resolveRequestUserContext(request);
+    const nutritrackState = await getNutriTrackState(userContext);
     const context = buildRecipesAssistantContext({
       state: nutritrackState,
       legacyContext,
@@ -964,7 +1085,7 @@ async function handleApiChat(request, response) {
     const azureError = error.details?.error?.message;
     console.error("[Server] Errore nella route /api/chat.", azureError || error.message);
 
-    sendJson(response, 500, {
+    sendJson(response, error.statusCode || 500, {
       error: azureError || error.message || "Errore interno del server."
     });
   }
@@ -1006,7 +1127,8 @@ async function handleRecipesAssistantChat(request, response) {
     const message = String(body.message || "").trim();
     const history = Array.isArray(body.history) ? body.history : [];
     const legacyContext = body.context && typeof body.context === "object" ? body.context : {};
-    const nutritrackState = await getNutriTrackState();
+    const userContext = await resolveRequestUserContext(request);
+    const nutritrackState = await getNutriTrackState(userContext);
     const context = buildRecipesAssistantContext({
       state: nutritrackState,
       legacyContext,
@@ -1069,7 +1191,7 @@ async function handleRecipesAssistantChat(request, response) {
   } catch (error) {
     const azureError = error.details?.error?.message;
     console.error("[Server] Errore nella route /api/recipes/assistant/chat.", azureError || error.message);
-    sendJson(response, 500, {
+    sendJson(response, error.statusCode || 500, {
       error: azureError || error.message || "Errore interno del server.",
     });
   }
@@ -1080,7 +1202,8 @@ async function handleApiRecipeGenerate(request, response) {
     const body = await readJsonBody(request);
     const filters = sanitizeRecipeGenerationFilters(body.filters && typeof body.filters === "object" ? body.filters : {});
     const legacyContext = body.context && typeof body.context === "object" ? body.context : {};
-    const nutritrackState = await getNutriTrackState();
+    const userContext = await resolveRequestUserContext(request);
+    const nutritrackState = await getNutriTrackState(userContext);
     const context = buildRecipesAssistantContext({
       state: nutritrackState,
       legacyContext,
@@ -1116,7 +1239,7 @@ async function handleApiRecipeGenerate(request, response) {
   } catch (error) {
     const azureError = error.details?.error?.message;
     console.error("[Server] Errore nella route /api/recipes/generate.", azureError || error.message);
-    sendJson(response, 500, {
+    sendJson(response, error.statusCode || 500, {
       error: azureError || error.message || "Errore interno del server.",
     });
   }
@@ -1133,9 +1256,10 @@ async function handleApplyRecipeToDiet(request, response) {
       return;
     }
 
-    const currentState = await getNutriTrackState();
+    const userContext = await resolveRequestUserContext(request);
+    const currentState = await getNutriTrackState(userContext);
     const result = applyRecipeToDietState(currentState, recipe, mealType);
-    const savedState = await saveNutriTrackState(result.state);
+    const savedState = await saveNutriTrackState(userContext, result.state);
 
     sendJson(response, 200, {
       ok: true,
@@ -1145,45 +1269,58 @@ async function handleApplyRecipeToDiet(request, response) {
     });
   } catch (error) {
     console.error("[Server] Errore nella route /api/recipes/apply-to-diet.", error);
-    sendJson(response, 500, {
+    sendJson(response, error.statusCode || 500, {
       error: error.message || "Impossibile applicare la ricetta alla dieta.",
     });
   }
 }
 
-async function handleNutriTrackStateRead(response) {
+async function handleNutriTrackStateRead(request, response) {
   try {
-    const snapshot = await getNutriTrackStateSnapshot();
-    sendJson(response, 200, snapshot);
+    const userContext = await resolveRequestUserContext(request);
+    const snapshot = await getNutriTrackStateSnapshot(userContext);
+    sendJson(response, 200, {
+      ...snapshot,
+      runtime: getRuntimeConfig(),
+    });
   } catch (error) {
     console.error("[Server] Errore nella lettura dello stato NutriTrack.", error);
-    sendJson(response, 500, { error: "Impossibile leggere lo stato NutriTrack." });
+    sendJson(response, error.statusCode || 500, { error: error.message || "Impossibile leggere lo stato NutriTrack." });
   }
 }
 
 async function handleNutriTrackStateWrite(request, response) {
   try {
+    const userContext = await resolveRequestUserContext(request);
     const payload = await readJsonBody(request);
-    const savedState = await saveNutriTrackState(payload?.state);
-    const snapshot = await getNutriTrackStateSnapshot();
+    const savedState = await saveNutriTrackState(userContext, payload?.state, {
+      expectedRevision: payload?.revision,
+    });
+    const snapshot = await getNutriTrackStateSnapshot(userContext);
     const database = getNutriTrackDatabaseStatus();
     sendJson(response, 200, {
       ok: true,
       savedAt: new Date().toISOString(),
       state: savedState,
+      revision: snapshot.revision,
       database,
       storage: snapshot.storage,
+      runtime: getRuntimeConfig(),
     });
   } catch (error) {
     console.error("[Server] Errore nel salvataggio dello stato NutriTrack.", error);
-    const statusCode = error.message === "Lo stato NutriTrack deve essere un oggetto JSON." ? 400 : 500;
-    sendJson(response, statusCode, { error: error.message || "Impossibile salvare lo stato NutriTrack." });
+    const statusCode = error.statusCode || (error.message === "Lo stato NutriTrack deve essere un oggetto JSON." ? 400 : 500);
+    sendJson(response, statusCode, {
+      error: error.message || "Impossibile salvare lo stato NutriTrack.",
+      ...(error.snapshot ? { state: error.snapshot.state, revision: error.snapshot.revision, storage: error.snapshot.storage } : {}),
+    });
   }
 }
 
 function handleDatabaseStatus(response) {
   sendJson(response, 200, {
     database: getNutriTrackDatabaseStatus(),
+    runtime: getRuntimeConfig(),
   });
 }
 
@@ -1215,40 +1352,26 @@ async function handleOpenFoodFactsProduct(requestUrl, response) {
   }
 }
 
-async function handleStravaStatus(request, response) {
+async function handleScaleStatus(request, response) {
   try {
-    const config = getStravaConfig(request);
-    const connection = await readStravaConnection();
-    sendJson(response, 200, {
-      strava: buildPublicStravaState(connection, config),
-    });
-  } catch (error) {
-    console.error("[Server] Errore nella lettura stato Strava.", error);
-    sendJson(response, 500, { error: "Impossibile leggere lo stato Strava." });
-  }
-}
-
-async function handleScaleStatus(response) {
-  try {
-    const connection = await readScaleConnection();
+    const userContext = await resolveRequestUserContext(request);
+    const connection = await readScaleConnection(userContext);
     sendJson(response, 200, {
       scale: buildPublicScaleState(connection),
     });
   } catch (error) {
     console.error("[Server] Errore nella lettura stato bilancia.", error);
-    sendJson(response, 500, { error: "Impossibile leggere lo stato bilancia." });
+    sendJson(response, error.statusCode || 500, { error: error.message || "Impossibile leggere lo stato bilancia." });
   }
 }
 
 async function handleDevicesStateRead(request, response) {
   try {
-    const snapshot = await getNutriTrackStateSnapshot();
-    const config = getStravaConfig(request);
-    const stravaConnection = await readStravaConnection();
-    const scaleConnection = await readScaleConnection();
-    const strava = buildPublicStravaState(stravaConnection, config);
+    const userContext = await resolveRequestUserContext(request);
+    const snapshot = await getNutriTrackStateSnapshot(userContext);
+    const scaleConnection = await readScaleConnection(userContext);
     const scale = buildPublicScaleState(scaleConnection);
-    const devices = buildDevicesStatePayload(snapshot.state?.devices, strava);
+    const devices = buildDevicesStatePayload(snapshot.state?.devices);
     devices.integrations.scale = {
       ...devices.integrations.scale,
       ...scale,
@@ -1256,99 +1379,36 @@ async function handleDevicesStateRead(request, response) {
 
     sendJson(response, 200, {
       devices,
+      runtime: getRuntimeConfig(),
       storage: {
-        primaryProviders: ["scale", "strava"],
+        primaryProviders: ["scale"],
         legacyProviders: [],
         integrationStateSource: "backend_providers",
         integrationProviders: {
           scale: getScaleProviderId(),
-          strava: "strava_oauth",
         },
-        uiStateSource: snapshot.storage?.legacyFileAvailable ? "legacy_file" : "defaults",
+        uiStateSource: "none",
         legacyUiStateFields: snapshot.storage?.legacyFileAvailable
-          ? ["syncPreferences"]
+          ? snapshot.storage.legacyUiCacheSections.filter((field) => field.startsWith("devices."))
           : [],
         notes: [
-          "strava e letto dal backend come integrazione primaria",
           "scale usa una simulazione backend dedicata con contratto stabile in attesa del provider reale",
-          "il file legacy devices conserva solo preferenze di sync e non piu lo stato delle integrazioni",
+          "lo stato operativo della bilancia e letto dal provider backend dedicato",
         ],
       },
     });
   } catch (error) {
     console.error("[Server] Errore nella lettura stato devices.", error);
-    sendJson(response, 500, { error: "Impossibile leggere lo stato devices." });
+    sendJson(response, error.statusCode || 500, { error: error.message || "Impossibile leggere lo stato devices." });
   }
 }
 
-function handleStravaConnect(request, response) {
+async function handleScaleConnect(request, response) {
   try {
-    const authorizeUrl = buildAuthorizeUrl(request);
-    redirectTo(response, authorizeUrl);
-  } catch (error) {
-    console.error("[Server] Errore avvio OAuth Strava.", error);
-    sendJson(response, 500, { error: error.message || "Impossibile avviare l'autenticazione Strava." });
-  }
-}
-
-async function handleStravaCallback(request, requestUrl, response) {
-  const baseUrl = `${requestUrl.origin}/`;
-  const redirectParams = new URLSearchParams({
-    tab: "profile",
-    section: "devices",
-  });
-
-  try {
-    const error = requestUrl.searchParams.get("error");
-    const state = requestUrl.searchParams.get("state");
-    const code = requestUrl.searchParams.get("code");
-
-    if (!consumeAuthorizationState(state)) {
-      throw new Error("Stato OAuth Strava non valido o scaduto.");
-    }
-
-    if (error) {
-      redirectParams.set("strava", "error");
-      redirectParams.set("message", error);
-      redirectTo(response, `${baseUrl}?${redirectParams.toString()}`);
-      return;
-    }
-
-    if (!code) {
-      throw new Error("Codice OAuth Strava mancante.");
-    }
-
-    await exchangeAuthorizationCode(request, code);
-    redirectParams.set("strava", "connected");
-    redirectTo(response, `${baseUrl}?${redirectParams.toString()}`);
-  } catch (error) {
-    console.error("[Server] Errore callback Strava.", error);
-    redirectParams.set("strava", "error");
-    redirectParams.set("message", error.message || "callback_failed");
-    redirectTo(response, `${baseUrl}?${redirectParams.toString()}`);
-  }
-}
-
-async function handleStravaSync(request, response) {
-  try {
-    const strava = await syncStravaActivities(request);
-    sendJson(response, 200, {
-      ok: true,
-      strava,
-    });
-  } catch (error) {
-    console.error("[Server] Errore sync Strava.", error);
-    sendJson(response, error.statusCode || 500, {
-      error: error.message || "Impossibile sincronizzare Strava.",
-    });
-  }
-}
-
-async function handleScaleConnect(response) {
-  try {
-    const snapshot = await getNutriTrackStateSnapshot();
-    const currentConnection = await readScaleConnection();
-    const nextConnection = await connectScale(snapshot.state?.profile?.personal, currentConnection);
+    const userContext = await resolveRequestUserContext(request);
+    const snapshot = await getNutriTrackStateSnapshot(userContext);
+    const currentConnection = await readScaleConnection(userContext);
+    const nextConnection = await connectScale(userContext, snapshot.state?.profile?.personal, currentConnection);
 
     sendJson(response, 200, {
       ok: true,
@@ -1356,17 +1416,18 @@ async function handleScaleConnect(response) {
     });
   } catch (error) {
     console.error("[Server] Errore connessione bilancia.", error);
-    sendJson(response, 500, {
+    sendJson(response, error.statusCode || 500, {
       error: error.message || "Impossibile connettere la bilancia.",
     });
   }
 }
 
-async function handleScaleSync(response) {
+async function handleScaleSync(request, response) {
   try {
-    const snapshot = await getNutriTrackStateSnapshot();
-    const currentConnection = await readScaleConnection();
-    const nextConnection = await syncScale(snapshot.state?.profile?.personal, currentConnection);
+    const userContext = await resolveRequestUserContext(request);
+    const snapshot = await getNutriTrackStateSnapshot(userContext);
+    const currentConnection = await readScaleConnection(userContext);
+    const nextConnection = await syncScale(userContext, snapshot.state?.profile?.personal, currentConnection);
 
     sendJson(response, 200, {
       ok: true,
@@ -1374,16 +1435,17 @@ async function handleScaleSync(response) {
     });
   } catch (error) {
     console.error("[Server] Errore sync bilancia.", error);
-    sendJson(response, 500, {
+    sendJson(response, error.statusCode || 500, {
       error: error.message || "Impossibile sincronizzare la bilancia.",
     });
   }
 }
 
-async function handleScaleDisconnect(response) {
+async function handleScaleDisconnect(request, response) {
   try {
-    const currentConnection = await readScaleConnection();
-    const nextConnection = await disconnectScale(currentConnection);
+    const userContext = await resolveRequestUserContext(request);
+    const currentConnection = await readScaleConnection(userContext);
+    const nextConnection = await disconnectScale(userContext, currentConnection);
 
     sendJson(response, 200, {
       ok: true,
@@ -1391,7 +1453,7 @@ async function handleScaleDisconnect(response) {
     });
   } catch (error) {
     console.error("[Server] Errore disconnessione bilancia.", error);
-    sendJson(response, 500, {
+    sendJson(response, error.statusCode || 500, {
       error: error.message || "Impossibile disconnettere la bilancia.",
     });
   }
@@ -1399,6 +1461,7 @@ async function handleScaleDisconnect(response) {
 
 async function handleScalePermissionsUpdate(request, response) {
   try {
+    const userContext = await resolveRequestUserContext(request);
     const payload = await readJsonBody(request);
     const requestedPermissions =
       payload?.permissions && typeof payload.permissions === "object" ? payload.permissions : null;
@@ -1408,7 +1471,7 @@ async function handleScalePermissionsUpdate(request, response) {
       return;
     }
 
-    const currentConnection = await readScaleConnection();
+    const currentConnection = await readScaleConnection(userContext);
     const allowedPermissionKeys = Object.keys(buildPublicScaleState(currentConnection).permissions || {});
     const hasInvalidPermissionKey = Object.keys(requestedPermissions).some(
       (permissionKey) => !allowedPermissionKeys.includes(permissionKey)
@@ -1419,27 +1482,15 @@ async function handleScalePermissionsUpdate(request, response) {
       return;
     }
 
-    const nextConnection = await updateScalePermissions(currentConnection, requestedPermissions);
+    const nextConnection = await updateScalePermissions(userContext, currentConnection, requestedPermissions);
     sendJson(response, 200, {
       ok: true,
       scale: buildPublicScaleState(nextConnection),
     });
   } catch (error) {
     console.error("[Server] Errore aggiornamento permessi bilancia.", error);
-    sendJson(response, 500, {
+    sendJson(response, error.statusCode || 500, {
       error: error.message || "Impossibile aggiornare i permessi bilancia.",
-    });
-  }
-}
-
-async function handleStravaDisconnect(request, response) {
-  try {
-    await revokeStravaConnection(request);
-    sendJson(response, 200, { ok: true });
-  } catch (error) {
-    console.error("[Server] Errore disconnessione Strava.", error);
-    sendJson(response, 500, {
-      error: error.message || "Impossibile disconnettere Strava.",
     });
   }
 }
@@ -1458,6 +1509,26 @@ const requestHandler = async (request, response) => {
       "Access-Control-Allow-Headers": "Content-Type"
     });
     response.end();
+    return;
+  }
+
+  if (request.method === "GET" && requestUrl.pathname === "/api/auth/session") {
+    await handleAuthSessionRead(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/auth/register") {
+    await handleAuthRegister(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/auth/login") {
+    await handleAuthLogin(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/auth/logout") {
+    await handleAuthLogout(request, response);
     return;
   }
 
@@ -1482,7 +1553,7 @@ const requestHandler = async (request, response) => {
   }
 
   if (request.method === "GET" && requestUrl.pathname === "/api/nutritrack/state") {
-    await handleNutriTrackStateRead(response);
+    await handleNutriTrackStateRead(request, response);
     return;
   }
 
@@ -1502,22 +1573,22 @@ const requestHandler = async (request, response) => {
   }
 
   if (request.method === "GET" && requestUrl.pathname === "/api/scale/status") {
-    await handleScaleStatus(response);
+    await handleScaleStatus(request, response);
     return;
   }
 
   if (request.method === "POST" && requestUrl.pathname === "/api/scale/connect") {
-    await handleScaleConnect(response);
+    await handleScaleConnect(request, response);
     return;
   }
 
   if (request.method === "POST" && requestUrl.pathname === "/api/scale/sync") {
-    await handleScaleSync(response);
+    await handleScaleSync(request, response);
     return;
   }
 
   if (request.method === "POST" && requestUrl.pathname === "/api/scale/disconnect") {
-    await handleScaleDisconnect(response);
+    await handleScaleDisconnect(request, response);
     return;
   }
 
@@ -1528,31 +1599,6 @@ const requestHandler = async (request, response) => {
 
   if (request.method === "GET" && requestUrl.pathname.startsWith("/api/openfoodfacts/product/")) {
     await handleOpenFoodFactsProduct(requestUrl, response);
-    return;
-  }
-
-  if (request.method === "GET" && requestUrl.pathname === "/api/strava/status") {
-    await handleStravaStatus(request, response);
-    return;
-  }
-
-  if (request.method === "GET" && requestUrl.pathname === "/api/strava/connect") {
-    handleStravaConnect(request, response);
-    return;
-  }
-
-  if (request.method === "GET" && requestUrl.pathname === "/api/strava/callback") {
-    await handleStravaCallback(request, requestUrl, response);
-    return;
-  }
-
-  if (request.method === "POST" && requestUrl.pathname === "/api/strava/sync") {
-    await handleStravaSync(request, response);
-    return;
-  }
-
-  if (request.method === "POST" && requestUrl.pathname === "/api/strava/disconnect") {
-    await handleStravaDisconnect(request, response);
     return;
   }
 

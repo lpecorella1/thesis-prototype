@@ -1,7 +1,7 @@
 /* Desktop enhancements:
    `mobile-style.css` resta la base mobile-first.
-   Qui riattiviamo progressivamente tipografia, griglie e spacing piu ampi
-   solo quando lo schermo supera i breakpoint tablet/desktop. */
+   Qui si riattivano progressivamente tipografia, griglie e spacing più ampi
+   solo quando lo schermo supera i breakpoint. */
 
 @media (min-width: 841px) {
   .section-mobile-nav {
@@ -44,12 +44,50 @@
     text-align: right;
   }
 
+  .hero-side-panels {
+    min-width: 230px;
+    justify-items: stretch;
+  }
+
   .goal-panel span {
     font-size: 1rem;
   }
 
   .goal-panel strong {
     font-size: clamp(1.7rem, 2vw, 2.3rem);
+  }
+
+  .session-panel {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 16px 18px;
+    border-radius: 18px;
+  }
+
+  .session-panel-copy {
+    gap: 4px;
+  }
+
+  .auth-card {
+    width: min(960px, 100%);
+    grid-template-columns: minmax(0, 1.1fr) minmax(360px, 420px);
+    align-items: center;
+    gap: 28px;
+  }
+
+  .auth-form-panel {
+    padding: 28px;
+  }
+
+  .auth-card-copy h1 {
+    max-width: 11ch;
+    font-size: clamp(3rem, 6vw, 4.5rem);
+  }
+
+  .auth-card-copy p {
+    max-width: 52ch;
+    font-size: 1.02rem;
   }
 
   .tabs {
@@ -218,6 +256,48 @@
 
   .panel {
     padding: 26px;
+  }
+
+  .save-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+  }
+
+  .save-confirmation {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(15, 191, 91, 0.08);
+    color: #0a9f45;
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1;
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease;
+  }
+
+  .save-confirmation.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .save-confirmation-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: rgba(15, 191, 91, 0.16);
+    font-size: 0.82rem;
   }
 
   .chat-panel {

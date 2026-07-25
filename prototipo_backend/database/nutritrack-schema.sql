@@ -22,6 +22,18 @@ CREATE TABLE users (
     CONSTRAINT users_email_format_chk CHECK (POSITION('@' IN email) > 1)
 );
 
+CREATE TABLE user_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_token_hash CHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    user_agent VARCHAR(512),
+    ip_address VARCHAR(128),
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE user_profiles (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
@@ -36,7 +48,10 @@ CREATE TABLE user_profiles (
     allergies TEXT,
     medications TEXT,
     medical_conditions TEXT,
-    blood_type VARCHAR(10),
+    dietary_preferences TEXT,
+    primary_objective VARCHAR(80),
+    secondary_objective VARCHAR(80),
+    health_focus VARCHAR(80),
     daily_calories_goal INTEGER,
     daily_protein_goal INTEGER,
     daily_carbs_goal INTEGER,
@@ -72,6 +87,10 @@ CREATE TABLE recipes (
     ingredients_text TEXT NOT NULL,
     instructions_text TEXT NOT NULL,
     recipe_source_type recipe_source_type_t NOT NULL DEFAULT 'manual',
+    app_recipe_id VARCHAR(120),
+    generated_at TIMESTAMPTZ,
+    signature VARCHAR(255),
+    recipe_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT recipes_calories_chk CHECK (calories IS NULL OR calories >= 0),
@@ -246,12 +265,14 @@ CREATE TABLE openfoodfacts_products_cache (
 
 INSERT INTO device_providers (provider_key, device_type, display_name, supports_oauth, is_wearable)
 VALUES
-    ('scale', 'scale', 'Bilancia digitale', FALSE, FALSE),
-    ('strava', 'fitness_app', 'Strava', TRUE, FALSE)
+    ('scale', 'scale', 'Bilancia digitale', FALSE, FALSE)
 ON CONFLICT (provider_key) DO NOTHING;
 
 CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
+CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id, created_at DESC);
+CREATE INDEX idx_user_sessions_active_lookup ON user_sessions(session_token_hash, expires_at) WHERE revoked_at IS NULL;
 CREATE INDEX idx_recipes_created_by_user_id ON recipes(created_by_user_id);
+CREATE UNIQUE INDEX idx_recipes_app_recipe_id ON recipes(created_by_user_id, app_recipe_id) WHERE app_recipe_id IS NOT NULL;
 CREATE INDEX idx_recipes_meal_type ON recipes(meal_type);
 CREATE INDEX idx_recipes_diet_type ON recipes(diet_type);
 CREATE INDEX idx_nutrition_meals_user_id ON nutrition_meals(user_id);

@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const {
   readNutriTrackStateFile,
   writeNutriTrackStateFile,
@@ -8,7 +9,16 @@ const {
   readNutriTrackStateFromPostgres,
 } = require("./nutritrack-state-postgres-store");
 
-const POSTGRES_PRIMARY_SECTIONS = ["profile", "nutrition", "grocery", "progress"];
+const POSTGRES_PRIMARY_SECTIONS = ["profile", "nutrition", "grocery", "progress", "recipes", "datasets"];
+const LEGACY_UI_CACHE_SECTIONS = [
+  "recipes.generator",
+  "recipes.currentRecipe",
+  "recipes.chatMessages",
+  "datasets.openFoodFacts.source",
+  "devices.showPermissionsPanel",
+  "grocery.ar",
+  "progress.autoSnapshots",
+];
 
 function cloneNutriTrackState(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -26,6 +36,19 @@ function sanitizeNutriTrackStatePayload(payload) {
   return cloneNutriTrackState(payload);
 }
 
+function createNutriTrackConflictError(message, snapshot) {
+  const error = new Error(message);
+  error.statusCode = 409;
+  error.code = "NUTRITRACK_STATE_CONFLICT";
+  error.snapshot = snapshot;
+  return error;
+}
+
+function computeNutriTrackStateRevision(state, primarySource) {
+  const serializedState = JSON.stringify(state || null);
+  return `${primarySource}:${crypto.createHash("sha256").update(serializedState).digest("hex")}`;
+}
+
 function pickAvailableSectionSources(postgresState) {
   return POSTGRES_PRIMARY_SECTIONS.filter((sectionName) =>
     hasMeaningfulNutriTrackState(postgresState?.[sectionName])
@@ -36,118 +59,175 @@ function hasCompletePostgresStructuredState(postgresState) {
   return pickAvailableSectionSources(postgresState).length === POSTGRES_PRIMARY_SECTIONS.length;
 }
 
-function selectPrimarySectionValue(postgresSection, baseSection, fieldName) {
-  if (postgresSection && Object.prototype.hasOwnProperty.call(postgresSection, fieldName)) {
-    return cloneNutriTrackState(postgresSection[fieldName]);
-  }
-
-  return cloneNutriTrackState(baseSection?.[fieldName]);
-}
-
-function buildLegacyDevicesUiState(devicesState) {
-  if (!devicesState || typeof devicesState !== "object" || Array.isArray(devicesState)) {
-    return null;
-  }
-
-  return {
-    syncPreferences:
-      devicesState.syncPreferences && typeof devicesState.syncPreferences === "object"
-        ? cloneNutriTrackState(devicesState.syncPreferences)
-        : {},
-  };
-}
-
 function buildLegacyUiCacheState(fullState) {
   const sourceState = cloneNutriTrackState(fullState) || {};
-  const legacyDevicesUiState = buildLegacyDevicesUiState(sourceState.devices);
 
   return {
-    ...(sourceState.recipes ? { recipes: sourceState.recipes } : {}),
-    ...(sourceState.datasets ? { datasets: sourceState.datasets } : {}),
-    ...(legacyDevicesUiState ? { devices: legacyDevicesUiState } : {}),
-    ...(sourceState.nutrition?.goals ? { nutrition: { goals: sourceState.nutrition.goals } } : {}),
+    ...(sourceState.recipes
+      ? {
+          recipes: {
+            ...(sourceState.recipes.generator ? { generator: sourceState.recipes.generator } : {}),
+            ...(sourceState.recipes.currentRecipe ? { currentRecipe: sourceState.recipes.currentRecipe } : {}),
+            ...(Array.isArray(sourceState.recipes.chatMessages) ? { chatMessages: sourceState.recipes.chatMessages } : {}),
+          },
+        }
+      : {}),
+    ...(sourceState.datasets?.openFoodFacts?.source
+      ? {
+          datasets: {
+            openFoodFacts: {
+              source: sourceState.datasets.openFoodFacts.source,
+            },
+          },
+        }
+      : {}),
+    ...(sourceState.devices && typeof sourceState.devices === "object"
+      ? {
+          devices: {
+            ...(sourceState.devices.showPermissionsPanel !== undefined
+              ? { showPermissionsPanel: sourceState.devices.showPermissionsPanel }
+              : {}),
+          },
+        }
+      : {}),
     ...(sourceState.grocery?.ar ? { grocery: { ar: sourceState.grocery.ar } } : {}),
     ...(sourceState.progress?.autoSnapshots ? { progress: { autoSnapshots: sourceState.progress.autoSnapshots } } : {}),
   };
 }
 
-function mergeNutriTrackState(baseState, postgresState) {
+function buildStructuredPostgresState(postgresState) {
   if (!hasMeaningfulNutriTrackState(postgresState)) {
-    return hasMeaningfulNutriTrackState(baseState) ? cloneNutriTrackState(baseState) : null;
+    return null;
   }
 
-  const mergedState = hasMeaningfulNutriTrackState(baseState) ? cloneNutriTrackState(baseState) : {};
-  const postgresPrimaryState = cloneNutriTrackState(postgresState);
-
   return {
-    ...mergedState,
-    ...postgresPrimaryState,
-    profile: postgresPrimaryState.profile || mergedState.profile,
+    profile: cloneNutriTrackState(postgresState.profile) || {},
     nutrition: {
-      ...(mergedState.nutrition || {}),
-      ...(postgresPrimaryState.nutrition || {}),
-      meals: selectPrimarySectionValue(postgresPrimaryState.nutrition, mergedState.nutrition, "meals"),
+      ...(cloneNutriTrackState(postgresState.nutrition) || {}),
     },
     grocery: {
-      ...(mergedState.grocery || {}),
-      ...(postgresPrimaryState.grocery || {}),
-      items: selectPrimarySectionValue(postgresPrimaryState.grocery, mergedState.grocery, "items"),
-      pantry: selectPrimarySectionValue(postgresPrimaryState.grocery, mergedState.grocery, "pantry"),
+      ...(cloneNutriTrackState(postgresState.grocery) || {}),
     },
     progress: {
-      ...(mergedState.progress || {}),
-      ...(postgresPrimaryState.progress || {}),
-      dailyLogs: selectPrimarySectionValue(postgresPrimaryState.progress, mergedState.progress, "dailyLogs"),
+      ...(cloneNutriTrackState(postgresState.progress) || {}),
+    },
+    recipes: {
+      ...(cloneNutriTrackState(postgresState.recipes) || {}),
+    },
+    datasets: {
+      ...(cloneNutriTrackState(postgresState.datasets) || {}),
+    },
+    devices: {
+      ...(cloneNutriTrackState(postgresState.devices) || {}),
     },
   };
 }
 
-function buildStorageMetadata({ baseState, postgresState, databaseStatus }) {
+function buildStateFromLegacyUiCache(legacyUiCacheState) {
+  const sourceState = hasMeaningfulNutriTrackState(legacyUiCacheState) ? cloneNutriTrackState(legacyUiCacheState) : {};
+
+  return {
+    ...(sourceState.recipes ? { recipes: sourceState.recipes } : {}),
+    ...(sourceState.datasets ? { datasets: sourceState.datasets } : {}),
+    ...(sourceState.devices?.showPermissionsPanel !== undefined
+      ? {
+          devices: {
+            showPermissionsPanel: sourceState.devices.showPermissionsPanel,
+          },
+        }
+      : {}),
+    ...(sourceState.grocery?.ar ? { grocery: { ar: sourceState.grocery.ar } } : {}),
+    ...(sourceState.progress?.autoSnapshots ? { progress: { autoSnapshots: sourceState.progress.autoSnapshots } } : {}),
+  };
+}
+
+function composeNutriTrackState({ postgresState, legacyUiCacheState, databaseStatus }) {
+  const structuredPostgresState = buildStructuredPostgresState(postgresState);
+
+  if (databaseStatus.enabled) {
+    if (structuredPostgresState) {
+      return structuredPostgresState;
+    }
+
+    return hasMeaningfulNutriTrackState(legacyUiCacheState) ? cloneNutriTrackState(legacyUiCacheState) : null;
+  }
+
+  return hasMeaningfulNutriTrackState(legacyUiCacheState) ? cloneNutriTrackState(legacyUiCacheState) : null;
+}
+
+function buildStorageMetadata({ baseState, postgresState, databaseStatus, state }) {
   const postgresPrimarySections = pickAvailableSectionSources(postgresState);
   const postgresStructuredStateComplete = postgresPrimarySections.length === POSTGRES_PRIMARY_SECTIONS.length;
+  const usingLegacyFileFallback = !databaseStatus.enabled || !hasMeaningfulNutriTrackState(postgresState);
+  const primarySource = usingLegacyFileFallback ? "legacy_file" : "postgres_primary";
 
   return {
     database: databaseStatus,
-    primarySource:
-      postgresPrimarySections.length > 0
-        ? postgresStructuredStateComplete
-          ? "postgres_structured_sections_complete"
-          : "postgres_structured_sections_partial"
-        : "legacy_file",
+    primarySource,
     postgresPrimarySections,
     postgresStructuredStateComplete,
     legacyFileAvailable: hasMeaningfulNutriTrackState(baseState),
+    legacyUiCacheAvailable: hasMeaningfulNutriTrackState(baseState),
+    legacyUiCacheSections: hasMeaningfulNutriTrackState(baseState) ? LEGACY_UI_CACHE_SECTIONS : [],
+    revision: computeNutriTrackStateRevision(state, primarySource),
+    usesLegacyFileFallback: usingLegacyFileFallback,
   };
 }
 
-async function getNutriTrackStateSnapshot() {
-  const storedState = await readNutriTrackStateFile();
-  const postgresState = await readNutriTrackStateFromPostgres();
+async function getNutriTrackStateSnapshot(userContext) {
   const databaseStatus = buildDatabaseStatus();
+  const [storedState, postgresState] = await Promise.all([
+    readNutriTrackStateFile(),
+    readNutriTrackStateFromPostgres(userContext),
+  ]);
+  const state = composeNutriTrackState({
+    postgresState,
+    legacyUiCacheState: storedState,
+    databaseStatus,
+  });
+  const storage = buildStorageMetadata({
+    baseState: storedState,
+    postgresState,
+    databaseStatus,
+    state,
+  });
 
   return {
-    state: mergeNutriTrackState(storedState, postgresState),
-    storage: buildStorageMetadata({
-      baseState: storedState,
-      postgresState,
-      databaseStatus,
-    }),
+    state,
+    revision: storage.revision,
+    storage,
   };
 }
 
-async function getNutriTrackState() {
-  const snapshot = await getNutriTrackStateSnapshot();
+async function getNutriTrackState(userContext) {
+  const snapshot = await getNutriTrackStateSnapshot(userContext);
   return snapshot.state;
 }
 
-async function saveNutriTrackState(nextState) {
+async function saveNutriTrackState(userContext, nextState, options = {}) {
   const sanitizedState = sanitizeNutriTrackStatePayload(nextState);
+  const expectedRevision = typeof options.expectedRevision === "string" ? options.expectedRevision.trim() : "";
+  const currentSnapshot = await getNutriTrackStateSnapshot(userContext);
+
+  if (expectedRevision && currentSnapshot.revision && expectedRevision !== currentSnapshot.revision) {
+    throw createNutriTrackConflictError(
+      "Lo stato NutriTrack e' stato aggiornato da un'altra sessione. Ricarica i dati prima di salvare di nuovo.",
+      currentSnapshot
+    );
+  }
+
   const databaseStatus = buildDatabaseStatus();
 
   if (databaseStatus.enabled) {
-    await mirrorNutriTrackStateToPostgres(sanitizedState);
+    await mirrorNutriTrackStateToPostgres(sanitizedState, userContext);
     await writeNutriTrackStateFile(buildLegacyUiCacheState(sanitizedState));
   } else {
+    if (userContext?.type === "authenticated_user") {
+      const error = new Error("Salvataggio utente non disponibile: PostgreSQL non configurato.");
+      error.statusCode = 503;
+      throw error;
+    }
+
     await writeNutriTrackStateFile(sanitizedState);
   }
 

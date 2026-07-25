@@ -159,6 +159,7 @@ async function persistNutriTrackStateToApi() {
   try {
     const response = await fetch(NUTRITRACK_STATE_API_PATH, {
       method: "PUT",
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
       },
@@ -166,6 +167,9 @@ async function persistNutriTrackStateToApi() {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        window.handleNutriTrackUnauthorized?.();
+      }
       throw new Error(`Salvataggio NutriTrack fallito (${response.status}).`);
     }
   } catch (error) {
@@ -202,12 +206,16 @@ async function hydrateNutriTrackStateFromApi() {
   try {
     const response = await fetch(NUTRITRACK_STATE_API_PATH, {
       method: "GET",
+      credentials: "same-origin",
       headers: {
         Accept: "application/json",
       },
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        window.handleNutriTrackUnauthorized?.();
+      }
       throw new Error(`Hydration NutriTrack fallita (${response.status}).`);
     }
 

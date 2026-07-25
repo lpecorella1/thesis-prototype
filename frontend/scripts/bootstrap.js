@@ -109,8 +109,6 @@ window.NutriTrackBootstrap = Object.freeze({
   groceryArStopIcon,
   setGroceryArToggleButtonState,
   nutritrackSyncRuntime,
-  groceryComparisonCatalog,
-  groceryNameToCatalogId,
   groceryArRuntime,
   openFoodFactsRuntime,
   barcodeScannerRuntime,
@@ -121,6 +119,8 @@ window.NutriTrackBootstrap = Object.freeze({
   getRelativeDateKey,
   getDefaultProgressState,
   devicesCatalog,
+  getDefaultDevicesUiState,
+  getDefaultDevicesIntegrationsState,
   getDefaultDevicesState,
   defaultState,
 });

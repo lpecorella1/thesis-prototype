@@ -39,7 +39,6 @@ function ensureDatasetExists() {
 
 function getHeaderMap() {
   if (cachedHeaderMap) {
-    console.log("[OpenFoodFacts] Header map da cache.");
     return cachedHeaderMap;
   }
 
@@ -65,10 +64,6 @@ function getHeaderMap() {
 
   const columns = headerLine.split("\t");
   cachedHeaderMap = Object.fromEntries(columns.map((column, index) => [column, index]));
-  console.log("[OpenFoodFacts] Header caricato dal dataset.", {
-    datasetPath,
-    columnCount: columns.length
-  });
   return cachedHeaderMap;
 }
 
@@ -146,11 +141,6 @@ function findProductLineByBarcode(barcode) {
     }
 
     ensureDatasetExists();
-    console.log("[OpenFoodFacts] Avvio lookup locale.", {
-      barcode: normalizedBarcode,
-      datasetPath
-    });
-
     execFile(
       "rg",
       ["-m", "1", `^${normalizedBarcode}\\t`, datasetPath],
@@ -158,9 +148,6 @@ function findProductLineByBarcode(barcode) {
       (error, stdout) => {
         if (error) {
           if (error.code === 1) {
-            console.log("[OpenFoodFacts] Barcode non trovato nel dataset.", {
-              barcode: normalizedBarcode
-            });
             resolve(null);
             return;
           }
@@ -169,10 +156,6 @@ function findProductLineByBarcode(barcode) {
           return;
         }
 
-        console.log("[OpenFoodFacts] Riga trovata nel dataset.", {
-          barcode: normalizedBarcode,
-          lineLength: stdout.trim().length
-        });
         resolve(stdout.trim());
       }
     );
@@ -187,18 +170,9 @@ async function fetchOpenFoodFactsProduct(barcode) {
   }
 
   try {
-    console.log("[OpenFoodFacts] Avvio lookup API live.", {
-      barcode: normalizedBarcode,
-      url: `${OPEN_FOOD_FACTS_API_URL}/${normalizedBarcode}.json`
-    });
-
     const apiProduct = await fetchOpenFoodFactsApiProduct(normalizedBarcode);
 
     if (apiProduct) {
-      console.log("[OpenFoodFacts] Prodotto recuperato da API live.", {
-        barcode: normalizedBarcode,
-        name: apiProduct.product_name || apiProduct.product_name_it || null
-      });
       return {
         product: apiProduct,
         source: "api"
@@ -220,11 +194,6 @@ async function fetchOpenFoodFactsProduct(barcode) {
 
   const columns = productLine.split("\t");
   const product = buildCompatibleProduct(columns, headerMap);
-  console.log("[OpenFoodFacts] Prodotto compatibile costruito.", {
-    barcode: product.code,
-    name: product.product_name,
-    nutriscore: product.nutriscore_grade || null
-  });
   return {
     product,
     source: "dataset"

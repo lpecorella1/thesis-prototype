@@ -24,11 +24,11 @@ Lo schema in `prototipo_backend/database/nutritrack-schema.sql` ora copre anche:
 
 ### Persistenza da chiarire o secondaria
 
-- `recipes.currentRecipe`, `recipes.history`, `recipes.generatedRecipesById`
+- `recipes.currentRecipe`
 - `recipes.chatMessages`
-- `datasets.openFoodFacts.productsByBarcode`
+- `datasets.openFoodFacts.source`
 - `progress.autoSnapshots`
-- `devices.syncPreferences`
+- `devices.showPermissionsPanel`
 
 ### Persistenza attiva device oggi
 
@@ -37,13 +37,12 @@ Il modello SQL per i device esiste gia, ma non e ancora la persistenza runtime u
 Stato attuale:
 
 - `scale` -> file provider dedicato `prototipo_backend/data/scale-connection.json`
-- `strava` -> file provider dedicato `prototipo_backend/data/strava-connection.json`
 - `GET /api/devices/state` ricompone lo stato leggendo provider backend + preferenze legacy UI
 
 Quindi:
 
 - `device_connections`, `device_sync_runs` e `device_measurements` sono tabelle target del modello finale
-- non sono ancora la fonte di verita attiva per `scale` e `strava`
+- non sono ancora la fonte di verita attiva per `scale`
 
 Questi blocchi non vanno forzati subito nel cuore del modello relazionale: alcuni sono cache, altri sono dati derivati, altri ancora sono conversazione o supporto UX.
 
@@ -67,8 +66,8 @@ Il backend ora puo lavorare in modalita ibrida:
 - usa un profilo locale single-user lato backend finche l'autenticazione non e implementata
 - puo fare il mirror delle sezioni strutturate su Postgres se attivi `NUTRITRACK_USE_POSTGRES=1`
 - usa `DATABASE_URL` per la connessione
-- espone `GET /api/database/status` per capire se sta lavorando in `file_only` o `hybrid_read_through`
-- espone `GET /api/nutritrack/state` con metadati `storage`, cosi e visibile quando `profile`, `nutrition`, `grocery` e `progress` arrivano primariamente da Postgres e quando la copertura strutturata e completa
+- espone `GET /api/database/status` per capire se sta lavorando in `file_only` o `postgres_primary`
+- espone `GET /api/nutritrack/state` con metadati `storage`, cosi e visibile quando `profile`, `nutrition`, `grocery`, `progress`, `recipes` e `datasets` arrivano primariamente da Postgres e quando la copertura strutturata e completa
 - include uno smoke check `npm run verify:postgres-primary` per verificare quando il fallback legacy puo essere disattivato
 - espone `GET /api/devices/state` con metadati propri per separare:
   - provider backend attivi
@@ -87,10 +86,11 @@ Il mirror Postgres attuale copre:
 
 Il file JSON legacy oggi conserva:
 
-- `recipes`
-- `datasets`
-- `devices.syncPreferences`
-- `nutrition.goals`
+- `recipes.generator`
+- `recipes.currentRecipe`
+- `recipes.chatMessages`
+- `datasets.openFoodFacts.source`
+- `devices.showPermissionsPanel`
 - `grocery.ar`
 - `progress.autoSnapshots`
 
@@ -99,7 +99,7 @@ Il file JSON legacy oggi conserva:
 Step 3: decidere la strategia finale del layer device:
 
 1. mantenere provider file-based fino all'arrivo dei provider reali
-2. oppure iniziare il passaggio di `strava` / `scale` verso:
+2. oppure iniziare il passaggio di `scale` verso:
    - `device_connections`
    - `device_connection_permissions`
    - `device_sync_runs`

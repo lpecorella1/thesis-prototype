@@ -16,6 +16,60 @@ function toFiniteNumber(value, fallback = null) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function getObjectiveLabel(value) {
+  const labels = {
+    "weight-loss": "Perdere peso",
+    "weight-maintenance": "Mantenere il peso",
+    "weight-gain": "Aumentare di peso",
+    "eat-better": "Mangiare meglio",
+    "muscle-gain": "Aumentare la massa muscolare",
+    "energy-wellbeing": "Avere piu energia e benessere",
+    "health-support": "Supportare una specifica esigenza di salute",
+    "meal-regularity": "Mangiare con piu regolarita",
+    "meal-quality": "Migliorare la qualita dei pasti",
+    satiety: "Sentirmi piu sazio/a",
+    "hunger-management": "Ridurre fame nervosa o abbuffate",
+    "training-support": "Supportare allenamento e recupero",
+    digestion: "Migliorare digestione e benessere intestinale",
+  };
+
+  return labels[String(value || "").trim()] || "";
+}
+
+function getHealthFocusLabel(value) {
+  const labels = {
+    glycemia: "Glicemia",
+    cholesterol: "Colesterolo",
+    "blood-pressure": "Pressione",
+    digestion: "Digestione",
+    intolerances: "Intolleranze o sensibilita",
+    other: "Altro",
+  };
+
+  return labels[String(value || "").trim()] || "";
+}
+
+function buildGoalSummary(goals = {}) {
+  const primaryObjectiveLabel = getObjectiveLabel(goals.primaryObjective);
+  const secondaryObjectiveLabel = getObjectiveLabel(goals.secondaryObjective);
+  const healthFocusLabel = getHealthFocusLabel(goals.healthFocus);
+  const chunks = [];
+
+  if (primaryObjectiveLabel) {
+    chunks.push(`Obiettivo principale: ${primaryObjectiveLabel}`);
+  }
+
+  if (secondaryObjectiveLabel) {
+    chunks.push(`Obiettivo secondario: ${secondaryObjectiveLabel}`);
+  }
+
+  if (healthFocusLabel) {
+    chunks.push(`Focus salute: ${healthFocusLabel}`);
+  }
+
+  return chunks.join(". ");
+}
+
 function getDaysUntilIsoDate(dateKey) {
   if (!dateKey) {
     return null;
@@ -260,6 +314,7 @@ function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {
     ...(legacyContext.generator && typeof legacyContext.generator === "object" ? cloneJson(legacyContext.generator) : {}),
     ...(overrides.generator && typeof overrides.generator === "object" ? cloneJson(overrides.generator) : {}),
   };
+  const goalSummary = buildGoalSummary(resolvedGoals);
 
   return {
     source: {
@@ -276,6 +331,13 @@ function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {
     recentMeals: normalizedRecentMeals,
     recentRecipes,
     profile: {
+      primaryObjective: String(resolvedGoals.primaryObjective || "").trim(),
+      primaryObjectiveLabel: getObjectiveLabel(resolvedGoals.primaryObjective),
+      secondaryObjective: String(resolvedGoals.secondaryObjective || "").trim(),
+      secondaryObjectiveLabel: getObjectiveLabel(resolvedGoals.secondaryObjective),
+      healthFocus: String(resolvedGoals.healthFocus || "").trim(),
+      healthFocusLabel: getHealthFocusLabel(resolvedGoals.healthFocus),
+      goalSummary,
       calories: toFiniteNumber(resolvedGoals.calories, 2000),
       protein: toFiniteNumber(resolvedGoals.protein, 150),
       carbs: toFiniteNumber(resolvedGoals.carbs, 250),
@@ -284,6 +346,7 @@ function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {
       activityLevel: String(profile.personal?.activityLevel || legacyContext.profile?.activityLevel || "").trim(),
       allergies: String(profile.medical?.allergies || "").trim(),
       medicalConditions: String(profile.medical?.medicalConditions || "").trim(),
+      dietaryPreferences: String(profile.medical?.dietaryPreferences || "").trim(),
     },
     generator,
     currentRecipe: currentRecipe

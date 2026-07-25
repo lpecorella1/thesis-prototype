@@ -67,12 +67,10 @@ Separare chiaramente le integrazioni reali da quelle simulate.
 
 1. Mantenere un layer provider backend esplicito per ogni integrazione device.
 2. Decidere quali provider restano simulatori di sviluppo e quali diventano integrazioni reali.
-3. Scegliere se il primo passaggio a persistenza strutturata riguarda `strava`, `scale` o entrambi.
-4. Se si passa a Postgres, salvare connessione, permessi, errori, sync runs e measurements nel layer device dedicato.
+3. Se si passa a Postgres, salvare connessione, permessi, errori, sync runs e measurements nel layer device dedicato.
 
 ### File coinvolti
 
-- `prototipo_backend/strava.js`
 - `prototipo_backend/scale.js`
 - `prototipo_backend/scale-provider-mock.js`
 - `frontend/scripts/devices.js`
@@ -128,6 +126,26 @@ Allineare comunicazione e affidabilita tecnica alla nuova baseline.
 ### Criterio di uscita
 
 La repo si presenta come applicazione in sviluppo strutturato, non come demo fragile.
+
+## Modalita runtime da distinguere esplicitamente
+
+Per evitare ambiguita durante la transizione verso il login, il backend deve distinguere almeno questi stati:
+
+1. `development seed`
+   - dati e bootstrap di sviluppo
+   - non rappresenta un utente reale
+   - puo convivere con le altre modalita come flag separato
+2. `single-user local mode`
+   - sviluppo locale senza autenticazione completata
+   - backend agganciato a un utente implicito di sviluppo
+3. `authenticated user mode`
+   - modalita target
+   - ogni richiesta deve essere risolta contro un `users.id` ottenuto da sessione autenticata
+
+Configurazione consigliata:
+
+- `NUTRITRACK_APP_MODE=single-user-local|authenticated-user`
+- `NUTRITRACK_ENABLE_DEVELOPMENT_SEED=0|1`
 
 ## Ordine consigliato
 

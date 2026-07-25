@@ -1,4 +1,4 @@
-require("dotenv").config({ path: require("path").join(__dirname, ".env") });
+require("./backend-env");
 
 const fs = require("fs");
 const os = require("os");
@@ -150,8 +150,5 @@ process.env.PORT = PORT;
 process.env.HTTPS = "1";
 process.env.HTTPS_KEY_PATH = keyPath;
 process.env.HTTPS_CERT_PATH = certPath;
-
-console.log(`[Mobile] Certificato pronto per https://${lanIpAddress}:${PORT}`);
-console.log("[Mobile] Apri questo indirizzo dal telefono collegato alla stessa rete Wi-Fi.");
 
 require("./server");

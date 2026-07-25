@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node server.js",
     "start:mobile": "node start-mobile.js",
-    "verify:postgres-primary": "node scripts/verify-postgres-primary.js"
+    "verify:postgres-primary": "node scripts/verify-postgres-primary.js",
+    "verify:runtime-smoke": "node scripts/verify-runtime-smoke.js"
   }
 }

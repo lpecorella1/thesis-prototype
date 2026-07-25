@@ -15,27 +15,31 @@ function getScaleProviderId() {
 }
 
 async function readScaleConnection() {
-  return getScaleProvider().readScaleConnection();
+  return readScaleConnectionForUser(null);
+}
+
+async function readScaleConnectionForUser(userContext) {
+  return getScaleProvider().readScaleConnection(userContext);
 }
 
 function buildPublicScaleState(connection) {
   return getScaleProvider().buildPublicScaleState(connection);
 }
 
-async function connectScale(profileState, currentConnection) {
-  return getScaleProvider().connect(profileState, currentConnection);
+async function connectScale(userContext, profileState, currentConnection) {
+  return getScaleProvider().connect(profileState, currentConnection, userContext);
 }
 
-async function syncScale(profileState, currentConnection) {
-  return getScaleProvider().sync(profileState, currentConnection);
+async function syncScale(userContext, profileState, currentConnection) {
+  return getScaleProvider().sync(profileState, currentConnection, userContext);
 }
 
-async function disconnectScale(currentConnection) {
-  return getScaleProvider().disconnect(currentConnection);
+async function disconnectScale(userContext, currentConnection) {
+  return getScaleProvider().disconnect(currentConnection, userContext);
 }
 
-async function updateScalePermissions(currentConnection, nextPermissions) {
-  return getScaleProvider().updatePermissions(currentConnection, nextPermissions);
+async function updateScalePermissions(userContext, currentConnection, nextPermissions) {
+  return getScaleProvider().updatePermissions(currentConnection, nextPermissions, userContext);
 }
 
 module.exports = {
@@ -44,7 +48,7 @@ module.exports = {
   disconnectScale,
   getScaleProvider,
   getScaleProviderId,
-  readScaleConnection,
+  readScaleConnection: readScaleConnectionForUser,
   syncScale,
   updateScalePermissions,
 };

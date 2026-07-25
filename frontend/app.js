@@ -20,9 +20,12 @@ const requiredBootstrapKeys = [
   "NUTRITRACK_SYNC_DEBOUNCE_MS",
   "defaultRecipeTimestamp",
   "RECIPE_NUTRITION_SOURCE_LABEL",
+  "getRelativeDateKey",
+  "getDefaultDevicesUiState",
+  "getDefaultDevicesIntegrationsState",
+  "getDefaultDevicesState",
+  "devicesCatalog",
   "nutritrackSyncRuntime",
-  "groceryComparisonCatalog",
-  "groceryNameToCatalogId",
   "groceryArRuntime",
   "openFoodFactsRuntime",
   "barcodeScannerRuntime",
@@ -39,6 +42,9 @@ if (missingBootstrapKeys.length > 0) {
 }
 
 const appState = loadNutriTrackStateFromLocalCache();
+const nutritrackCoreRuntime = {
+  started: false,
+};
 
 // Core date and range helpers shared across modules.
 function formatShortDayLabel(value) {
@@ -302,15 +308,6 @@ function captureTodayProgressSnapshot(options = {}) {
   return captureProgressSnapshotForDate(getTodayDateKey(), options);
 }
 
-// Shared nutrition feedback for the diary section.
-function setFeedback(message) {
-  const feedback = document.querySelector("[data-nutrition-feedback]");
-
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
-
 // Shared state normalization for persisted frontend data.
 function normalizeNutritionMeal(meal) {
   return {
@@ -359,13 +356,9 @@ function normalizeProgressSnapshots(snapshots) {
 
 function getPersistedDevicesUiState(devicesState) {
   const savedDevicesState = devicesState && typeof devicesState === "object" ? devicesState : {};
-  const defaultDevicesUiState = getDefaultDevicesUiState();
 
   return {
-    syncPreferences:
-      savedDevicesState.syncPreferences && typeof savedDevicesState.syncPreferences === "object"
-        ? { ...savedDevicesState.syncPreferences }
-        : { ...defaultDevicesUiState.syncPreferences },
+    showPermissionsPanel: Boolean(savedDevicesState.showPermissionsPanel),
   };
 }
 
@@ -417,10 +410,6 @@ function normalizeDevicesState(devicesState, options = {}) {
     ...savedUiState,
     showPermissionsPanel: false,
     integrations: normalizeDevicesIntegrationsState(devicesState, options),
-    syncPreferences: {
-      ...defaultDevicesState.syncPreferences,
-      ...savedUiState.syncPreferences,
-    },
   };
 }
 
@@ -526,7 +515,8 @@ function getComparableProductKey(product) {
     return "";
   }
 
-  return product.source === "openfoodfacts" ? `off:${product.barcode}` : product.id;
+  const barcode = sanitizeBarcode(product.barcode);
+  return barcode ? `off:${barcode}` : "";
 }
 
 function readOpenFoodFactsMacro(nutriments, keys) {
@@ -667,43 +657,19 @@ function getCachedOpenFoodFactsProduct(barcode) {
 }
 
 function getComparableProductByKey(productKey) {
-  if (!productKey) {
+  if (!productKey || !String(productKey).startsWith("off:")) {
     return null;
   }
 
-  if (String(productKey).startsWith("off:")) {
-    return getCachedOpenFoodFactsProduct(String(productKey).slice(4));
-  }
-
-  return getCatalogProductById(productKey);
-}
-
-function getCatalogProductById(productId) {
-  return groceryComparisonCatalog.find((product) => product.id === productId) || null;
-}
-
-function getCatalogProductByBarcode(barcode) {
-  const normalizedBarcode = sanitizeBarcode(barcode);
-  return groceryComparisonCatalog.find((product) => product.barcode === normalizedBarcode) || null;
+  return getCachedOpenFoodFactsProduct(String(productKey).slice(4));
 }
 
 function getCatalogProductFromGroceryItem(item) {
   if (item?.barcode) {
-    const cachedProduct = getCachedOpenFoodFactsProduct(item.barcode);
-
-    if (cachedProduct) {
-      return cachedProduct;
-    }
-
-    const catalogBarcodeProduct = getCatalogProductByBarcode(item.barcode);
-
-    if (catalogBarcodeProduct) {
-      return catalogBarcodeProduct;
-    }
+    return getCachedOpenFoodFactsProduct(item.barcode);
   }
 
-  const catalogId = groceryNameToCatalogId[String(item?.name || "").toLowerCase()];
-  return catalogId ? getCatalogProductById(catalogId) : null;
+  return null;
 }
 
 function calculateGroceryComparisonScore(product) {
@@ -934,7 +900,6 @@ function applyProductToNutritionLookup(product) {
   openFoodFactsRuntime.nutritionLookup = product;
   openFoodFactsRuntime.nutritionDraft = createImportedNutritionDraft(product, "Importato da OpenFoodFacts");
   form.elements.name.value = product.name;
-  setFeedback(`Prodotto ${product.name} collegato a OpenFoodFacts. I valori nutrizionali verranno compilati automaticamente.`);
 }
 
 function applyProductToGroceryLookup(product, barcode) {
@@ -950,7 +915,6 @@ function applyProductToGroceryLookup(product, barcode) {
   form.elements.quantity.value = product.quantity || product.serving || "1 confezione";
   form.elements.category.value = product.category || "Dispensa";
   renderLookupResult("[data-off-grocery-result]", product);
-  setGroceryFeedback(`Prodotto ${product.name} collegato a OpenFoodFacts.`);
 }
 
 // Shared live barcode lookup flow.
@@ -980,10 +944,8 @@ async function resolveScannedBarcode(barcode) {
     setBarcodeScannerStatus(error.message);
 
     if (target === "nutrition") {
-      setFeedback(error.message);
       renderLookupResult("[data-off-nutrition-result]", null, error.message);
     } else if (target === "grocery") {
-      setGroceryFeedback(error.message);
       renderLookupResult("[data-off-grocery-result]", null, error.message);
     }
   } finally {
@@ -1035,22 +997,12 @@ async function startBarcodeScanner(target) {
   if (!navigator.mediaDevices?.getUserMedia) {
     const message = "La camera non è disponibile.";
     setBarcodeScannerStatus(message);
-    if (target === "nutrition") {
-      setFeedback(message);
-    } else {
-      setGroceryFeedback(message);
-    }
     return;
   }
 
   if (!("BarcodeDetector" in window)) {
     const message = "Questo browser non supporta BarcodeDetector. Per la scansione usa Chrome o Edge recenti.";
     setBarcodeScannerStatus(message);
-    if (target === "nutrition") {
-      setFeedback(message);
-    } else {
-      setGroceryFeedback(message);
-    }
     return;
   }
 
@@ -1080,11 +1032,7 @@ async function startBarcodeScanner(target) {
   } catch (error) {
     closeBarcodeScannerModal();
     const message = "Accesso alla camera non disponibile. Verifica permessi.";
-    if (target === "nutrition") {
-      setFeedback(message);
-    } else {
-      setGroceryFeedback(message);
-    }
+    setBarcodeScannerStatus(message);
   } finally {
     barcodeScannerRuntime.isStarting = false;
   }
@@ -1120,15 +1068,11 @@ function setupBarcodeScanner() {
 
 // Shared biometric helper used by progress, profile, and devices.
 function calculateBmi(heightCm, weightKg) {
-  if (!heightCm || !weightKg) {
+  if (!Number.isFinite(heightCm) || !Number.isFinite(weightKg) || heightCm <= 0 || weightKg <= 0) {
     return null;
   }
 
   const heightMeters = heightCm / 100;
-
-  if (heightMeters <= 0) {
-    return null;
-  }
 
   return weightKg / (heightMeters * heightMeters);
 }
@@ -1136,6 +1080,14 @@ function calculateBmi(heightCm, weightKg) {
 const nutritionEditorRuntime = {
   mealId: "",
 };
+
+function formatNutritionGoalValue(value, unit = "") {
+  if (value == null || value === "") {
+    return "-";
+  }
+
+  return unit ? `${value} ${unit}` : String(value);
+}
 
 // Nutrition core rendering and setup remain here because they coordinate shared state.
 function renderNutritionSummary() {
@@ -1150,11 +1102,12 @@ function renderNutritionSummary() {
 
   Object.entries(goals).forEach(([key, value]) => {
     document.querySelectorAll(`[data-nutrition-goal="${key}"]`).forEach((element) => {
-      element.textContent = String(value);
+      element.textContent = value == null || value === "" ? "-" : String(value);
     });
 
     const progressElement = document.querySelector(`[data-nutrition-progress="${key}"]`);
-    const progress = value > 0 ? Math.min((totals[key] / value) * 100, 100) : 0;
+    const numericGoal = typeof value === "number" ? value : Number(value);
+    const progress = Number.isFinite(numericGoal) && numericGoal > 0 ? Math.min((totals[key] / numericGoal) * 100, 100) : 0;
 
     if (progressElement) {
       progressElement.style.width = `${progress}%`;
@@ -1164,7 +1117,7 @@ function renderNutritionSummary() {
   const calorieGoalDisplay = document.querySelector("[data-calorie-goal-display]");
 
   if (calorieGoalDisplay) {
-    calorieGoalDisplay.textContent = `${goals.calories} kcal`;
+    calorieGoalDisplay.textContent = formatNutritionGoalValue(goals.calories, "kcal");
   }
 }
 
@@ -1172,6 +1125,7 @@ function renderNutritionSummary() {
 function syncNutritionGoalsFromProfile() {
   const { calories, protein, carbs, fats } = appState.profile.goals;
 
+  appState.nutrition = appState.nutrition && typeof appState.nutrition === "object" ? appState.nutrition : {};
   appState.nutrition.goals = {
     calories,
     protein,
@@ -1252,17 +1206,8 @@ function getActiveNutritionEditMeal() {
   return appState.nutrition.meals.find((meal) => meal.id === nutritionEditorRuntime.mealId) || null;
 }
 
-function setNutritionEditFeedback(message) {
-  const feedback = document.querySelector("[data-nutrition-edit-feedback]");
-
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
-
 function closeNutritionEditForm() {
   nutritionEditorRuntime.mealId = "";
-  setNutritionEditFeedback("");
   renderNutritionEditForm();
 }
 
@@ -1272,7 +1217,6 @@ function openNutritionEditForm(meal) {
   }
 
   nutritionEditorRuntime.mealId = meal.id;
-  setNutritionEditFeedback("");
   renderNutritionEditForm();
 }
 
@@ -1355,7 +1299,6 @@ function removeNutritionMeal(mealId) {
 
   if (nutritionEditorRuntime.mealId === mealId) {
     nutritionEditorRuntime.mealId = "";
-    setNutritionEditFeedback("");
   }
 
   appState.nutrition.meals = appState.nutrition.meals.filter((meal) => meal.id !== mealId);
@@ -1389,14 +1332,12 @@ function setupNutritionSection() {
     const meal = createNutritionMealFromForm(form);
 
     if (!isNutritionMealValid(meal)) {
-      setFeedback("Completa almeno nome e orario con valori validi.");
       return;
     }
 
     appState.nutrition.meals.push(meal);
     persistNutritionMealChanges(getMealDateKey(meal));
     resetNutritionFormAfterSubmit(form);
-    setFeedback(`${meal.nutritionSourceLabel || "Valori nutrizionali"} salvati. Puoi correggerli dal pasto appena creato.`);
   });
 
   mealsList.addEventListener("click", (event) => {
@@ -1420,7 +1361,6 @@ function setupNutritionSection() {
     }
 
     removeNutritionMeal(button.dataset.deleteMealId);
-    setFeedback("Pasto rimosso.");
   });
 
   editForm.addEventListener("submit", (event) => {
@@ -1450,30 +1390,27 @@ function setupNutritionSection() {
     const hasInvalidNumber = Object.values(updatedValues).some((value) => value === null || value < 0);
 
     if (hasInvalidNumber) {
-      setNutritionEditFeedback("Inserisci solo numeri validi per correggere i valori nutrizionali.");
       return;
     }
 
     applyManualNutritionCorrection(meal, updatedValues);
     closeNutritionEditForm();
-    setFeedback("Valori nutrizionali aggiornati manualmente.");
   });
 
   editCancelButton.addEventListener("click", () => {
     closeNutritionEditForm();
-    setFeedback("Correzione annullata.");
   });
 
   renderNutrition();
 }
 
 // Core app bootstrap kept in app.js as the shared entrypoint.
-function initializeNutriTrackApp() {
-  if (initializeNutriTrackApp.hasRun) {
+function startNutriTrackCore() {
+  if (nutritrackCoreRuntime.started) {
     return;
   }
 
-  initializeNutriTrackApp.hasRun = true;
+  nutritrackCoreRuntime.started = true;
 
   syncNutritionGoalsFromProfile();
   setupBarcodeScanner();
@@ -1492,6 +1429,20 @@ function initializeNutriTrackApp() {
       saveState();
       renderNutrition();
     });
+}
+
+async function initializeNutriTrackApp() {
+  if (initializeNutriTrackApp.hasRun) {
+    return;
+  }
+
+  initializeNutriTrackApp.hasRun = true;
+
+  const shouldStartApp = await window.bootstrapAuthenticationGate?.();
+
+  if (shouldStartApp) {
+    startNutriTrackCore();
+  }
 }
 
 initializeNutriTrackApp.hasRun = false;

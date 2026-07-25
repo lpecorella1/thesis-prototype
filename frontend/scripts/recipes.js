@@ -42,14 +42,6 @@ function getRecipeMealLabel(value) {
   return labels[value] || value;
 }
 
-function setRecipeFeedback(message) {
-  const feedback = document.querySelector("[data-recipe-feedback]");
-
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
-
 async function generateRecipeWithAi(filters) {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 25000);
@@ -214,7 +206,6 @@ function renderRecipeResult() {
     container.innerHTML = `
       <article class="empty-state">
         <h3>Nessuna ricetta generata</h3>
-        <p>Imposta i criteri qui accanto e genera una proposta basata sui tuoi vincoli reali.</p>
       </article>
     `;
     return;
@@ -226,7 +217,6 @@ function renderRecipeResult() {
     <div class="result-head">
       <div>
         <h3>${escapeHtml(recipe.title)}</h3>
-        <p>${escapeHtml(recipe.description)}</p>
         <div class="inline-meta">
           <span>${recipe.duration} min</span>
           <span>${recipe.servings} porzioni</span>
@@ -243,22 +233,13 @@ function renderRecipeResult() {
       <button class="primary-btn primary-btn-blue" type="button" data-save-current-recipe>${isSaved ? "Rimuovi dai salvati" : "Salva ricetta"}</button>
       <button class="recipe-secondary-btn" type="button" data-apply-current-recipe-to-nutrition>Usa nella dieta</button>
     </div>
+    <p class="recipe-apply-feedback" data-recipe-apply-feedback aria-live="polite"></p>
     <div class="macro-pill-row">
       <span>Proteine ${recipe.protein}g</span>
       <span>Carboidrati ${recipe.carbs}g</span>
       <span>Grassi ${recipe.fats}g</span>
       <span>Generata ${escapeHtml(formatDateTime(recipe.generatedAt))}</span>
     </div>
-    ${
-      recipe.pantryNote || recipe.criteriaNote
-        ? `
-      <div class="lookup-chip-row">
-        ${recipe.pantryNote ? `<span class="lookup-chip">${escapeHtml(recipe.pantryNote)}</span>` : ""}
-        ${recipe.criteriaNote ? `<span class="lookup-chip">${escapeHtml(recipe.criteriaNote)}</span>` : ""}
-      </div>
-    `
-        : ""
-    }
     <div class="two-col-copy">
       <div>
         <h4>Ingredienti</h4>
@@ -400,6 +381,18 @@ function createRecipeNutritionDraft(recipe) {
   return createImportedNutritionDraft(recipe, RECIPE_NUTRITION_SOURCE_LABEL);
 }
 
+function setRecipeApplyFeedback(message, tone = "neutral") {
+  const feedback = document.querySelector("[data-recipe-apply-feedback]");
+
+  if (!feedback) {
+    return;
+  }
+
+  feedback.textContent = message || "";
+  feedback.classList.toggle("is-error", tone === "error");
+  feedback.classList.toggle("is-success", tone === "success");
+}
+
 function syncNutriTrackStateFromBackend(nextState) {
   if (!nextState) {
     return;
@@ -417,16 +410,6 @@ function syncNutriTrackStateFromBackend(nextState) {
   });
   Object.assign(appState, normalizedState);
   saveNutriTrackStateToLocalCache();
-}
-
-function buildPantryUsageFeedback(pantryUpdates) {
-  if (pantryUpdates.length === 0) {
-    return "";
-  }
-
-  return pantryUpdates
-    .map((entry) => `${entry.pantryItemName}: ${entry.removed ? "esaurito" : `restano ${entry.nextQuantity}`}`)
-    .join(" • ");
 }
 
 async function executeRecipeAssistantAction(action) {
@@ -479,7 +462,9 @@ function applyRecipeToNutrition(recipe, mealType) {
 
   return fetch("/api/recipes/apply-to-diet", {
     method: "POST",
+    credentials: "same-origin",
     headers: {
+      Accept: "application/json",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -491,7 +476,9 @@ function applyRecipeToNutrition(recipe, mealType) {
       const payload = await response.json();
 
       if (!response.ok || !payload?.state) {
-        throw new Error(payload?.error || "Non sono riuscito ad applicare la ricetta alla dieta.");
+        const error = new Error(payload?.error || "Non sono riuscito ad applicare la ricetta alla dieta.");
+        error.status = response.status;
+        throw error;
       }
 
       syncNutriTrackStateFromBackend(payload.state);
@@ -507,8 +494,8 @@ function applyRecipeToNutrition(recipe, mealType) {
       switchToTab("nutrition");
       renderNutrition();
       renderGrocery();
-      const pantryFeedback = buildPantryUsageFeedback(Array.isArray(payload.pantryUpdates) ? payload.pantryUpdates : []);
-      setFeedback(pantryFeedback ? `Ricetta aggiunta alla Dieta. Dispensa aggiornata: ${pantryFeedback}` : "Ricetta aggiunta alla Dieta.");
+      renderProgress();
+      setRecipeApplyFeedback(`Ricetta aggiunta alla Dieta: ${payload.meal?.name || recipe.title}.`, "success");
 
       return payload;
     });
@@ -530,7 +517,7 @@ function setCurrentRecipeWithContext(recipe, pantryFallbackNote, personalFallbac
   return true;
 }
 
-function restoreRecipeFromCollection(recipeId, pantryFallbackNote, personalFallbackNote, successMessage) {
+function restoreRecipeFromCollection(recipeId, pantryFallbackNote, personalFallbackNote) {
   const recipe = getRecipeById(recipeId);
 
   if (!setCurrentRecipeWithContext(recipe, pantryFallbackNote, personalFallbackNote)) {
@@ -539,7 +526,6 @@ function restoreRecipeFromCollection(recipeId, pantryFallbackNote, personalFallb
 
   saveState();
   renderRecipes();
-  setRecipeFeedback(successMessage);
 }
 
 function appendRecipeChatMessage(role, content) {
@@ -593,16 +579,13 @@ function setupRecipeGeneratorForm(generatorForm) {
 
     appState.recipes.generator = nextFilters;
     setRecipeGeneratorPendingState(generatorForm, true);
-    setRecipeFeedback("Sto generando una ricetta usando AI, dispensa e preferenze...");
 
     try {
       appState.recipes.currentRecipe = await generateRecipeWithAi(nextFilters);
       saveRecipeToHistory(appState.recipes.currentRecipe);
       saveState();
       renderRecipes();
-      setRecipeFeedback("Ricetta generata correttamente.");
-    } catch (error) {
-      setRecipeFeedback(error.message || "Non sono riuscito a generare la ricetta.");
+    } catch {
     } finally {
       setRecipeGeneratorPendingState(generatorForm, false);
     }
@@ -610,14 +593,30 @@ function setupRecipeGeneratorForm(generatorForm) {
 }
 
 function setupRecipeResultActions(recipeResult) {
-  recipeResult.addEventListener("click", (event) => {
+  recipeResult.addEventListener("click", async (event) => {
     const saveButton = event.target.closest("[data-save-current-recipe]");
     const applyButton = event.target.closest("[data-apply-current-recipe-to-nutrition]");
 
     if (applyButton && appState.recipes.currentRecipe) {
-      applyRecipeToNutrition(appState.recipes.currentRecipe, appState.recipes.generator.mealType).catch((error) => {
-        setFeedback(error.message || "Non sono riuscito a usare la ricetta nella dieta.");
-      });
+      applyButton.disabled = true;
+      applyButton.textContent = "Aggiungo...";
+      setRecipeApplyFeedback("Sto aggiungendo la ricetta alla Dieta.");
+
+      try {
+        await applyRecipeToNutrition(appState.recipes.currentRecipe, appState.recipes.generator.mealType);
+      } catch (error) {
+        if (error?.status === 401) {
+          window.handleNutriTrackUnauthorized?.();
+        }
+
+        setRecipeApplyFeedback(
+          error?.message || "Non sono riuscito ad aggiungere la ricetta alla Dieta.",
+          "error"
+        );
+      } finally {
+        applyButton.disabled = false;
+        applyButton.textContent = "Usa nella dieta";
+      }
       return;
     }
 
@@ -634,7 +633,6 @@ function setupRecipeResultActions(recipeResult) {
 
     saveState();
     renderRecipes();
-    setRecipeFeedback(isSaved ? "Ricetta rimossa dai salvati." : "Ricetta salvata.");
   });
 }
 
@@ -650,8 +648,7 @@ function setupRecipeHistoryActions(recipeHistory) {
     restoreRecipeFromCollection(
       button.dataset.recipeHistoryId,
       "Ricetta riaperta dallo storico recente.",
-      "Ricetta recuperata dallo storico delle generazioni.",
-      "Ricetta ricaricata dallo storico."
+      "Ricetta recuperata dallo storico delle generazioni."
     );
   });
 }
@@ -667,8 +664,7 @@ function setupSavedRecipeActions(savedRecipes) {
     restoreRecipeFromCollection(
       button.dataset.recipeSavedId,
       "Ricetta aperta dai preferiti.",
-      "Ricetta recuperata dall'elenco salvati.",
-      "Ricetta aperta dai salvati."
+      "Ricetta recuperata dall'elenco salvati."
     );
   });
 }
@@ -716,7 +712,7 @@ function setupRecipeChat(chatForm, chatResetButton) {
   });
 
   chatResetButton?.addEventListener("click", () => {
-    appState.recipes.chatMessages = getDefaultRecipeChatMessages();
+    appState.recipes.chatMessages = [];
     saveState();
     renderRecipeChat();
   });

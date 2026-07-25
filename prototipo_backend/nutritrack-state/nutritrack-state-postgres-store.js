@@ -1,4 +1,5 @@
 let pgModule;
+let userProfilesColumnsPromise;
 
 function cloneJson(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -30,6 +31,10 @@ function normalizeDate(value) {
 function normalizeTimestamp(value) {
   const normalizedValue = String(value || "").trim();
   return normalizedValue || null;
+}
+
+function normalizeJsonObject(value, fallback = {}) {
+  return value && typeof value === "object" && !Array.isArray(value) ? cloneJson(value) : cloneJson(fallback);
 }
 
 function padNumber(value) {
@@ -64,6 +69,49 @@ function formatTimeKeyLocal(value) {
   return `${padNumber(date.getHours())}:${padNumber(date.getMinutes())}`;
 }
 
+function parseJsonArrayText(value) {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map((item) => String(item || "").trim()).filter(Boolean) : [];
+  } catch (error) {
+    return String(value)
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+}
+
+function serializeJsonArrayText(value) {
+  return JSON.stringify(
+    Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : []
+  );
+}
+
+async function getUserProfilesColumns(client) {
+  if (!userProfilesColumnsPromise) {
+    userProfilesColumnsPromise = client
+      .query(
+        `
+          SELECT column_name
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'user_profiles'
+        `
+      )
+      .then((result) => new Set(result.rows.map((row) => String(row.column_name || "").trim()).filter(Boolean)))
+      .catch((error) => {
+        userProfilesColumnsPromise = null;
+        throw error;
+      });
+  }
+
+  return userProfilesColumnsPromise;
+}
+
 function resolveMealConsumedAt(meal = {}) {
   const directTimestamp = normalizeTimestamp(meal.timestamp || meal.consumedAt);
 
@@ -83,6 +131,14 @@ function resolveMealConsumedAt(meal = {}) {
   }
 
   return new Date().toISOString();
+}
+
+function resolveRecipeSourceType(recipe = {}) {
+  if (recipe.mode === "ai-generated") {
+    return "assistant";
+  }
+
+  return "manual";
 }
 
 function getPgModule() {
@@ -169,7 +225,7 @@ function buildDatabaseStatus() {
 
   return {
     enabled: true,
-    mode: "hybrid_read_through",
+    mode: "postgres_primary",
     reason: "",
     pgInstalled: true,
   };
@@ -222,78 +278,69 @@ async function getLocalAppUserId(client) {
   return result.rows[0]?.id || null;
 }
 
+async function resolveUserIdForContext(client, userContext, { createIfMissing = false } = {}) {
+  if (userContext?.type === "authenticated_user") {
+    const normalizedUserId = Number(userContext.userId);
+
+    if (!Number.isInteger(normalizedUserId) || normalizedUserId <= 0) {
+      throw new Error("Authenticated user context non valido: userId mancante.");
+    }
+
+    return normalizedUserId;
+  }
+
+  if (userContext?.type === "local_implicit" || !userContext) {
+    return createIfMissing ? ensureLocalAppUser(client) : getLocalAppUserId(client);
+  }
+
+  throw new Error(`User context non supportato: ${userContext.type || "unknown"}.`);
+}
+
 async function replaceUserProfile(client, userId, profileState = {}) {
   const personal = profileState.personal || {};
   const medical = profileState.medical || {};
   const goals = profileState.goals || {};
+  const availableColumns = await getUserProfilesColumns(client);
+  const profileEntries = [
+    ["full_name", normalizeString(personal.fullName)],
+    ["age", normalizeNumber(personal.age)],
+    ["gender", normalizeString(personal.gender)],
+    ["height_cm", normalizeNumber(personal.heightCm)],
+    ["current_weight_kg", normalizeNumber(personal.currentWeightKg)],
+    ["target_weight_kg", normalizeNumber(personal.targetWeightKg)],
+    ["activity_level", normalizeString(personal.activityLevel)],
+    ["diet_type", normalizeString(personal.dietType)],
+    ["allergies", normalizeString(medical.allergies)],
+    ["medications", normalizeString(medical.medications)],
+    ["medical_conditions", normalizeString(medical.medicalConditions)],
+    ["dietary_preferences", normalizeString(medical.dietaryPreferences)],
+    ["primary_objective", normalizeString(goals.primaryObjective)],
+    ["secondary_objective", normalizeString(goals.secondaryObjective)],
+    ["health_focus", normalizeString(goals.healthFocus)],
+    ["daily_calories_goal", normalizeNumber(goals.calories)],
+    ["daily_protein_goal", normalizeNumber(goals.protein)],
+    ["daily_carbs_goal", normalizeNumber(goals.carbs)],
+    ["daily_fats_goal", normalizeNumber(goals.fats)],
+    ["daily_water_goal", normalizeNumber(goals.water)],
+  ].filter(([columnName]) => availableColumns.has(columnName));
+
+  const insertColumns = ["user_id", ...profileEntries.map(([columnName]) => columnName)];
+  const insertPlaceholders = insertColumns.map((_, index) => `$${index + 1}`);
+  const updateAssignments = profileEntries.map(([columnName]) => `${columnName} = EXCLUDED.${columnName}`);
+  const queryValues = [userId, ...profileEntries.map(([, value]) => value)];
 
   await client.query(
     `
       INSERT INTO user_profiles (
-        user_id,
-        full_name,
-        age,
-        gender,
-        height_cm,
-        current_weight_kg,
-        target_weight_kg,
-        activity_level,
-        diet_type,
-        allergies,
-        medications,
-        medical_conditions,
-        blood_type,
-        daily_calories_goal,
-        daily_protein_goal,
-        daily_carbs_goal,
-        daily_fats_goal,
-        daily_water_goal
+        ${insertColumns.join(",\n        ")}
       )
-      VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9,
-        $10, $11, $12, $13, $14, $15, $16, $17, $18
-      )
+      VALUES (${insertPlaceholders.join(", ")})
       ON CONFLICT (user_id)
       DO UPDATE SET
-        full_name = EXCLUDED.full_name,
-        age = EXCLUDED.age,
-        gender = EXCLUDED.gender,
-        height_cm = EXCLUDED.height_cm,
-        current_weight_kg = EXCLUDED.current_weight_kg,
-        target_weight_kg = EXCLUDED.target_weight_kg,
-        activity_level = EXCLUDED.activity_level,
-        diet_type = EXCLUDED.diet_type,
-        allergies = EXCLUDED.allergies,
-        medications = EXCLUDED.medications,
-        medical_conditions = EXCLUDED.medical_conditions,
-        blood_type = EXCLUDED.blood_type,
-        daily_calories_goal = EXCLUDED.daily_calories_goal,
-        daily_protein_goal = EXCLUDED.daily_protein_goal,
-        daily_carbs_goal = EXCLUDED.daily_carbs_goal,
-        daily_fats_goal = EXCLUDED.daily_fats_goal,
-        daily_water_goal = EXCLUDED.daily_water_goal,
+        ${updateAssignments.join(",\n        ")},
         updated_at = CURRENT_TIMESTAMP
     `,
-    [
-      userId,
-      normalizeString(personal.fullName),
-      normalizeNumber(personal.age),
-      normalizeString(personal.gender),
-      normalizeNumber(personal.heightCm),
-      normalizeNumber(personal.currentWeightKg),
-      normalizeNumber(personal.targetWeightKg),
-      normalizeString(personal.activityLevel),
-      normalizeString(personal.dietType),
-      normalizeString(medical.allergies),
-      normalizeString(medical.medications),
-      normalizeString(medical.medicalConditions),
-      normalizeString(medical.bloodType),
-      normalizeNumber(goals.calories),
-      normalizeNumber(goals.protein),
-      normalizeNumber(goals.carbs),
-      normalizeNumber(goals.fats),
-      normalizeNumber(goals.water),
-    ]
+    queryValues
   );
 }
 
@@ -439,7 +486,167 @@ async function replaceProgressLogs(client, userId, dailyLogs = []) {
   }
 }
 
-async function mirrorNutriTrackStateToPostgres(state) {
+async function replaceRecipesState(client, userId, recipesState = {}) {
+  await client.query("DELETE FROM saved_recipes WHERE user_id = $1", [userId]);
+  await client.query("DELETE FROM recipes WHERE created_by_user_id = $1", [userId]);
+
+  const generatedRecipesById =
+    recipesState.generatedRecipesById && typeof recipesState.generatedRecipesById === "object"
+      ? recipesState.generatedRecipesById
+      : {};
+  const savedRecipeIds = Array.isArray(recipesState.savedRecipeIds) ? recipesState.savedRecipeIds : [];
+
+  for (const recipe of Object.values(generatedRecipesById)) {
+    if (!recipe || typeof recipe !== "object" || !recipe.id) {
+      continue;
+    }
+
+    const result = await client.query(
+      `
+        INSERT INTO recipes (
+          created_by_user_id,
+          app_recipe_id,
+          title,
+          description,
+          calories,
+          protein_g,
+          carbs_g,
+          fats_g,
+          duration_minutes,
+          servings,
+          difficulty_level,
+          diet_type,
+          meal_type,
+          ingredients_text,
+          instructions_text,
+          recipe_source_type,
+          generated_at,
+          signature,
+          recipe_payload
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16, $17, $18, $19::jsonb
+        )
+        ON CONFLICT (created_by_user_id, app_recipe_id) WHERE app_recipe_id IS NOT NULL
+        DO UPDATE SET
+          title = EXCLUDED.title,
+          description = EXCLUDED.description,
+          calories = EXCLUDED.calories,
+          protein_g = EXCLUDED.protein_g,
+          carbs_g = EXCLUDED.carbs_g,
+          fats_g = EXCLUDED.fats_g,
+          duration_minutes = EXCLUDED.duration_minutes,
+          servings = EXCLUDED.servings,
+          difficulty_level = EXCLUDED.difficulty_level,
+          diet_type = EXCLUDED.diet_type,
+          meal_type = EXCLUDED.meal_type,
+          ingredients_text = EXCLUDED.ingredients_text,
+          instructions_text = EXCLUDED.instructions_text,
+          recipe_source_type = EXCLUDED.recipe_source_type,
+          generated_at = EXCLUDED.generated_at,
+          signature = EXCLUDED.signature,
+          recipe_payload = EXCLUDED.recipe_payload,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING id
+      `,
+      [
+        userId,
+        normalizeString(recipe.id),
+        normalizeString(recipe.title) || "Ricetta",
+        normalizeString(recipe.description),
+        normalizeNumber(recipe.calories),
+        normalizeNumber(recipe.protein),
+        normalizeNumber(recipe.carbs),
+        normalizeNumber(recipe.fats),
+        normalizeNumber(recipe.duration),
+        normalizeNumber(recipe.servings),
+        normalizeString(recipe.difficulty),
+        normalizeString(Array.isArray(recipe.dietTypes) ? recipe.dietTypes[0] : recipe.dietTypes),
+        normalizeString(Array.isArray(recipe.mealTypes) ? recipe.mealTypes[0] : recipe.mealTypes),
+        serializeJsonArrayText(recipe.ingredients),
+        serializeJsonArrayText(recipe.instructions),
+        resolveRecipeSourceType(recipe),
+        normalizeTimestamp(recipe.generatedAt),
+        normalizeString(recipe.signature),
+        JSON.stringify(cloneJson(recipe) || {}),
+      ]
+    );
+
+    if (savedRecipeIds.includes(recipe.id)) {
+      await client.query(
+        `
+          INSERT INTO saved_recipes (user_id, recipe_id)
+          VALUES ($1, $2)
+          ON CONFLICT (user_id, recipe_id) DO NOTHING
+        `,
+        [userId, result.rows[0].id]
+      );
+    }
+  }
+}
+
+async function replaceOpenFoodFactsCache(client, productsByBarcode = {}) {
+  const products = productsByBarcode && typeof productsByBarcode === "object" ? Object.values(productsByBarcode) : [];
+
+  await client.query("DELETE FROM openfoodfacts_products_cache");
+
+  for (const product of products) {
+    if (!product || typeof product !== "object" || !product.barcode) {
+      continue;
+    }
+
+    await client.query(
+      `
+        INSERT INTO openfoodfacts_products_cache (
+          barcode,
+          product_name,
+          brand,
+          category,
+          quantity_label,
+          serving_label,
+          nutriscore_grade,
+          nutriments,
+          source_payload,
+          fetched_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, CURRENT_TIMESTAMP)
+        ON CONFLICT (barcode)
+        DO UPDATE SET
+          product_name = EXCLUDED.product_name,
+          brand = EXCLUDED.brand,
+          category = EXCLUDED.category,
+          quantity_label = EXCLUDED.quantity_label,
+          serving_label = EXCLUDED.serving_label,
+          nutriscore_grade = EXCLUDED.nutriscore_grade,
+          nutriments = EXCLUDED.nutriments,
+          source_payload = EXCLUDED.source_payload,
+          fetched_at = CURRENT_TIMESTAMP
+      `,
+      [
+        normalizeString(product.barcode),
+        normalizeString(product.name),
+        normalizeString(product.brand),
+        normalizeString(product.category),
+        normalizeString(product.quantity),
+        normalizeString(product.serving),
+        normalizeString(product.nutriscoreGrade),
+        JSON.stringify({
+          calories: normalizeNumber(product.calories),
+          protein: normalizeNumber(product.protein),
+          carbs: normalizeNumber(product.carbs),
+          fats: normalizeNumber(product.fats),
+          sugar: normalizeNumber(product.sugar),
+          fiber: normalizeNumber(product.fiber),
+          nutriscoreScore: normalizeNumber(product.nutriscoreScore),
+        }),
+        JSON.stringify(cloneJson(product) || {}),
+      ]
+    );
+  }
+}
+
+async function mirrorNutriTrackStateToPostgres(state, userContext) {
   const databaseStatus = buildDatabaseStatus();
 
   if (!databaseStatus.enabled) {
@@ -450,12 +657,14 @@ async function mirrorNutriTrackStateToPostgres(state) {
     await client.query("BEGIN");
 
     try {
-      const userId = await ensureLocalAppUser(client);
+      const userId = await resolveUserIdForContext(client, userContext, { createIfMissing: true });
       await replaceUserProfile(client, userId, state.profile);
       await replaceNutritionMeals(client, userId, state.nutrition?.meals);
       await replaceGroceryItems(client, userId, state.grocery?.items);
       await replacePantryItems(client, userId, state.grocery?.pantry);
       await replaceProgressLogs(client, userId, state.progress?.dailyLogs);
+      await replaceRecipesState(client, userId, state.recipes);
+      await replaceOpenFoodFactsCache(client, state.datasets?.openFoodFacts?.productsByBarcode);
       await client.query("COMMIT");
     } catch (error) {
       await client.query("ROLLBACK");
@@ -467,26 +676,36 @@ async function mirrorNutriTrackStateToPostgres(state) {
 }
 
 async function readUserProfile(client, userId) {
+  const availableColumns = await getUserProfilesColumns(client);
+  const selectColumns = [
+    "full_name",
+    "age",
+    "gender",
+    "height_cm",
+    "current_weight_kg",
+    "target_weight_kg",
+    "activity_level",
+    "diet_type",
+    "allergies",
+    "medications",
+    "medical_conditions",
+    "dietary_preferences",
+    "primary_objective",
+    "secondary_objective",
+    "health_focus",
+    "daily_calories_goal",
+    "daily_protein_goal",
+    "daily_carbs_goal",
+    "daily_fats_goal",
+    "daily_water_goal",
+  ]
+    .filter((columnName) => availableColumns.has(columnName))
+    .map((columnName) => `COALESCE(${columnName}, NULL) AS ${columnName}`);
+
   const result = await client.query(
     `
       SELECT
-        full_name,
-        age,
-        gender,
-        height_cm,
-        current_weight_kg,
-        target_weight_kg,
-        activity_level,
-        diet_type,
-        allergies,
-        medications,
-        medical_conditions,
-        blood_type,
-        daily_calories_goal,
-        daily_protein_goal,
-        daily_carbs_goal,
-        daily_fats_goal,
-        daily_water_goal
+        ${selectColumns.join(",\n        ")}
       FROM user_profiles
       WHERE user_id = $1
       LIMIT 1
@@ -515,9 +734,12 @@ async function readUserProfile(client, userId) {
       allergies: row.allergies || "",
       medications: row.medications || "",
       medicalConditions: row.medical_conditions || "",
-      bloodType: row.blood_type || "",
+      dietaryPreferences: row.dietary_preferences || "",
     },
     goals: {
+      primaryObjective: row.primary_objective || "",
+      secondaryObjective: row.secondary_objective || "",
+      healthFocus: row.health_focus || "",
       calories: normalizeDbNumber(row.daily_calories_goal),
       protein: normalizeDbNumber(row.daily_protein_goal),
       carbs: normalizeDbNumber(row.daily_carbs_goal),
@@ -548,7 +770,15 @@ async function readNutritionMeals(client, userId) {
     [userId]
   );
 
+  const userProfile = await readUserProfile(client, userId);
+
   return {
+    goals: {
+      calories: normalizeDbNumber(userProfile?.goals?.calories),
+      protein: normalizeDbNumber(userProfile?.goals?.protein),
+      carbs: normalizeDbNumber(userProfile?.goals?.carbs),
+      fats: normalizeDbNumber(userProfile?.goals?.fats),
+    },
     meals: result.rows.map((row) => ({
       id: String(row.id),
       name: row.meal_name || "Pasto",
@@ -657,7 +887,155 @@ async function readProgressLogs(client, userId) {
   };
 }
 
-async function readNutriTrackStateFromPostgres() {
+async function readRecipesState(client, userId) {
+  const recipesResult = await client.query(
+    `
+      SELECT
+        id,
+        app_recipe_id,
+        title,
+        description,
+        calories,
+        protein_g,
+        carbs_g,
+        fats_g,
+        duration_minutes,
+        servings,
+        difficulty_level,
+        diet_type,
+        meal_type,
+        ingredients_text,
+        instructions_text,
+        recipe_source_type,
+        generated_at,
+        signature,
+        recipe_payload
+      FROM recipes
+      WHERE created_by_user_id = $1
+      ORDER BY COALESCE(generated_at, created_at) DESC, id DESC
+    `,
+    [userId]
+  );
+
+  const savedRecipesResult = await client.query(
+    `
+      SELECT r.app_recipe_id
+      FROM saved_recipes sr
+      JOIN recipes r ON r.id = sr.recipe_id
+      WHERE sr.user_id = $1
+      ORDER BY sr.saved_at DESC, sr.id DESC
+    `,
+    [userId]
+  );
+
+  const generatedRecipes = recipesResult.rows.map((row) => {
+    const payload = normalizeJsonObject(row.recipe_payload);
+    const appRecipeId = row.app_recipe_id || payload.id || `recipe-db-${row.id}`;
+
+    return {
+      ...payload,
+      id: appRecipeId,
+      title: row.title || payload.title || "Ricetta",
+      description: row.description || payload.description || "",
+      calories: normalizeDbNumber(row.calories) ?? payload.calories ?? 0,
+      protein: normalizeDbNumber(row.protein_g) ?? payload.protein ?? 0,
+      carbs: normalizeDbNumber(row.carbs_g) ?? payload.carbs ?? 0,
+      fats: normalizeDbNumber(row.fats_g) ?? payload.fats ?? 0,
+      duration: normalizeDbNumber(row.duration_minutes) ?? payload.duration ?? 0,
+      servings: normalizeDbNumber(row.servings) ?? payload.servings ?? 1,
+      difficulty: row.difficulty_level || payload.difficulty || "Facile",
+      dietTypes: payload.dietTypes || (row.diet_type ? [row.diet_type] : []),
+      mealTypes: payload.mealTypes || (row.meal_type ? [row.meal_type] : []),
+      ingredients: Array.isArray(payload.ingredients) ? payload.ingredients : parseJsonArrayText(row.ingredients_text),
+      instructions: Array.isArray(payload.instructions) ? payload.instructions : parseJsonArrayText(row.instructions_text),
+      generatedAt:
+        payload.generatedAt ||
+        (row.generated_at instanceof Date ? row.generated_at.toISOString() : normalizeTimestamp(row.generated_at)) ||
+        "",
+      signature: row.signature || payload.signature || appRecipeId,
+    };
+  });
+
+  const generatedRecipesById = Object.fromEntries(generatedRecipes.map((recipe) => [recipe.id, recipe]));
+
+  return {
+    history: generatedRecipes.slice(0, 6).map((recipe) => ({
+      id: recipe.id,
+      title: recipe.title,
+      generatedAt: recipe.generatedAt,
+      signature: recipe.signature || recipe.id,
+    })),
+    savedRecipeIds: savedRecipesResult.rows
+      .map((row) => String(row.app_recipe_id || "").trim())
+      .filter(Boolean),
+    generatedRecipesById,
+  };
+}
+
+async function readOpenFoodFactsCache(client) {
+  const result = await client.query(
+    `
+      SELECT
+        barcode,
+        product_name,
+        brand,
+        category,
+        quantity_label,
+        serving_label,
+        nutriscore_grade,
+        nutriments,
+        source_payload
+      FROM openfoodfacts_products_cache
+      ORDER BY fetched_at DESC
+      LIMIT 200
+    `
+  );
+
+  const productsByBarcode = Object.fromEntries(
+    result.rows
+      .map((row) => {
+        const payload = normalizeJsonObject(row.source_payload);
+        const nutriments = normalizeJsonObject(row.nutriments);
+        const barcode = String(row.barcode || payload.barcode || "").trim();
+
+        if (!barcode) {
+          return null;
+        }
+
+        return [
+          barcode,
+          {
+            ...payload,
+            source: payload.source || "openfoodfacts",
+            retrievalSource: payload.retrievalSource || "cache",
+            barcode,
+            name: payload.name || row.product_name || "Prodotto senza nome",
+            brand: payload.brand || row.brand || "OpenFoodFacts",
+            category: payload.category || row.category || "",
+            quantity: payload.quantity || row.quantity_label || "",
+            serving: payload.serving || row.serving_label || "100 g",
+            calories: payload.calories ?? normalizeDbNumber(nutriments.calories),
+            protein: payload.protein ?? normalizeDbNumber(nutriments.protein),
+            carbs: payload.carbs ?? normalizeDbNumber(nutriments.carbs),
+            fats: payload.fats ?? normalizeDbNumber(nutriments.fats),
+            sugar: payload.sugar ?? normalizeDbNumber(nutriments.sugar),
+            fiber: payload.fiber ?? normalizeDbNumber(nutriments.fiber),
+            nutriscoreGrade: payload.nutriscoreGrade || row.nutriscore_grade || "",
+            nutriscoreScore: payload.nutriscoreScore ?? normalizeDbNumber(nutriments.nutriscoreScore),
+          },
+        ];
+      })
+      .filter(Boolean)
+  );
+
+  return {
+    openFoodFacts: {
+      productsByBarcode,
+    },
+  };
+}
+
+async function readNutriTrackStateFromPostgres(userContext) {
   const databaseStatus = buildDatabaseStatus();
 
   if (!databaseStatus.enabled) {
@@ -665,7 +1043,7 @@ async function readNutriTrackStateFromPostgres() {
   }
 
   return withClient(async (client) => {
-    const userId = await getLocalAppUserId(client);
+    const userId = await resolveUserIdForContext(client, userContext, { createIfMissing: false });
 
     if (!userId) {
       return null;
@@ -676,6 +1054,8 @@ async function readNutriTrackStateFromPostgres() {
     const groceryItems = await readGroceryItems(client, userId);
     const pantryItems = await readPantryItems(client, userId);
     const progress = await readProgressLogs(client, userId);
+    const recipes = await readRecipesState(client, userId);
+    const datasets = (await readOpenFoodFactsCache(client)) || {};
 
     return {
       profile,
@@ -685,6 +1065,8 @@ async function readNutriTrackStateFromPostgres() {
         pantry: pantryItems,
       },
       progress,
+      recipes,
+      datasets,
     };
   });
 }

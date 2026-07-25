@@ -1,11 +1,3 @@
-function setGroceryFeedback(message) {
-  const feedback = document.querySelector("[data-grocery-feedback]");
-
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
-
 function upsertPantryItemFromGrocery(item) {
   const pantryItem = {
     id: item.id,
@@ -323,7 +315,7 @@ function scheduleGroceryBarcodeDetection() {
           return;
         }
 
-        let matchedProduct = firstCode ? getCachedOpenFoodFactsProduct(firstCode) || getCatalogProductByBarcode(firstCode) : null;
+        let matchedProduct = firstCode ? getCachedOpenFoodFactsProduct(firstCode) : null;
 
         if (!matchedProduct && firstCode) {
           appState.grocery.ar.lastDetectedBarcode = firstCode;
@@ -446,7 +438,6 @@ function setupGrocerySection() {
     };
 
     if (!item.name || !item.quantity || !item.category) {
-      setGroceryFeedback("Completa tutti i campi per aggiungere un prodotto.");
       return;
     }
 
@@ -459,7 +450,6 @@ function setupGrocerySection() {
     openFoodFactsRuntime.groceryLookup = null;
     form.elements.barcode.value = "";
     renderLookupResult("[data-off-grocery-result]", null, "");
-    setGroceryFeedback("Prodotto salvato nella lista della spesa.");
   });
 
   list.addEventListener("click", (event) => {
@@ -489,7 +479,6 @@ function setupGrocerySection() {
       appState.grocery.items = appState.grocery.items.filter((item) => item.id !== groceryDeleteId);
       saveState();
       renderGrocery();
-      setGroceryFeedback("Prodotto rimosso dalla lista.");
       return;
     }
 
@@ -514,7 +503,6 @@ function setupGrocerySection() {
 
       saveState();
       renderGrocery();
-      setGroceryFeedback(nextCompleted ? "Prodotto acquistato e salvato in dispensa." : "Prodotto nella lista della spesa.");
     }
   });
 
@@ -528,7 +516,6 @@ function setupGrocerySection() {
     appState.grocery.pantry = appState.grocery.pantry.filter((item) => item.id !== deleteButton.dataset.pantryDeleteId);
     saveState();
     renderPantry();
-    setGroceryFeedback("Prodotto rimosso dalla dispensa.");
   });
 
   arToggleButton.addEventListener("click", async () => {
@@ -568,14 +555,12 @@ function setupGrocerySection() {
     const completedCount = appState.grocery.items.filter((item) => item.completed).length;
 
     if (completedCount === 0) {
-      setGroceryFeedback("Non ci sono prodotti completati da rimuovere.");
       return;
     }
 
     appState.grocery.items = appState.grocery.items.filter((item) => !item.completed);
     saveState();
     renderGrocery();
-    setGroceryFeedback("Prodotti completati spostati in dispensa.");
   });
 
   window.addEventListener("beforeunload", stopGroceryArCamera);
