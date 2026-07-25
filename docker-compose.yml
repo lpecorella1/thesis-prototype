@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nutritrack-app:local
+    command: sh -c "npm run bootstrap:postgres-state && node server.js"
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${NUTRITRACK_PORT:-3000}:3000"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: postgresql://nutritrack:nutritrack@db:5432/nutritrack
+      NUTRITRACK_USE_POSTGRES: 1
+      NUTRITRACK_APP_MODE: ${NUTRITRACK_APP_MODE:-single-user-local}
+      NUTRITRACK_LOCAL_USER_EMAIL: ${NUTRITRACK_LOCAL_USER_EMAIL:-app-local@nutritrack.local}
+      NUTRITRACK_ENABLE_DEVELOPMENT_SEED: ${NUTRITRACK_ENABLE_DEVELOPMENT_SEED:-0}
+      NUTRITRACK_DATA_DIR: /app/prototipo_backend/data
+      NUTRITRACK_SESSION_TTL_DAYS: ${NUTRITRACK_SESSION_TTL_DAYS:-14}
+      SCALE_PROVIDER: ${SCALE_PROVIDER:-mock}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      AZURE_OPENAI_API_VERSION: ${AZURE_OPENAI_API_VERSION:-2024-05-01-preview}
+    volumes:
+      - app_data:/app/prototipo_backend/data
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: nutritrack
+      POSTGRES_USER: nutritrack
+      POSTGRES_PASSWORD: nutritrack
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./prototipo_backend/database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nutritrack -d nutritrack"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  app_data:
+  postgres_data:

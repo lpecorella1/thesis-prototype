@@ -7,6 +7,7 @@
     "pg": "^8.13.1"
   },
   "scripts": {
+    "bootstrap:postgres-state": "node scripts/bootstrap-postgres-state.js",
     "start": "node server.js",
     "start:mobile": "node start-mobile.js",
     "verify:postgres-primary": "node scripts/verify-postgres-primary.js",

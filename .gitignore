@@ -1,4 +1,5 @@
 .DS_Store
+.env
 prototipo_backend/.env
 prototipo_backend/en.openfoodfacts.org.products.csv
 prototipo_backend/certs/

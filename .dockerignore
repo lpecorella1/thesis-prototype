@@ -1,0 +1,11 @@
+.git
+.DS_Store
+.env
+node_modules
+**/node_modules
+npm-debug.log*
+
+prototipo_backend/.env
+prototipo_backend/certs/
+prototipo_backend/data/
+prototipo_backend/en.openfoodfacts.org.products.csv

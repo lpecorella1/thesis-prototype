@@ -37,6 +37,37 @@ Poi apro l'app su:
 http://localhost:3000
 ```
 
+## Avvio con Docker e OrbStack
+
+OrbStack espone lo stesso comando Docker/Compose standard, quindi dal root del progetto posso avviare app e PostgreSQL insieme:
+
+```bash
+cp .env.docker.example .env
+docker compose up --build
+```
+
+Poi apro l'app su:
+
+```text
+http://localhost:3000
+```
+
+Il `docker-compose.yml` crea due servizi:
+
+- `app`: backend Node.js che serve anche il frontend statico;
+- `db`: PostgreSQL con le migrazioni montate in `/docker-entrypoint-initdb.d`.
+
+All'avvio del container `app`, lo script `npm run bootstrap:postgres-state` inizializza lo stato minimo in PostgreSQL se le tabelle sono ancora vuote.
+
+Le migrazioni vengono applicate automaticamente quando il volume PostgreSQL viene creato per la prima volta. Se devo ricreare il database da zero:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+Per usare Azure OpenAI nel container compilo le variabili `AZURE_OPENAI_*` nel file `.env` creato da `.env.docker.example`.
+
 Per provarla da telefono sulla stessa rete uso:
 
 ```bash
@@ -77,6 +108,23 @@ RESET_DB=1 ./database/bootstrap-local-postgres.sh
 
 La guida completa è in [`prototipo_backend/database/README.md`](./prototipo_backend/database/README.md). Le scelte di modello dati sono riassunte in [`docs/postgres-data-architecture.md`](./docs/postgres-data-architecture.md).
 
+## Recipes Assistant
+
+La sezione Recipes mantiene il frontend leggero: l'interfaccia raccoglie input, mostra risultati, gestisce cronologia/UI state e invia le azioni al backend. La logica di dominio resta invece lato server, dove il backend costruisce il contesto NutriTrack reale e dialoga con Azure OpenAI.
+
+Il contesto usato dall'assistente include profilo e obiettivi, preferenze alimentari, dispensa e alimenti in scadenza, lista della spesa, pasti recenti, progressi, ricetta corrente e record OpenFoodFacts disponibili nello stato.
+
+Le route principali sono:
+
+- `POST /api/recipes/generate`: genera una ricetta usando filtri e contesto backend;
+- `POST /api/recipes/assistant/chat`: gestisce la chat Recipes con classificazione minima dell'intento;
+- `POST /api/recipes/apply-to-diet`: applica una ricetta alla giornata alimentare e aggiorna lo stato;
+- `POST /api/chat`: resta disponibile come chat generale, usando comunque il contesto NutriTrack costruito lato server.
+
+La chat riconosce già intenti come applicare la ricetta corrente alla dieta, chiedere una lista della spesa, generare o modificare una ricetta, usare ingredienti disponibili e proseguire una conversazione generica. Per ora solo l'applicazione della ricetta corrente produce un'azione strutturata immediata; gli altri intenti passano ancora dalla risposta conversazionale di Azure OpenAI.
+
+Le prossime parti da consolidare sono una route più coerente per la generazione dell'assistente, ad esempio `POST /api/recipes/assistant/generate`, una route dedicata per la lista della spesa generata dall'assistente, il matching ingredienti-dispensa lato backend, il salvataggio esplicito delle decisioni che modificano dieta o dispensa e la riduzione dei fallback locali rimasti nel frontend.
+
 ## Verifiche
 
 Smoke test locale senza PostgreSQL:
@@ -102,5 +150,4 @@ NUTRITRACK_BASE_URL=http://127.0.0.1:3000 npm run verify:postgres-primary
 
 - [`prototipo_backend/database/README.md`](./prototipo_backend/database/README.md): setup, persistenza e verifiche database.
 - [`docs/postgres-data-architecture.md`](./docs/postgres-data-architecture.md): motivazioni dell'architettura dati.
-- [`docs/recipes-assistant.md`](./docs/recipes-assistant.md): stato attuale della sezione Recipes e cosa resta da consolidare.
 - [`docs/prototype_markdown.md`](./docs/prototype_markdown.md): bozza testuale collegata alla tesi.
