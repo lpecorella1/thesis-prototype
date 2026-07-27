@@ -1,4 +1,6 @@
 // Recipe lookup and local state helpers.
+const buildRecipesApiPath = window.NutriTrackBootstrap.buildNutriTrackApiPath;
+
 function getRecipeById(recipeId) {
   if (!recipeId) {
     return null;
@@ -47,7 +49,7 @@ async function generateRecipeWithAi(filters) {
   const timeoutId = window.setTimeout(() => controller.abort(), 25000);
 
   try {
-    const response = await fetch("/api/recipes/generate", {
+    const response = await fetch(buildRecipesApiPath("/api/recipes/generate"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -149,7 +151,7 @@ async function getRecipeAssistantResponse(message) {
   const timeoutId = window.setTimeout(() => controller.abort(), 20000);
 
   try {
-    const response = await fetch("/api/recipes/assistant/chat", {
+    const response = await fetch(buildRecipesApiPath("/api/recipes/assistant/chat"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -460,7 +462,7 @@ function applyRecipeToNutrition(recipe, mealType) {
     return Promise.resolve(null);
   }
 
-  return fetch("/api/recipes/apply-to-diet", {
+  return fetch(buildRecipesApiPath("/api/recipes/apply-to-diet"), {
     method: "POST",
     credentials: "same-origin",
     headers: {

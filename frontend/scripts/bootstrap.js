@@ -28,7 +28,8 @@ const recipeSwitches = document.querySelectorAll("[data-recipe-target]");
 const recipePanels = document.querySelectorAll("[data-recipe-panel]");
 
 const NUTRITRACK_LOCAL_STATE_CACHE_KEY = "nutriTrackPrototypeState";
-const NUTRITRACK_STATE_API_PATH = "/api/nutritrack/state";
+const NUTRITRACK_BASE_PATH = normalizeNutriTrackBasePath(window.NUTRITRACK_BASE_PATH || "");
+const NUTRITRACK_STATE_API_PATH = buildNutriTrackApiPath("/api/nutritrack/state");
 const NUTRITRACK_SYNC_DEBOUNCE_MS = 450;
 const groceryArStartIcon = `
   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -89,6 +90,21 @@ const recipeChatRuntime = {
   isWaiting: false,
 };
 
+function normalizeNutriTrackBasePath(value) {
+  const rawValue = String(value || "").trim();
+
+  if (!rawValue || rawValue === "/") {
+    return "";
+  }
+
+  return `/${rawValue.replace(/^\/+|\/+$/g, "")}`;
+}
+
+function buildNutriTrackApiPath(path) {
+  const normalizedPath = String(path || "").startsWith("/") ? String(path || "") : `/${path || ""}`;
+  return `${NUTRITRACK_BASE_PATH}${normalizedPath}`;
+}
+
 window.NutriTrackBootstrap = Object.freeze({
   crypto,
   structuredClone,
@@ -101,8 +117,10 @@ window.NutriTrackBootstrap = Object.freeze({
   recipeSwitches,
   recipePanels,
   NUTRITRACK_LOCAL_STATE_CACHE_KEY,
+  NUTRITRACK_BASE_PATH,
   NUTRITRACK_STATE_API_PATH,
   NUTRITRACK_SYNC_DEBOUNCE_MS,
+  buildNutriTrackApiPath,
   defaultRecipeTimestamp,
   RECIPE_NUTRITION_SOURCE_LABEL,
   groceryArStartIcon,

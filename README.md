@@ -34,7 +34,7 @@ npm start
 Poi apro l'app su:
 
 ```text
-http://localhost:3000
+http://localhost:3000/nutritrack
 ```
 
 ## Avvio con Docker e OrbStack
@@ -49,13 +49,27 @@ docker compose up --build
 Poi apro l'app su:
 
 ```text
-http://localhost:3000
+http://localhost:3000/nutritrack
 ```
 
 Il `docker-compose.yml` crea due servizi:
 
 - `app`: backend Node.js che serve anche il frontend statico;
 - `db`: PostgreSQL con le migrazioni montate in `/docker-entrypoint-initdb.d`.
+
+Le porte pubblicate da Compose sono vincolate a `127.0.0.1`, quindi app e database non vengono esposti direttamente su tutte le interfacce di rete del server. Nel container `app`, Node ascolta comunque su `0.0.0.0` per restare raggiungibile dal port mapping Docker; l'esposizione verso l'host resta limitata dal binding `127.0.0.1:${NUTRITRACK_PORT:-3000}:3000`.
+
+Il base path applicativo predefinito è:
+
+```env
+NUTRITRACK_BASE_PATH=/nutritrack
+```
+
+Quindi su un reverse proxy condiviso posso pubblicare il servizio sotto:
+
+```text
+https://mercurio.isti.cnr.it/nutritrack
+```
 
 All'avvio del container `app`, lo script `npm run bootstrap:postgres-state` inizializza lo stato minimo in PostgreSQL se le tabelle sono ancora vuote.
 
@@ -83,6 +97,7 @@ Le variabili di riferimento sono in `prototipo_backend/.env.example`.
 Le più importanti sono:
 
 - `NUTRITRACK_APP_MODE=single-user-local|authenticated-user`
+- `NUTRITRACK_BASE_PATH=/nutritrack`
 - `NUTRITRACK_USE_POSTGRES=0|1`
 - `DATABASE_URL=postgresql://...`
 - `NUTRITRACK_LOCAL_USER_EMAIL=app-local@nutritrack.local`
@@ -116,14 +131,14 @@ Il contesto usato dall'assistente include profilo e obiettivi, preferenze alimen
 
 Le route principali sono:
 
-- `POST /api/recipes/generate`: genera una ricetta usando filtri e contesto backend;
-- `POST /api/recipes/assistant/chat`: gestisce la chat Recipes con classificazione minima dell'intento;
-- `POST /api/recipes/apply-to-diet`: applica una ricetta alla giornata alimentare e aggiorna lo stato;
-- `POST /api/chat`: resta disponibile come chat generale, usando comunque il contesto NutriTrack costruito lato server.
+- `POST /nutritrack/api/recipes/generate`: genera una ricetta usando filtri e contesto backend;
+- `POST /nutritrack/api/recipes/assistant/chat`: gestisce la chat Recipes con classificazione minima dell'intento;
+- `POST /nutritrack/api/recipes/apply-to-diet`: applica una ricetta alla giornata alimentare e aggiorna lo stato;
+- `POST /nutritrack/api/chat`: resta disponibile come chat generale, usando comunque il contesto NutriTrack costruito lato server.
 
 La chat riconosce già intenti come applicare la ricetta corrente alla dieta, chiedere una lista della spesa, generare o modificare una ricetta, usare ingredienti disponibili e proseguire una conversazione generica. Per ora solo l'applicazione della ricetta corrente produce un'azione strutturata immediata; gli altri intenti passano ancora dalla risposta conversazionale di Azure OpenAI.
 
-Le prossime parti da consolidare sono una route più coerente per la generazione dell'assistente, ad esempio `POST /api/recipes/assistant/generate`, una route dedicata per la lista della spesa generata dall'assistente, il matching ingredienti-dispensa lato backend, il salvataggio esplicito delle decisioni che modificano dieta o dispensa e la riduzione dei fallback locali rimasti nel frontend.
+Le prossime parti da consolidare sono una route più coerente per la generazione dell'assistente, ad esempio `POST /nutritrack/api/recipes/assistant/generate`, una route dedicata per la lista della spesa generata dall'assistente, il matching ingredienti-dispensa lato backend, il salvataggio esplicito delle decisioni che modificano dieta o dispensa e la riduzione dei fallback locali rimasti nel frontend.
 
 ## Verifiche
 

@@ -142,6 +142,16 @@ function serializeCookie(name, value, options = {}) {
   return segments.join("; ");
 }
 
+function normalizeCookiePath(value) {
+  const rawValue = String(value || "").trim();
+
+  if (!rawValue || rawValue === "/") {
+    return "/";
+  }
+
+  return `/${rawValue.replace(/^\/+|\/+$/g, "")}`;
+}
+
 function buildPasswordHash(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   const derivedKey = crypto.pbkdf2Sync(password, salt, PASSWORD_ITERATIONS, PASSWORD_KEY_LENGTH, "sha256");
@@ -239,7 +249,7 @@ function getSessionCookieOptions() {
     httpOnly: true,
     sameSite: "Lax",
     secure: String(process.env.HTTPS || "").trim() === "1",
-    path: "/",
+    path: normalizeCookiePath(process.env.NUTRITRACK_BASE_PATH || "/nutritrack"),
   };
 }
 

@@ -9,10 +9,11 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "${NUTRITRACK_PORT:-3000}:3000"
+      - "127.0.0.1:${NUTRITRACK_PORT:-3000}:3000"
     environment:
       HOST: 0.0.0.0
       PORT: 3000
+      NUTRITRACK_BASE_PATH: ${NUTRITRACK_BASE_PATH:-/nutritrack}
       DATABASE_URL: postgresql://nutritrack:nutritrack@db:5432/nutritrack
       NUTRITRACK_USE_POSTGRES: 1
       NUTRITRACK_APP_MODE: ${NUTRITRACK_APP_MODE:-single-user-local}
@@ -36,7 +37,7 @@ services:
       POSTGRES_USER: nutritrack
       POSTGRES_PASSWORD: nutritrack
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./prototipo_backend/database/migrations:/docker-entrypoint-initdb.d:ro

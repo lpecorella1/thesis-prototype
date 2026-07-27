@@ -61,6 +61,7 @@ Valori minimi per usare PostgreSQL:
 ```env
 DATABASE_URL=postgresql://USERNAME:PASSWORD@localhost:5432/nutritrack
 NUTRITRACK_USE_POSTGRES=1
+NUTRITRACK_BASE_PATH=/nutritrack
 NUTRITRACK_APP_MODE=single-user-local
 NUTRITRACK_LOCAL_USER_EMAIL=app-local@nutritrack.local
 ```
@@ -74,7 +75,7 @@ Le modalità runtime sono due:
 
 ## Persistenza attuale
 
-Con PostgreSQL attivo, `GET /api/nutritrack/state` ricompone lo stato partendo dalle tabelle strutturate e restituisce anche metadata `storage`.
+Con PostgreSQL attivo, `GET /nutritrack/api/nutritrack/state` ricompone lo stato partendo dalle tabelle strutturate e restituisce anche metadata `storage`.
 
 Le sezioni primarie coperte da PostgreSQL sono:
 
@@ -103,22 +104,22 @@ Il modello SQL dei device è già pronto come destinazione strutturata, ma il pr
 prototipo_backend/data/scale-connection.json
 ```
 
-Il frontend non legge direttamente quel file: passa sempre da `GET /api/devices/state` e dalle route `/api/scale/*`.
+Il frontend non legge direttamente quel file: passa sempre da `GET /nutritrack/api/devices/state` e dalle route `/nutritrack/api/scale/*`.
 
 ## Verifica minima
 
 Dopo il bootstrap controllo:
 
-1. `GET /api/database/status`
-2. `GET /api/nutritrack/state`
-3. `PUT /api/nutritrack/state` per un primo salvataggio/backfill
+1. `GET /nutritrack/api/database/status`
+2. `GET /nutritrack/api/nutritrack/state`
+3. `PUT /nutritrack/api/nutritrack/state` per un primo salvataggio/backfill
 4. popolamento delle tabelle principali
 5. `npm run verify:postgres-primary`
 
 Lo script `verify:postgres-primary` verifica che:
 
 - il database sia in modalità `postgres_primary`;
-- `GET /api/nutritrack/state` abbia `primarySource=postgres_primary`;
+- `GET /nutritrack/api/nutritrack/state` abbia `primarySource=postgres_primary`;
 - `profile`, `nutrition`, `grocery`, `progress`, `recipes` e `datasets` risultino coperte da PostgreSQL.
 
 Per lo smoke test locale senza PostgreSQL uso:

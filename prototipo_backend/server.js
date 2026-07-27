@@ -37,13 +37,14 @@ const {
   updateScalePermissions,
 } = require("./scale");
 
-const HOST = process.env.HOST || "0.0.0.0";
+const HOST = process.env.HOST || "127.0.0.1";
 const PORT = Number(process.env.PORT || 3000);
 const HTTPS_ENABLED = process.env.HTTPS === "1";
 const HTTPS_KEY_PATH = process.env.HTTPS_KEY_PATH || path.join(__dirname, "certs", "local-key.pem");
 const HTTPS_CERT_PATH = process.env.HTTPS_CERT_PATH || path.join(__dirname, "certs", "local-cert.pem");
 const repositoryRoot = path.resolve(__dirname, "..");
 const frontendRoot = path.join(repositoryRoot, "frontend");
+const APP_BASE_PATH = normalizeAppBasePath(process.env.NUTRITRACK_BASE_PATH || "/nutritrack");
 
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -87,6 +88,44 @@ function sendJson(response, statusCode, payload, extraHeaders = {}) {
     ...extraHeaders,
   });
   response.end(JSON.stringify(payload));
+}
+
+function normalizeAppBasePath(value) {
+  const rawValue = String(value || "").trim();
+
+  if (!rawValue || rawValue === "/") {
+    return "";
+  }
+
+  return `/${rawValue.replace(/^\/+|\/+$/g, "")}`;
+}
+
+function resolveRequestPath(urlPath) {
+  if (!APP_BASE_PATH) {
+    return {
+      path: urlPath,
+      isBasePathRequest: false,
+    };
+  }
+
+  if (urlPath === APP_BASE_PATH) {
+    return {
+      path: "/",
+      isBasePathRequest: true,
+    };
+  }
+
+  if (urlPath.startsWith(`${APP_BASE_PATH}/`)) {
+    return {
+      path: urlPath.slice(APP_BASE_PATH.length) || "/",
+      isBasePathRequest: true,
+    };
+  }
+
+  return {
+    path: urlPath,
+    isBasePathRequest: false,
+  };
 }
 
 function cloneJson(value) {
@@ -143,6 +182,9 @@ function buildDevicesStatePayload(savedDevicesState = {}) {
 function sendFile(response, filePath) {
   const extension = path.extname(filePath).toLowerCase();
   const contentType = CONTENT_TYPES[extension] || "application/octet-stream";
+  const cacheControl = [".html", ".js", ".css"].includes(extension)
+    ? "no-cache"
+    : "public, max-age=3600";
 
   fs.readFile(filePath, (error, fileContent) => {
     if (error) {
@@ -151,7 +193,10 @@ function sendFile(response, filePath) {
     }
 
     console.log("[Server] Invio file statico.", { filePath });
-    response.writeHead(200, { "Content-Type": contentType });
+    response.writeHead(200, {
+      "Content-Type": contentType,
+      "Cache-Control": cacheControl,
+    });
     response.end(fileContent);
   });
 }
@@ -1325,11 +1370,11 @@ function handleDatabaseStatus(response) {
   });
 }
 
-async function handleOpenFoodFactsProduct(requestUrl, response) {
+async function handleOpenFoodFactsProduct(urlPath, response) {
   try {
-    const barcode = sanitizeBarcode(requestUrl.pathname.split("/").pop());
+    const barcode = sanitizeBarcode(urlPath.split("/").pop());
     console.log("[Server] Richiesta OpenFoodFacts ricevuta.", {
-      path: requestUrl.pathname,
+      path: urlPath,
       barcode
     });
 
@@ -1517,10 +1562,21 @@ async function handleScaleClientMeasurement(request, response) {
 
 const requestHandler = async (request, response) => {
   const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+  const routedRequest = resolveRequestPath(requestUrl.pathname);
+  const requestPath = routedRequest.path;
   console.log("[Server] Richiesta HTTP in ingresso.", {
     method: request.method,
-    path: requestUrl.pathname
+    path: requestUrl.pathname,
+    routePath: requestPath
   });
+
+  if (request.method === "GET" && APP_BASE_PATH && requestUrl.pathname === APP_BASE_PATH) {
+    response.writeHead(308, {
+      Location: `${APP_BASE_PATH}/`,
+    });
+    response.end();
+    return;
+  }
 
   if (request.method === "OPTIONS") {
     response.writeHead(204, {
@@ -1532,103 +1588,103 @@ const requestHandler = async (request, response) => {
     return;
   }
 
-  if (request.method === "GET" && requestUrl.pathname === "/api/auth/session") {
+  if (request.method === "GET" && requestPath === "/api/auth/session") {
     await handleAuthSessionRead(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/auth/register") {
+  if (request.method === "POST" && requestPath === "/api/auth/register") {
     await handleAuthRegister(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/auth/login") {
+  if (request.method === "POST" && requestPath === "/api/auth/login") {
     await handleAuthLogin(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/auth/logout") {
+  if (request.method === "POST" && requestPath === "/api/auth/logout") {
     await handleAuthLogout(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/chat") {
+  if (request.method === "POST" && requestPath === "/api/chat") {
     await handleApiChat(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/recipes/assistant/chat") {
+  if (request.method === "POST" && requestPath === "/api/recipes/assistant/chat") {
     await handleRecipesAssistantChat(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/recipes/generate") {
+  if (request.method === "POST" && requestPath === "/api/recipes/generate") {
     await handleApiRecipeGenerate(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/recipes/apply-to-diet") {
+  if (request.method === "POST" && requestPath === "/api/recipes/apply-to-diet") {
     await handleApplyRecipeToDiet(request, response);
     return;
   }
 
-  if (request.method === "GET" && requestUrl.pathname === "/api/nutritrack/state") {
+  if (request.method === "GET" && requestPath === "/api/nutritrack/state") {
     await handleNutriTrackStateRead(request, response);
     return;
   }
 
-  if (request.method === "PUT" && requestUrl.pathname === "/api/nutritrack/state") {
+  if (request.method === "PUT" && requestPath === "/api/nutritrack/state") {
     await handleNutriTrackStateWrite(request, response);
     return;
   }
 
-  if (request.method === "GET" && requestUrl.pathname === "/api/database/status") {
+  if (request.method === "GET" && requestPath === "/api/database/status") {
     handleDatabaseStatus(response);
     return;
   }
 
-  if (request.method === "GET" && requestUrl.pathname === "/api/devices/state") {
+  if (request.method === "GET" && requestPath === "/api/devices/state") {
     await handleDevicesStateRead(request, response);
     return;
   }
 
-  if (request.method === "GET" && requestUrl.pathname === "/api/scale/status") {
+  if (request.method === "GET" && requestPath === "/api/scale/status") {
     await handleScaleStatus(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/scale/connect") {
+  if (request.method === "POST" && requestPath === "/api/scale/connect") {
     await handleScaleConnect(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/scale/sync") {
+  if (request.method === "POST" && requestPath === "/api/scale/sync") {
     await handleScaleSync(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/scale/disconnect") {
+  if (request.method === "POST" && requestPath === "/api/scale/disconnect") {
     await handleScaleDisconnect(request, response);
     return;
   }
 
-  if (request.method === "PUT" && requestUrl.pathname === "/api/scale/permissions") {
+  if (request.method === "PUT" && requestPath === "/api/scale/permissions") {
     await handleScalePermissionsUpdate(request, response);
     return;
   }
 
-  if (request.method === "POST" && requestUrl.pathname === "/api/scale/client-measurement") {
+  if (request.method === "POST" && requestPath === "/api/scale/client-measurement") {
     await handleScaleClientMeasurement(request, response);
     return;
   }
 
-  if (request.method === "GET" && requestUrl.pathname.startsWith("/api/openfoodfacts/product/")) {
-    await handleOpenFoodFactsProduct(requestUrl, response);
+  if (request.method === "GET" && requestPath.startsWith("/api/openfoodfacts/product/")) {
+    await handleOpenFoodFactsProduct(requestPath, response);
     return;
   }
 
   if (request.method === "GET") {
-    const staticPath = resolveStaticPath(requestUrl.pathname);
+    const staticPath = resolveStaticPath(requestPath);
 
     if (!staticPath) {
       sendJson(response, 403, { error: "Percorso non consentito." });
@@ -1664,10 +1720,11 @@ function createServer() {
 
 function getNetworkUrls() {
   const protocol = HTTPS_ENABLED ? "https" : "http";
-  const urls = [`${protocol}://localhost:${PORT}`];
+  const displayPath = APP_BASE_PATH || "/";
+  const urls = [`${protocol}://localhost:${PORT}${displayPath}`];
 
   if (HOST !== "0.0.0.0") {
-    urls.unshift(`${protocol}://${HOST}:${PORT}`);
+    urls.unshift(`${protocol}://${HOST}:${PORT}${displayPath}`);
     return urls;
   }
 
@@ -1680,7 +1737,7 @@ function getNetworkUrls() {
         return;
       }
 
-      const candidate = `${protocol}://${entry.address}:${PORT}`;
+      const candidate = `${protocol}://${entry.address}:${PORT}${displayPath}`;
 
       if (!seen.has(candidate)) {
         seen.add(candidate);

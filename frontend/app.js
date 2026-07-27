@@ -757,7 +757,9 @@ async function fetchOpenFoodFactsProduct(barcode) {
     return cachedProduct;
   }
 
-  const response = await fetch(`/api/openfoodfacts/product/${normalizedBarcode}`);
+  const response = await fetch(
+    window.NutriTrackBootstrap.buildNutriTrackApiPath(`/api/openfoodfacts/product/${normalizedBarcode}`)
+  );
 
   if (!response.ok) {
     const errorPayload = await response.json().catch(() => null);

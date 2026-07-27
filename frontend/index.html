@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/nutritrack/" />
     <title>NutriTrack Prototype</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,6 +13,9 @@
     />
     <link rel="stylesheet" href="mobile-style.css?v=20260706" />
     <link rel="stylesheet" href="desktop.css?v=20260706" />
+    <script>
+      window.NUTRITRACK_BASE_PATH = "/nutritrack";
+    </script>
   </head>
   <body>
     <section class="auth-shell" data-auth-shell hidden>
@@ -838,18 +842,18 @@
       </div>
     </div>
 
-    <script src="scripts/data-config.js"></script>
-    <script src="scripts/bootstrap.js"></script>
-    <script src="scripts/shared-utils.js"></script>
-    <script src="scripts/state.js"></script>
-    <script src="scripts/navigation.js"></script>
-    <script src="app.js"></script>
-    <script src="scripts/auth.js"></script>
-    <script src="scripts/grocery.js"></script>
-    <script src="scripts/devices.js"></script>
-    <script src="scripts/progress.js"></script>
-    <script src="scripts/recipes.js"></script>
-    <script src="scripts/profile.js"></script>
+    <script src="scripts/data-config.js?v=20260727b"></script>
+    <script src="scripts/bootstrap.js?v=20260727b"></script>
+    <script src="scripts/shared-utils.js?v=20260727b"></script>
+    <script src="scripts/state.js?v=20260727b"></script>
+    <script src="scripts/navigation.js?v=20260727b"></script>
+    <script src="app.js?v=20260727b"></script>
+    <script src="scripts/auth.js?v=20260727b"></script>
+    <script src="scripts/grocery.js?v=20260727b"></script>
+    <script src="scripts/devices.js?v=20260727b"></script>
+    <script src="scripts/progress.js?v=20260727b"></script>
+    <script src="scripts/recipes.js?v=20260727b"></script>
+    <script src="scripts/profile.js?v=20260727b"></script>
     <script>
       window.initializeNutriTrackApp?.();
     </script>

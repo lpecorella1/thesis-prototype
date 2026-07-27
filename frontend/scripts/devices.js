@@ -1,9 +1,10 @@
-const DEVICES_STATE_API_PATH = "/api/devices/state";
-const SCALE_CONNECT_API_PATH = "/api/scale/connect";
-const SCALE_SYNC_API_PATH = "/api/scale/sync";
-const SCALE_DISCONNECT_API_PATH = "/api/scale/disconnect";
-const SCALE_PERMISSIONS_API_PATH = "/api/scale/permissions";
-const SCALE_CLIENT_MEASUREMENT_API_PATH = "/api/scale/client-measurement";
+const buildDevicesApiPath = window.NutriTrackBootstrap.buildNutriTrackApiPath;
+const DEVICES_STATE_API_PATH = buildDevicesApiPath("/api/devices/state");
+const SCALE_CONNECT_API_PATH = buildDevicesApiPath("/api/scale/connect");
+const SCALE_SYNC_API_PATH = buildDevicesApiPath("/api/scale/sync");
+const SCALE_DISCONNECT_API_PATH = buildDevicesApiPath("/api/scale/disconnect");
+const SCALE_PERMISSIONS_API_PATH = buildDevicesApiPath("/api/scale/permissions");
+const SCALE_CLIENT_MEASUREMENT_API_PATH = buildDevicesApiPath("/api/scale/client-measurement");
 
 const devicesRuntime = {
   isHydratingDevices: false,

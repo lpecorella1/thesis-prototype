@@ -1,4 +1,20 @@
 const DEFAULT_BASE_URL = process.env.NUTRITRACK_BASE_URL || "http://127.0.0.1:3000";
+const DEFAULT_BASE_PATH =
+  process.env.NUTRITRACK_BASE_PATH === undefined ? "/nutritrack" : process.env.NUTRITRACK_BASE_PATH;
+
+function normalizeBasePath(value) {
+  const rawValue = String(value || "").trim();
+
+  if (!rawValue || rawValue === "/") {
+    return "";
+  }
+
+  return `/${rawValue.replace(/^\/+|\/+$/g, "")}`;
+}
+
+function buildApiUrl(path) {
+  return `${DEFAULT_BASE_URL}${normalizeBasePath(DEFAULT_BASE_PATH)}${path}`;
+}
 
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
@@ -19,8 +35,8 @@ function assert(condition, message) {
 }
 
 async function main() {
-  const databaseStatusPayload = await fetchJson(`${DEFAULT_BASE_URL}/api/database/status`);
-  const statePayload = await fetchJson(`${DEFAULT_BASE_URL}/api/nutritrack/state`);
+  const databaseStatusPayload = await fetchJson(buildApiUrl("/api/database/status"));
+  const statePayload = await fetchJson(buildApiUrl("/api/nutritrack/state"));
 
   const database = databaseStatusPayload.database || {};
   const storage = statePayload.storage || {};
@@ -42,6 +58,7 @@ async function main() {
       {
         ok: true,
         baseUrl: DEFAULT_BASE_URL,
+        basePath: normalizeBasePath(DEFAULT_BASE_PATH) || "/",
         databaseMode: database.mode,
         primarySource: storage.primarySource,
         postgresPrimarySections: storage.postgresPrimarySections,
@@ -60,6 +77,7 @@ main().catch((error) => {
       {
         ok: false,
         baseUrl: DEFAULT_BASE_URL,
+        basePath: normalizeBasePath(DEFAULT_BASE_PATH) || "/",
         error: error.message,
       },
       null,

@@ -20,6 +20,25 @@ const authModeButtons = document.querySelectorAll("[data-auth-mode-toggle]");
 const authLogoutButton = document.querySelector("[data-auth-logout]");
 const sessionUserLabel = document.querySelector("[data-session-user-label]");
 const authRegisterOnlyFields = document.querySelectorAll("[data-auth-register-only]");
+const buildAuthApiPath = window.NutriTrackBootstrap.buildNutriTrackApiPath;
+
+async function readAuthJsonResponse(response, endpointLabel) {
+  const responseText = await response.text();
+
+  if (!responseText) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(responseText);
+  } catch (error) {
+    const contentPreview = responseText.replace(/\s+/g, " ").trim().slice(0, 120);
+    throw new Error(
+      `Risposta non JSON da ${endpointLabel} (${response.status}). ` +
+        `Controlla il reverse proxy: ${contentPreview || "corpo vuoto"}.`
+    );
+  }
+}
 
 function setAuthFeedback(message, tone = "error") {
   if (!authFeedback) {
@@ -139,7 +158,8 @@ function applyAuthenticationUi() {
 }
 
 async function fetchAuthSessionState() {
-  const response = await fetch("/api/auth/session", {
+  const endpoint = buildAuthApiPath("/api/auth/session");
+  const response = await fetch(endpoint, {
     method: "GET",
     credentials: "same-origin",
     headers: {
@@ -147,7 +167,7 @@ async function fetchAuthSessionState() {
     },
   });
 
-  const payload = await response.json();
+  const payload = await readAuthJsonResponse(response, endpoint);
 
   if (!response.ok) {
     throw new Error(payload.error || `Verifica sessione fallita (${response.status}).`);
@@ -187,7 +207,8 @@ async function submitAuthForm() {
   setAuthFeedback(mode === "register" ? "Creazione account in corso..." : "Accesso in corso...", "success");
 
   try {
-    const response = await fetch(mode === "register" ? "/api/auth/register" : "/api/auth/login", {
+    const endpoint = buildAuthApiPath(mode === "register" ? "/api/auth/register" : "/api/auth/login");
+    const response = await fetch(endpoint, {
       method: "POST",
       credentials: "same-origin",
       headers: {
@@ -196,7 +217,7 @@ async function submitAuthForm() {
       },
       body: JSON.stringify(payload),
     });
-    const result = await response.json();
+    const result = await readAuthJsonResponse(response, endpoint);
 
     if (!response.ok) {
       throw new Error(result.error || `Autenticazione fallita (${response.status}).`);
@@ -218,7 +239,7 @@ async function handleLogout() {
   }
 
   try {
-    await fetch("/api/auth/logout", {
+    await fetch(buildAuthApiPath("/api/auth/logout"), {
       method: "POST",
       credentials: "same-origin",
       headers: {

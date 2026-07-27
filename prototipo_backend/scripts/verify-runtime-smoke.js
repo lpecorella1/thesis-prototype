@@ -5,6 +5,8 @@ const { spawn } = require("child_process");
 
 const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = Number(process.env.NUTRITRACK_SMOKE_PORT || "3011");
+const DEFAULT_BASE_PATH =
+  process.env.NUTRITRACK_BASE_PATH === undefined ? "/nutritrack" : process.env.NUTRITRACK_BASE_PATH;
 
 function assert(condition, message) {
   if (!condition) {
@@ -24,12 +26,42 @@ async function fetchJson(url, options = {}) {
   return payload;
 }
 
+async function fetchText(url, options = {}) {
+  const response = await fetch(url, options);
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`${options.method || "GET"} ${url} failed with ${response.status}: ${text}`);
+  }
+
+  return text;
+}
+
+function normalizeBasePath(value) {
+  const rawValue = String(value || "").trim();
+
+  if (!rawValue || rawValue === "/") {
+    return "";
+  }
+
+  return `/${rawValue.replace(/^\/+|\/+$/g, "")}`;
+}
+
+function buildApiUrl(baseUrl, path) {
+  return `${baseUrl}${normalizeBasePath(DEFAULT_BASE_PATH)}${path}`;
+}
+
+function buildAppUrl(baseUrl, path = "/") {
+  const normalizedPath = String(path || "").startsWith("/") ? String(path || "") : `/${path || ""}`;
+  return `${baseUrl}${normalizeBasePath(DEFAULT_BASE_PATH)}${normalizedPath}`;
+}
+
 async function waitForServer(baseUrl, timeoutMs = 8000) {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < timeoutMs) {
     try {
-      await fetchJson(`${baseUrl}/api/database/status`);
+      await fetchJson(buildApiUrl(baseUrl, "/api/database/status"));
       return;
     } catch (error) {
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -51,6 +83,7 @@ async function main() {
       NUTRITRACK_USE_POSTGRES: "0",
       NUTRITRACK_APP_MODE: "single-user-local",
       NUTRITRACK_ENABLE_DEVELOPMENT_SEED: "0",
+      NUTRITRACK_BASE_PATH: DEFAULT_BASE_PATH,
       NUTRITRACK_DATA_DIR: tempDataDir,
     },
     stdio: "ignore",
@@ -59,10 +92,12 @@ async function main() {
   try {
     await waitForServer(baseUrl);
 
-    const databaseStatusPayload = await fetchJson(`${baseUrl}/api/database/status`);
-    const statePayload = await fetchJson(`${baseUrl}/api/nutritrack/state`);
-    const devicesPayload = await fetchJson(`${baseUrl}/api/devices/state`);
-    const clientScalePayload = await fetchJson(`${baseUrl}/api/scale/client-measurement`, {
+    const databaseStatusPayload = await fetchJson(buildApiUrl(baseUrl, "/api/database/status"));
+    const indexMarkup = await fetchText(buildAppUrl(baseUrl, "/"));
+    const bootstrapScript = await fetchText(buildAppUrl(baseUrl, "/scripts/bootstrap.js"));
+    const statePayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutritrack/state"));
+    const devicesPayload = await fetchJson(buildApiUrl(baseUrl, "/api/devices/state"));
+    const clientScalePayload = await fetchJson(buildApiUrl(baseUrl, "/api/scale/client-measurement"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -83,7 +118,7 @@ async function main() {
         },
       }),
     });
-    const writePayload = await fetchJson(`${baseUrl}/api/nutritrack/state`, {
+    const writePayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutritrack/state"), {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -110,9 +145,12 @@ async function main() {
         },
       }),
     });
-    const readBackPayload = await fetchJson(`${baseUrl}/api/nutritrack/state`);
+    const readBackPayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutritrack/state"));
 
     assert(databaseStatusPayload.database?.mode === "file_only", "Expected file_only mode during smoke test.");
+    assert(indexMarkup.includes("window.NUTRITRACK_BASE_PATH"), "Expected prefixed app shell markup.");
+    assert(indexMarkup.includes("scripts/auth.js?v="), "Expected cache-busted frontend scripts.");
+    assert(bootstrapScript.includes("buildNutriTrackApiPath"), "Expected prefixed frontend bootstrap helper.");
     assert(databaseStatusPayload.runtime?.identityMode === "single_user_local", "Expected single_user_local mode.");
     assert(
       databaseStatusPayload.runtime?.developmentSeedEnabled === false,
@@ -133,6 +171,7 @@ async function main() {
         {
           ok: true,
           baseUrl,
+          basePath: normalizeBasePath(DEFAULT_BASE_PATH) || "/",
           runtime: databaseStatusPayload.runtime,
           databaseMode: databaseStatusPayload.database?.mode,
         },
