@@ -259,6 +259,21 @@ function renderRecipeResult() {
   `;
 }
 
+function renderRecipeGenerationError(error) {
+  const container = document.querySelector("[data-recipe-result]");
+
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = `
+    <article class="empty-state">
+      <h3>Generazione non riuscita</h3>
+      <p>${escapeHtml(error?.message || "Il generatore AI non ha restituito una ricetta valida.")}</p>
+    </article>
+  `;
+}
+
 function renderRecipeHistory() {
   const container = document.querySelector("[data-recipe-history]");
 
@@ -587,7 +602,8 @@ function setupRecipeGeneratorForm(generatorForm) {
       saveRecipeToHistory(appState.recipes.currentRecipe);
       saveState();
       renderRecipes();
-    } catch {
+    } catch (error) {
+      renderRecipeGenerationError(error);
     } finally {
       setRecipeGeneratorPendingState(generatorForm, false);
     }

@@ -1,9 +1,9 @@
 require("./backend-env");
 
-const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-const apiKey = process.env.AZURE_OPENAI_API_KEY;
-const deployment = process.env.AZURE_OPENAI_DEPLOYMENT;
-const apiVersion = process.env.AZURE_OPENAI_API_VERSION || "2024-05-01-preview";
+const endpoint = String(process.env.AZURE_OPENAI_ENDPOINT || "").trim().replace(/\/+$/, "");
+const apiKey = String(process.env.AZURE_OPENAI_API_KEY || "").trim();
+const deployment = String(process.env.AZURE_OPENAI_DEPLOYMENT || "").trim();
+const apiVersion = String(process.env.AZURE_OPENAI_API_VERSION || "2024-05-01-preview").trim();
 
 function ensureAzureConfig() {
   if (!endpoint || !apiKey || !deployment) {
@@ -13,35 +13,57 @@ function ensureAzureConfig() {
   }
 }
 
-async function createAzureChatCompletion(messages) {
+async function createAzureChatCompletion(messages, options = {}) {
   ensureAzureConfig();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const requestBody = {
+    messages,
+    max_tokens: options.maxTokens || 800,
+    temperature: options.temperature ?? 0.7,
+  };
+
+  if (options.responseFormat) {
+    requestBody.response_format = options.responseFormat;
+  }
 
   try {
     const response = await fetch(
-      `${endpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`,
+      `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "api-key": apiKey
         },
-        body: JSON.stringify({
-          messages,
-          max_tokens: 800,
-          temperature: 0.7
-        }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal
       }
     );
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data = null;
+
+    try {
+      data = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      data = {
+        error: {
+          message: responseText.slice(0, 500) || "Risposta Azure OpenAI non JSON.",
+        },
+      };
+    }
 
     if (!response.ok) {
       const error = new Error("Errore Azure OpenAI.");
+      error.statusCode = response.status;
+      error.statusText = response.statusText;
       error.details = data;
       throw error;
+    }
+
+    if (!data || typeof data !== "object") {
+      throw new Error("Risposta Azure OpenAI non JSON.");
     }
 
     return data;

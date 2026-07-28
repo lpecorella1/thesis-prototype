@@ -963,6 +963,19 @@ function normalizeGeneratedRecipePayload(payload, filters, context = {}) {
   };
 }
 
+function isAzureResponseFormatUnsupported(error) {
+  const message = String(error?.details?.error?.message || error?.message || "").toLowerCase();
+  const code = String(error?.details?.error?.code || "").toLowerCase();
+
+  return (
+    error?.statusCode === 400 &&
+    (message.includes("response_format") ||
+      message.includes("json_object") ||
+      message.includes("not supported") ||
+      code.includes("unsupported"))
+  );
+}
+
 async function handleAuthSessionRead(request, response) {
   try {
     const runtime = getRuntimeConfig();
@@ -1244,12 +1257,18 @@ async function handleRecipesAssistantChat(request, response) {
 }
 
 async function handleApiRecipeGenerate(request, response) {
+  let errorPhase = "init";
+
   try {
+    errorPhase = "read-body";
     const body = await readJsonBody(request);
     const filters = sanitizeRecipeGenerationFilters(body.filters && typeof body.filters === "object" ? body.filters : {});
     const legacyContext = body.context && typeof body.context === "object" ? body.context : {};
+    errorPhase = "resolve-user";
     const userContext = await resolveRequestUserContext(request);
+    errorPhase = "read-state";
     const nutritrackState = await getNutriTrackState(userContext);
+    errorPhase = "build-context";
     const context = buildRecipesAssistantContext({
       state: nutritrackState,
       legacyContext,
@@ -1268,25 +1287,65 @@ async function handleApiRecipeGenerate(request, response) {
       recentMeals: Array.isArray(context.recentMeals) ? context.recentMeals.length : 0,
     });
 
-    const completion = await createAzureChatCompletion(buildRecipeGenerationMessages(filters, context));
+    errorPhase = "azure-completion";
+    const generationMessages = buildRecipeGenerationMessages(filters, context);
+    let completion;
+
+    try {
+      completion = await createAzureChatCompletion(generationMessages, {
+        maxTokens: 1600,
+        responseFormat: { type: "json_object" },
+      });
+    } catch (error) {
+      if (!isAzureResponseFormatUnsupported(error)) {
+        throw error;
+      }
+
+      console.warn("[Server] Generazione ricetta: response_format non supportato, riprovo senza JSON mode.", {
+        azureCode: error.details?.error?.code || "",
+        message: error.details?.error?.message || error.message,
+      });
+      completion = await createAzureChatCompletion(generationMessages, {
+        maxTokens: 1600,
+      });
+    }
+
     const rawContent = completion.choices?.[0]?.message?.content;
+    console.log("[Server] Generazione ricetta: risposta Azure ricevuta.", {
+      finishReason: completion.choices?.[0]?.finish_reason || "",
+      contentLength: rawContent ? rawContent.length : 0,
+      completionTokens: completion.usage?.completion_tokens ?? null,
+      totalTokens: completion.usage?.total_tokens ?? null,
+    });
 
     if (!rawContent) {
       sendJson(response, 502, { error: "Risposta Azure OpenAI non valida." });
       return;
     }
 
+    errorPhase = "parse-json";
     const parsedPayload = parseJsonObjectFromCompletion(rawContent);
+    errorPhase = "normalize-recipe";
     const recipe = normalizeGeneratedRecipePayload(parsedPayload, filters, context);
+    errorPhase = "send-response";
     sendJson(response, 200, {
       recipe,
       usage: completion.usage || null,
     });
   } catch (error) {
     const azureError = error.details?.error?.message;
-    console.error("[Server] Errore nella route /api/recipes/generate.", azureError || error.message);
-    sendJson(response, error.statusCode || 500, {
+    const statusCode = error.statusCode || (azureError ? 502 : 500);
+    console.error("[Server] Errore nella route /api/recipes/generate.", {
+      phase: errorPhase,
+      statusCode,
+      azureStatusCode: error.statusCode || null,
+      azureStatusText: error.statusText || "",
+      azureCode: error.details?.error?.code || "",
+      message: azureError || error.message,
+    });
+    sendJson(response, statusCode, {
       error: azureError || error.message || "Errore interno del server.",
+      phase: errorPhase,
     });
   }
 }
