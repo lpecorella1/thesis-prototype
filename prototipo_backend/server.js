@@ -1293,7 +1293,7 @@ async function handleApiRecipeGenerate(request, response) {
 
     try {
       completion = await createAzureChatCompletion(generationMessages, {
-        maxTokens: 1600,
+        maxTokens: 1024,
         responseFormat: { type: "json_object" },
       });
     } catch (error) {
@@ -1306,7 +1306,7 @@ async function handleApiRecipeGenerate(request, response) {
         message: error.details?.error?.message || error.message,
       });
       completion = await createAzureChatCompletion(generationMessages, {
-        maxTokens: 1600,
+        maxTokens: 1024,
       });
     }
 

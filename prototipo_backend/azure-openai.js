@@ -19,7 +19,7 @@ async function createAzureChatCompletion(messages, options = {}) {
   const timeoutId = setTimeout(() => controller.abort(), 25000);
   const requestBody = {
     messages,
-    max_tokens: options.maxTokens || 800,
+    max_tokens: options.maxTokens || 1600,
     temperature: options.temperature ?? 0.7,
   };
 
