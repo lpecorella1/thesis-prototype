@@ -1,6 +1,6 @@
 # NutriTrack
 
-Applicazione web per gestire alimentazione, dispensa, spesa, ricette e progressi nutrizionali in un unico flusso. Il progetto nasce come prototipo tesi, la parte applicativa è organizzata come base locale strutturata: frontend statico, backend Node.js, persistenza PostgreSQL opzionale e integrazioni AI.
+Applicazione web per gestire alimentazione, dispensa, spesa, ricette e progressi nutrizionali in un unico flusso. Il progetto nasce come prototipo tesi; il percorso operativo principale è il deploy Docker su server con PostgreSQL e autenticazione, mentre l'avvio locale diretto resta disponibile come fallback di sviluppo/debug.
 
 ## Cosa contiene
 
@@ -22,31 +22,22 @@ Il nome `prototipo_backend` è ancora storico: per ora lo mantengo per non rompe
 - provider bilancia `scale` con stato backend e misurazioni lato client;
 - persistenza su file per sviluppo rapido oppure PostgreSQL come sorgente primaria strutturata.
 
-## Avvio locale
+## Avvio su server/Docker
 
-```bash
-cd prototipo_backend
-cp .env.example .env
-npm install
-npm start
-```
-
-Poi apro l'app su:
-
-```text
-http://localhost:3000/nutritrack
-```
-
-## Avvio con Docker e OrbStack
-
-OrbStack espone lo stesso comando Docker/Compose standard, quindi dal root del progetto posso avviare app e PostgreSQL insieme:
+Questo è il percorso raccomandato per test, demo e uso su Mercurio. Dal root del progetto avvio app e PostgreSQL insieme:
 
 ```bash
 cp .env.docker.example .env
 docker compose up --build
 ```
 
-Poi apro l'app su:
+Su Mercurio l'app viene pubblicata sotto:
+
+```text
+https://mercurio.isti.cnr.it/nutritrack
+```
+
+In locale con Docker apro invece:
 
 ```text
 http://localhost:3000/nutritrack
@@ -65,12 +56,6 @@ Il base path applicativo predefinito è:
 NUTRITRACK_BASE_PATH=/nutritrack
 ```
 
-Quindi su un reverse proxy condiviso posso pubblicare il servizio sotto:
-
-```text
-https://mercurio.isti.cnr.it/nutritrack
-```
-
 All'avvio del container `app`, lo script `npm run bootstrap:postgres-state` inizializza lo stato minimo in PostgreSQL se le tabelle sono ancora vuote.
 
 Le migrazioni vengono applicate automaticamente quando il volume PostgreSQL viene creato per la prima volta. Se devo ricreare il database da zero:
@@ -82,6 +67,23 @@ docker compose up --build
 
 Per usare Azure OpenAI nel container compilo le variabili `AZURE_OPENAI_*` nel file `.env` creato da `.env.docker.example`.
 
+## Avvio locale diretto
+
+Questo percorso resta disponibile solo per sviluppo rapido o debug quando non voglio passare da Docker/Mercurio:
+
+```bash
+cd prototipo_backend
+cp .env.example .env
+npm install
+npm start
+```
+
+Poi apro l'app su:
+
+```text
+http://localhost:3000/nutritrack
+```
+
 Per provarla da telefono sulla stessa rete uso:
 
 ```bash
@@ -92,11 +94,14 @@ Lo script mobile avvia HTTPS locale e rigenera il certificato se l'IP della rete
 
 ## Configurazione
 
-Le variabili di riferimento sono in `prototipo_backend/.env.example`.
+I file di esempio hanno ruoli diversi:
+
+- `.env.docker.example`: riferimento principale per Docker/Mercurio, copiato in `.env` nella root;
+- `prototipo_backend/.env.example`: fallback per avvio locale diretto con `npm start`, copiato in `prototipo_backend/.env`.
 
 Le più importanti sono:
 
-- `NUTRITRACK_APP_MODE=single-user-local|authenticated-user`
+- `NUTRITRACK_APP_MODE=authenticated-user|single-user-local`
 - `NUTRITRACK_BASE_PATH=/nutritrack`
 - `NUTRITRACK_USE_POSTGRES=0|1`
 - `DATABASE_URL=postgresql://...`
@@ -104,7 +109,7 @@ Le più importanti sono:
 - `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`
 - `SCALE_PROVIDER=mock`
 
-Uso `single-user-local` quando voglio lavorare velocemente senza login. Uso `authenticated-user` quando voglio provare registrazione, login, cookie di sessione e persistenza per utente su PostgreSQL.
+Uso `authenticated-user` su Mercurio/Docker quando voglio provare registrazione, login, cookie di sessione e persistenza per utente su PostgreSQL. Tengo `single-user-local` solo per sviluppo locale rapido senza login.
 
 ## Database
 

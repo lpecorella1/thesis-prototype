@@ -6,7 +6,7 @@ Uso questa cartella come riferimento canonico per la struttura dati PostgreSQL d
 
 - `migrations/`: migrazioni SQL ordinate e incrementali.
 - `nutritrack-schema.sql`: schema completo aggiornato alla migrazione più recente.
-- `bootstrap-local-postgres.sh`: script di bootstrap per il database locale.
+- `bootstrap-local-postgres.sh`: script di bootstrap per il database locale diretto, usato solo fuori da Docker.
 
 ## Cosa salvo in PostgreSQL
 
@@ -30,9 +30,22 @@ La tabella `device_connections` usa `is_mock DEFAULT FALSE`: quando lavoro con u
 3. Tengo separati dati applicativi, integrazioni device e cache esterne.
 4. Mantengo una migrazione graduale: il backend può ancora lavorare in locale senza PostgreSQL, ma quando `NUTRITRACK_USE_POSTGRES=1` la persistenza strutturata diventa primaria.
 
-## Bootstrap locale
+## Bootstrap Docker/Mercurio
 
-Prima configuro `prototipo_backend/.env` partendo da `.env.example`, poi avvio PostgreSQL e lancio:
+Nel percorso principale Docker/Mercurio non lancio manualmente lo script di bootstrap locale: PostgreSQL viene avviato dal servizio `db` di `docker-compose.yml` e le migrazioni in `migrations/` vengono montate in `/docker-entrypoint-initdb.d`.
+
+Quando il volume PostgreSQL viene creato per la prima volta, Postgres applica automaticamente le migrazioni. Il container `app` esegue poi `npm run bootstrap:postgres-state` per inizializzare lo stato applicativo minimo.
+
+Per ricreare il database Docker da zero:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+## Bootstrap locale diretto
+
+Questo percorso resta utile solo per sviluppo/debug senza Docker. Prima configuro `prototipo_backend/.env` partendo da `.env.example`, poi avvio PostgreSQL e lancio:
 
 ```bash
 cd prototipo_backend
@@ -62,7 +75,7 @@ Valori minimi per usare PostgreSQL:
 DATABASE_URL=postgresql://USERNAME:PASSWORD@localhost:5432/nutritrack
 NUTRITRACK_USE_POSTGRES=1
 NUTRITRACK_BASE_PATH=/nutritrack
-NUTRITRACK_APP_MODE=single-user-local
+NUTRITRACK_APP_MODE=authenticated-user
 NUTRITRACK_LOCAL_USER_EMAIL=app-local@nutritrack.local
 ```
 
