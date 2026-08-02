@@ -978,9 +978,7 @@ function isAzureResponseFormatUnsupported(error) {
 }
 
 const PANTRY_IMPORT_SOURCE_LABELS = Object.freeze({
-  receipt: "scontrino del supermercato",
-  shopping: "foto della spesa",
-  fridge: "foto del frigorifero",
+  photo: "foto di prodotti alimentari, scontrino, spesa o frigorifero",
 });
 
 const PANTRY_IMPORT_CATEGORIES = Object.freeze([
@@ -1000,7 +998,7 @@ function normalizePantryImportCategory(value) {
 
 function normalizePantryImportSourceType(value) {
   const sourceType = String(value || "").trim();
-  return PANTRY_IMPORT_SOURCE_LABELS[sourceType] ? sourceType : "shopping";
+  return PANTRY_IMPORT_SOURCE_LABELS[sourceType] ? sourceType : "photo";
 }
 
 function normalizePantryImportConfidence(value) {
@@ -1044,7 +1042,7 @@ function sanitizePantryImportImageDataUrl(value) {
 }
 
 function buildPantryImageImportMessages(sourceType, imageDataUrl) {
-  const sourceLabel = PANTRY_IMPORT_SOURCE_LABELS[sourceType] || PANTRY_IMPORT_SOURCE_LABELS.shopping;
+  const sourceLabel = PANTRY_IMPORT_SOURCE_LABELS[sourceType] || PANTRY_IMPORT_SOURCE_LABELS.photo;
 
   return [
     {

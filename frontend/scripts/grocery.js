@@ -25,9 +25,7 @@ function removePantryItem(groceryItemId) {
 }
 
 const PANTRY_IMPORT_SOURCE_LABELS = {
-  receipt: "scontrino",
-  shopping: "spesa",
-  fridge: "frigorifero",
+  photo: "prodotti",
 };
 
 const PANTRY_IMPORT_CATEGORIES = [
@@ -85,7 +83,7 @@ function renderPantryImportReview() {
   if (pantryImportRuntime.isLoading) {
     review.innerHTML = `
       <article class="pantry-import-empty">
-        Analisi AI in corso...
+        Analisi in corso...
       </article>
     `;
     return;
@@ -104,7 +102,7 @@ function renderPantryImportReview() {
   review.innerHTML = `
     <form class="pantry-import-form" data-pantry-import-review-form novalidate>
       <div class="pantry-import-review-head">
-        <strong>Proposta AI da ${escapeHtml(getPantryImportSourceLabel())}</strong>
+        <strong>Proposta AI</strong>
         <span>${pantryImportRuntime.draftItems.length} prodotti riconosciuti</span>
       </div>
       <div class="pantry-import-items">
@@ -236,7 +234,7 @@ async function importPantryImageFile(file, sourceType) {
     pantryImportRuntime.draftItems = items;
     setPantryImportStatus(
       items.length > 0
-        ? "Controlla la proposta AI: puoi correggere la lista o rigenerarla prima del salvataggio."
+        ? "Puoi correggere la lista o rigenerarla prima del salvataggio."
         : "La foto non ha prodotto alimenti riconoscibili. Puoi riprovare con una nuova immagine."
     );
   } catch (error) {
@@ -383,7 +381,7 @@ function renderPantry() {
     pantryList.innerHTML = `
       <article class="empty-pantry">
         <h3>Nessun alimento salvato in dispensa</h3>
-        <p>Quando completi un acquisto, l'articolo comparira qui come ingrediente disponibile.</p>
+        <p>Quando completi un acquisto, l'articolo comparirà qui come ingrediente disponibile.</p>
       </article>
     `;
     return;
@@ -392,7 +390,7 @@ function renderPantry() {
   pantryList.innerHTML = `
     <div class="pantry-list-head" aria-hidden="true">
       <span>Prodotto</span>
-      <span>Quantita / scadenza</span>
+      <span>Quantità / scadenza</span>
       <span>Categoria</span>
     </div>
     <div class="pantry-list-body">
@@ -835,7 +833,7 @@ function setupGrocerySection() {
     const regenerateButton = event.target.closest("[data-pantry-import-regenerate]");
 
     if (regenerateButton && pantryImportRuntime.lastFile) {
-      importPantryImageFile(pantryImportRuntime.lastFile, pantryImportRuntime.sourceType || "shopping");
+      importPantryImageFile(pantryImportRuntime.lastFile, pantryImportRuntime.sourceType || "photo");
     }
   });
 
@@ -843,7 +841,7 @@ function setupGrocerySection() {
     const file = event.target.files?.[0];
 
     if (file) {
-      importPantryImageFile(file, pantryImportRuntime.sourceType || "shopping");
+      importPantryImageFile(file, pantryImportRuntime.sourceType || "photo");
     }
 
     event.target.value = "";
