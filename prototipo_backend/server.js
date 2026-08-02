@@ -45,6 +45,7 @@ const HTTPS_CERT_PATH = process.env.HTTPS_CERT_PATH || path.join(__dirname, "cer
 const repositoryRoot = path.resolve(__dirname, "..");
 const frontendRoot = path.join(repositoryRoot, "frontend");
 const APP_BASE_PATH = normalizeAppBasePath(process.env.NUTRITRACK_BASE_PATH || "/nutritrack");
+const MAX_JSON_BODY_BYTES = 8_000_000;
 
 const CONTENT_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -219,7 +220,7 @@ function readJsonBody(request) {
     request.on("data", (chunk) => {
       rawBody += chunk;
 
-      if (rawBody.length > 1_000_000) {
+      if (rawBody.length > MAX_JSON_BODY_BYTES) {
         reject(new Error("Body troppo grande."));
         request.destroy();
       }
@@ -976,6 +977,102 @@ function isAzureResponseFormatUnsupported(error) {
   );
 }
 
+const PANTRY_IMPORT_SOURCE_LABELS = Object.freeze({
+  receipt: "scontrino del supermercato",
+  shopping: "foto della spesa",
+  fridge: "foto del frigorifero",
+});
+
+const PANTRY_IMPORT_CATEGORIES = Object.freeze([
+  "Frutta e verdura",
+  "Latticini",
+  "Carne e pesce",
+  "Cereali",
+  "Dispensa",
+  "Surgelati",
+  "Bevande",
+]);
+
+function normalizePantryImportCategory(value) {
+  const category = String(value || "").trim();
+  return PANTRY_IMPORT_CATEGORIES.includes(category) ? category : "Dispensa";
+}
+
+function normalizePantryImportSourceType(value) {
+  const sourceType = String(value || "").trim();
+  return PANTRY_IMPORT_SOURCE_LABELS[sourceType] ? sourceType : "shopping";
+}
+
+function normalizePantryImportConfidence(value) {
+  const confidence = Number(value);
+
+  if (!Number.isFinite(confidence)) {
+    return null;
+  }
+
+  return Math.max(0, Math.min(1, confidence));
+}
+
+function normalizePantryImportItems(payload) {
+  const rawItems = Array.isArray(payload?.items) ? payload.items : [];
+
+  return rawItems
+    .map((item) => ({
+      name: String(item?.name || "").trim(),
+      quantity: String(item?.quantity || "1 confezione").trim() || "1 confezione",
+      category: normalizePantryImportCategory(item?.category),
+      expiryDate: /^\d{4}-\d{2}-\d{2}$/.test(String(item?.expiryDate || "")) ? String(item.expiryDate) : "",
+      barcode: sanitizeBarcode(item?.barcode),
+      confidence: normalizePantryImportConfidence(item?.confidence),
+    }))
+    .filter((item) => item.name)
+    .slice(0, 40);
+}
+
+function sanitizePantryImportImageDataUrl(value) {
+  const dataUrl = String(value || "").trim();
+
+  if (!/^data:image\/(png|jpe?g|webp);base64,[a-z0-9+/=\s]+$/i.test(dataUrl)) {
+    throw new Error("Formato immagine non valido.");
+  }
+
+  if (dataUrl.length > MAX_JSON_BODY_BYTES - 200_000) {
+    throw new Error("Immagine troppo grande. Scatta una foto piu leggera o riprova.");
+  }
+
+  return dataUrl.replace(/\s/g, "");
+}
+
+function buildPantryImageImportMessages(sourceType, imageDataUrl) {
+  const sourceLabel = PANTRY_IMPORT_SOURCE_LABELS[sourceType] || PANTRY_IMPORT_SOURCE_LABELS.shopping;
+
+  return [
+    {
+      role: "system",
+      content:
+        "Sei un motore di acquisizione dati per una web app nutrizionale. Devi leggere immagini alimentari e restituire solo JSON valido. Non inventare prodotti non visibili. Se un dettaglio e' incerto, usa una quantita generica e confidence bassa. Le categorie ammesse sono: Frutta e verdura, Latticini, Carne e pesce, Cereali, Dispensa, Surgelati, Bevande.",
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text:
+            `Analizza questa immagine (${sourceLabel}) e converti tutti gli alimenti riconoscibili in una proposta per la dispensa. ` +
+            "Rispondi con JSON nel formato {\"items\":[{\"name\":\"\",\"quantity\":\"\",\"category\":\"\",\"expiryDate\":\"\",\"barcode\":\"\",\"confidence\":0.0}]}. " +
+            "Usa nomi prodotto in italiano, quantita brevi, expiryDate solo se visibile nel formato YYYY-MM-DD, barcode solo se il codice numerico e' leggibile.",
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: imageDataUrl,
+          },
+        },
+      ],
+    },
+  ];
+}
+
 async function handleAuthSessionRead(request, response) {
   try {
     const runtime = getRuntimeConfig();
@@ -1457,6 +1554,58 @@ async function handleOpenFoodFactsProduct(urlPath, response) {
   }
 }
 
+async function handlePantryImageImport(request, response) {
+  try {
+    await resolveRequestUserContext(request);
+    const payload = await readJsonBody(request);
+    const sourceType = normalizePantryImportSourceType(payload?.sourceType);
+    const imageDataUrl = sanitizePantryImportImageDataUrl(payload?.image?.dataUrl || payload?.imageDataUrl);
+    const messages = buildPantryImageImportMessages(sourceType, imageDataUrl);
+    let completion;
+
+    try {
+      completion = await createAzureChatCompletion(messages, {
+        maxTokens: 1200,
+        responseFormat: { type: "json_object" },
+        temperature: 0.1,
+      });
+    } catch (error) {
+      if (!isAzureResponseFormatUnsupported(error)) {
+        throw error;
+      }
+
+      console.warn("[Server] Import dispensa: response_format non supportato, riprovo senza JSON mode.", {
+        azureCode: error.details?.error?.code || "",
+        message: error.details?.error?.message || error.message,
+      });
+      completion = await createAzureChatCompletion(messages, {
+        maxTokens: 1200,
+        temperature: 0.1,
+      });
+    }
+
+    const rawContent = completion.choices?.[0]?.message?.content;
+
+    if (!rawContent) {
+      sendJson(response, 502, { error: "Risposta Azure OpenAI non valida." });
+      return;
+    }
+
+    const parsedPayload = parseJsonObjectFromCompletion(rawContent);
+    const items = normalizePantryImportItems(parsedPayload);
+
+    sendJson(response, 200, {
+      sourceType,
+      items,
+    });
+  } catch (error) {
+    console.error("[Server] Errore import immagine dispensa.", error);
+    sendJson(response, error.statusCode || (error.message === "Formato immagine non valido." ? 400 : 502), {
+      error: error.message || "Impossibile convertire la foto in prodotti.",
+    });
+  }
+}
+
 async function handleScaleStatus(request, response) {
   try {
     const userContext = await resolveRequestUserContext(request);
@@ -1739,6 +1888,11 @@ const requestHandler = async (request, response) => {
 
   if (request.method === "GET" && requestPath.startsWith("/api/openfoodfacts/product/")) {
     await handleOpenFoodFactsProduct(requestPath, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestPath === "/api/grocery/import-image") {
+    await handlePantryImageImport(request, response);
     return;
   }
 

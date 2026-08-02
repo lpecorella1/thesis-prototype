@@ -24,6 +24,261 @@ function removePantryItem(groceryItemId) {
   appState.grocery.pantry = appState.grocery.pantry.filter((item) => item.id !== groceryItemId);
 }
 
+const PANTRY_IMPORT_SOURCE_LABELS = {
+  receipt: "scontrino",
+  shopping: "spesa",
+  fridge: "frigorifero",
+};
+
+const PANTRY_IMPORT_CATEGORIES = [
+  "Frutta e verdura",
+  "Latticini",
+  "Carne e pesce",
+  "Cereali",
+  "Dispensa",
+  "Surgelati",
+  "Bevande",
+];
+
+const pantryImportRuntime = {
+  sourceType: "",
+  lastFile: null,
+  isLoading: false,
+  draftItems: [],
+};
+
+function normalizePantryImportCategory(value) {
+  const category = String(value || "").trim();
+  return PANTRY_IMPORT_CATEGORIES.includes(category) ? category : "Dispensa";
+}
+
+function normalizePantryImportItem(item) {
+  return {
+    name: String(item?.name || "").trim(),
+    quantity: String(item?.quantity || "1 confezione").trim(),
+    expiryDate: String(item?.expiryDate || "").trim(),
+    category: normalizePantryImportCategory(item?.category),
+    barcode: sanitizeBarcode(item?.barcode),
+    confidence: Number.isFinite(Number(item?.confidence)) ? Math.max(0, Math.min(1, Number(item.confidence))) : null,
+  };
+}
+
+function setPantryImportStatus(message) {
+  const status = document.querySelector("[data-pantry-import-status]");
+
+  if (status) {
+    status.textContent = message;
+  }
+}
+
+function getPantryImportSourceLabel(sourceType = pantryImportRuntime.sourceType) {
+  return PANTRY_IMPORT_SOURCE_LABELS[sourceType] || "foto";
+}
+
+function renderPantryImportReview() {
+  const review = document.querySelector("[data-pantry-import-review]");
+
+  if (!review) {
+    return;
+  }
+
+  if (pantryImportRuntime.isLoading) {
+    review.innerHTML = `
+      <article class="pantry-import-empty">
+        Analisi AI in corso...
+      </article>
+    `;
+    return;
+  }
+
+  if (pantryImportRuntime.draftItems.length === 0) {
+    review.innerHTML = "";
+    return;
+  }
+
+  const categoryOptions = (selectedCategory) =>
+    PANTRY_IMPORT_CATEGORIES.map(
+      (category) => `<option value="${escapeHtml(category)}"${category === selectedCategory ? " selected" : ""}>${escapeHtml(category)}</option>`
+    ).join("");
+
+  review.innerHTML = `
+    <form class="pantry-import-form" data-pantry-import-review-form novalidate>
+      <div class="pantry-import-review-head">
+        <strong>Proposta AI da ${escapeHtml(getPantryImportSourceLabel())}</strong>
+        <span>${pantryImportRuntime.draftItems.length} prodotti riconosciuti</span>
+      </div>
+      <div class="pantry-import-items">
+        ${pantryImportRuntime.draftItems
+          .map(
+            (item, index) => `
+              <article class="pantry-import-item" data-pantry-import-item="${index}">
+                <label class="field">
+                  <span>Prodotto</span>
+                  <input type="text" name="name" value="${escapeHtml(item.name)}" required />
+                </label>
+                <label class="field">
+                  <span>Quantità</span>
+                  <input type="text" name="quantity" value="${escapeHtml(item.quantity)}" required />
+                </label>
+                <label class="field">
+                  <span>Categoria</span>
+                  <select name="category">
+                    ${categoryOptions(item.category)}
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Scadenza</span>
+                  <input type="date" name="expiryDate" value="${escapeHtml(item.expiryDate)}" />
+                </label>
+                <input type="hidden" name="barcode" value="${escapeHtml(item.barcode)}" />
+                <button class="delete-btn pantry-import-remove" type="button" data-pantry-import-remove="${index}" aria-label="Rimuovi ${escapeHtml(item.name)}">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
+                </button>
+              </article>
+            `
+          )
+          .join("")}
+      </div>
+      <div class="pantry-import-review-actions">
+        <button class="grocery-neutral-btn" type="button" data-pantry-import-regenerate>Rigenera</button>
+        <button class="primary-btn primary-btn-green" type="submit">Aggiungi in dispensa</button>
+      </div>
+    </form>
+  `;
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result || "")));
+    reader.addEventListener("error", () => reject(new Error("Impossibile leggere l'immagine.")));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImageFromDataUrl(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", () => reject(new Error("Immagine non valida.")));
+    image.src = dataUrl;
+  });
+}
+
+async function compressImageForPantryImport(file) {
+  const originalDataUrl = await readFileAsDataUrl(file);
+
+  try {
+    const image = await loadImageFromDataUrl(originalDataUrl);
+    const maxDimension = 1400;
+    const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth || 1, image.naturalHeight || 1));
+    const width = Math.max(1, Math.round((image.naturalWidth || 1) * scale));
+    const height = Math.max(1, Math.round((image.naturalHeight || 1) * scale));
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      return originalDataUrl;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    context.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", 0.78);
+  } catch (error) {
+    return originalDataUrl;
+  }
+}
+
+async function requestPantryImageImport(file, sourceType) {
+  const imageDataUrl = await compressImageForPantryImport(file);
+  const response = await fetch(window.NutriTrackBootstrap.buildNutriTrackApiPath("/api/grocery/import-image"), {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      sourceType,
+      image: {
+        dataUrl: imageDataUrl,
+      },
+    }),
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      window.handleNutriTrackUnauthorized?.();
+    }
+
+    throw new Error(payload?.error || "Importazione immagine non riuscita.");
+  }
+
+  return Array.isArray(payload?.items) ? payload.items.map(normalizePantryImportItem).filter((item) => item.name) : [];
+}
+
+async function importPantryImageFile(file, sourceType) {
+  if (!file || pantryImportRuntime.isLoading) {
+    return;
+  }
+
+  pantryImportRuntime.sourceType = sourceType;
+  pantryImportRuntime.lastFile = file;
+  pantryImportRuntime.isLoading = true;
+  pantryImportRuntime.draftItems = [];
+  setPantryImportStatus(`Analisi della foto ${getPantryImportSourceLabel(sourceType)} in corso...`);
+  renderPantryImportReview();
+
+  try {
+    const items = await requestPantryImageImport(file, sourceType);
+    pantryImportRuntime.draftItems = items;
+    setPantryImportStatus(
+      items.length > 0
+        ? "Controlla la proposta AI: puoi correggere la lista o rigenerarla prima del salvataggio."
+        : "La foto non ha prodotto alimenti riconoscibili. Puoi riprovare con una nuova immagine."
+    );
+  } catch (error) {
+    pantryImportRuntime.draftItems = [];
+    setPantryImportStatus(error.message || "Importazione immagine non riuscita.");
+  } finally {
+    pantryImportRuntime.isLoading = false;
+    renderPantryImportReview();
+  }
+}
+
+function readPantryImportDraftFromForm(form) {
+  return Array.from(form.querySelectorAll("[data-pantry-import-item]"))
+    .map((row) =>
+      normalizePantryImportItem({
+        name: row.querySelector('[name="name"]')?.value,
+        quantity: row.querySelector('[name="quantity"]')?.value,
+        category: row.querySelector('[name="category"]')?.value,
+        expiryDate: row.querySelector('[name="expiryDate"]')?.value,
+        barcode: row.querySelector('[name="barcode"]')?.value,
+      })
+    )
+    .filter((item) => item.name && item.quantity && item.category);
+}
+
+function addPantryImportDraftToPantry(items) {
+  items.forEach((item) => {
+    appState.grocery.pantry.push({
+      id: crypto.randomUUID(),
+      name: item.name,
+      quantity: item.quantity,
+      expiryDate: item.expiryDate,
+      category: item.category,
+      barcode: item.barcode,
+      source: "ai-image",
+      nutriscoreGrade: "",
+    });
+  });
+
+  appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
+}
+
 function renderGrocerySummary() {
   const totalItems = appState.grocery.items.length;
   const completedItems = appState.grocery.items.filter((item) => item.completed).length;
@@ -260,6 +515,7 @@ function renderGrocery() {
   renderGrocerySummary();
   renderGroceryList();
   renderPantry();
+  renderPantryImportReview();
   renderGroceryArOverlay();
   renderGroceryArComparison();
 }
@@ -404,6 +660,8 @@ function setupGrocerySection() {
   const clearCompletedButton = document.querySelector("[data-clear-completed]");
   const arToggleButton = document.querySelector("[data-grocery-ar-toggle]");
   const arClearButton = document.querySelector("[data-grocery-ar-clear]");
+  const pantryImportInput = document.querySelector("[data-pantry-import-input]");
+  const pantryImportPanel = document.querySelector(".pantry-import-panel");
 
   if (!form || !list || !pantryList || !clearCompletedButton || !arToggleButton || !arClearButton) {
     return;
@@ -549,6 +807,68 @@ function setupGrocerySection() {
     saveState();
     renderGroceryArOverlay();
     renderGroceryArComparison();
+  });
+
+  pantryImportPanel?.addEventListener("click", (event) => {
+    const sourceButton = event.target.closest("[data-pantry-import-source]");
+
+    if (sourceButton && pantryImportInput) {
+      pantryImportRuntime.sourceType = sourceButton.dataset.pantryImportSource;
+      pantryImportInput.click();
+      return;
+    }
+
+    const removeButton = event.target.closest("[data-pantry-import-remove]");
+
+    if (removeButton) {
+      const removeIndex = Number(removeButton.dataset.pantryImportRemove);
+      pantryImportRuntime.draftItems = pantryImportRuntime.draftItems.filter((item, index) => index !== removeIndex);
+      setPantryImportStatus(
+        pantryImportRuntime.draftItems.length > 0
+          ? "Lista aggiornata. Puoi confermare quando e' corretta."
+          : "Tutti gli elementi sono stati rimossi dalla proposta AI."
+      );
+      renderPantryImportReview();
+      return;
+    }
+
+    const regenerateButton = event.target.closest("[data-pantry-import-regenerate]");
+
+    if (regenerateButton && pantryImportRuntime.lastFile) {
+      importPantryImageFile(pantryImportRuntime.lastFile, pantryImportRuntime.sourceType || "shopping");
+    }
+  });
+
+  pantryImportInput?.addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+
+    if (file) {
+      importPantryImageFile(file, pantryImportRuntime.sourceType || "shopping");
+    }
+
+    event.target.value = "";
+  });
+
+  pantryImportPanel?.addEventListener("submit", (event) => {
+    const reviewForm = event.target.closest("[data-pantry-import-review-form]");
+
+    if (!reviewForm) {
+      return;
+    }
+
+    event.preventDefault();
+    const items = readPantryImportDraftFromForm(reviewForm);
+
+    if (items.length === 0) {
+      setPantryImportStatus("Aggiungi almeno un prodotto valido prima di confermare.");
+      return;
+    }
+
+    addPantryImportDraftToPantry(items);
+    pantryImportRuntime.draftItems = [];
+    saveState();
+    renderGrocery();
+    setPantryImportStatus(`${items.length} prodotti aggiunti alla dispensa.`);
   });
 
   clearCompletedButton.addEventListener("click", () => {

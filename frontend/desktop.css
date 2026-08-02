@@ -382,9 +382,14 @@
     gap: 18px;
   }
 
-  /* Lo scanner barcode della spesa resta disponibile solo su mobile. */
+  /* Lo scanner barcode dei prodotti resta disponibile solo su mobile. */
   [data-open-barcode-scanner="grocery"],
   [data-open-barcode-scanner="nutrition"] {
+    display: none;
+  }
+
+  /* L'acquisizione da foto della dispensa resta disponibile solo su mobile. */
+  .pantry-import-panel {
     display: none;
   }
 

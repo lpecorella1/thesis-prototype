@@ -114,7 +114,7 @@
               <path d="M3 5h2l2.2 9.1h10.1l2.1-6.6H7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
             </svg>
           </span>
-          Spesa
+          Prodotti
         </button>
         <button class="tab is-active" type="button" data-tab-target="nutrition">
           <span class="icon">
@@ -164,8 +164,8 @@
                     <path d="M3 5h2l2.2 9.1h10.1l2.1-6.6H7" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
                   </svg>
                 </span>
-                <strong>La tua spesa</strong>
-                <span>Lista degli acquisti, confronto prodotti e dispensa.</span>
+                <strong>I tuoi prodotti</strong>
+                <span>Lista acquisti, confronto prodotti e dispensa.</span>
                 <small class="home-cloud-meta">Acquisti, dispensa e prodotti</small>
               </button>
 
@@ -212,7 +212,7 @@
             </div>
             <div class="section-links">
               <button class="section-link" type="button" data-section-link-target="recipes">Ricette</button>
-              <button class="section-link" type="button" data-section-link-target="grocery">Spesa</button>
+              <button class="section-link" type="button" data-section-link-target="grocery">Prodotti</button>
               <button class="section-link" type="button" data-section-link-target="nutrition">Dieta</button>
               <button class="section-link" type="button" data-section-link-target="profile">Dati</button>
             </div>
@@ -324,13 +324,13 @@
                 </svg>
               </button>
               <div class="section-crumb">
-                <span>Home / Spesa</span>
-                <strong>La tua spesa</strong>
+                <span>Home / Prodotti</span>
+                <strong>I tuoi prodotti</strong>
               </div>
             </div>
             <div class="section-links">
               <button class="section-link" type="button" data-section-link-target="recipes">Ricette</button>
-              <button class="section-link" type="button" data-section-link-target="grocery">Spesa</button>
+              <button class="section-link" type="button" data-section-link-target="grocery">Prodotti</button>
               <button class="section-link" type="button" data-section-link-target="nutrition">Dieta</button>
               <button class="section-link" type="button" data-section-link-target="profile">Dati</button>
             </div>
@@ -397,6 +397,23 @@
                   </div>
                 </form>
               </article>
+
+              <article class="panel pantry-import-panel">
+                <div class="pantry-import-head">
+                  <div>
+                    <h3>Aggiungi prodotti in dispensa</h3>
+                    <p>Trasforma scontrini, spesa o frigorifero in una lista modificabile prima del salvataggio.</p>
+                  </div>
+                </div>
+                <div class="pantry-import-actions">
+                  <button class="grocery-action-btn pantry-import-btn" type="button" data-pantry-import-source="receipt">Foto scontrino</button>
+                  <button class="grocery-action-btn pantry-import-btn" type="button" data-pantry-import-source="shopping">Foto spesa</button>
+                  <button class="grocery-action-btn pantry-import-btn" type="button" data-pantry-import-source="fridge">Foto frigo</button>
+                </div>
+                <input type="file" accept="image/*" capture="environment" data-pantry-import-input hidden />
+                <p class="pantry-import-status" data-pantry-import-status aria-live="polite">La proposta AI comparirà qui prima della conferma.</p>
+                <div class="pantry-import-review" data-pantry-import-review></div>
+              </article>
             </div>
 
             <article class="panel pantry-panel">
@@ -460,7 +477,7 @@
             </div>
             <div class="section-links">
               <button class="section-link" type="button" data-section-link-target="recipes">Ricette</button>
-              <button class="section-link" type="button" data-section-link-target="grocery">Spesa</button>
+              <button class="section-link" type="button" data-section-link-target="grocery">Prodotti</button>
               <button class="section-link" type="button" data-section-link-target="nutrition">Dieta</button>
               <button class="section-link" type="button" data-section-link-target="profile">Dati</button>
             </div>
@@ -645,7 +662,7 @@
             </div>
             <div class="section-links">
               <button class="section-link" type="button" data-section-link-target="recipes">Ricette</button>
-              <button class="section-link" type="button" data-section-link-target="grocery">Spesa</button>
+              <button class="section-link" type="button" data-section-link-target="grocery">Prodotti</button>
               <button class="section-link" type="button" data-section-link-target="nutrition">Dieta</button>
               <button class="section-link" type="button" data-section-link-target="profile">Dati</button>
             </div>
