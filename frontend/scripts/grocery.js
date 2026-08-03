@@ -303,7 +303,7 @@ function renderGroceryList() {
   if (appState.grocery.items.length === 0) {
     list.innerHTML = `
       <article class="panel empty-state">
-        <h3>Shopping List vuota</h3>
+        <h3>Lista della spesa</h3>
         <p>Aggiungi il prossimo prodotto da comprare e costruisci il tuo inventario domestico.</p>
       </article>
     `;
