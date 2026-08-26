@@ -979,6 +979,8 @@ function isAzureResponseFormatUnsupported(error) {
 
 const PANTRY_IMPORT_SOURCE_LABELS = Object.freeze({
   photo: "foto di prodotti alimentari, scontrino, spesa o frigorifero",
+  receipt: "foto di uno scontrino della spesa",
+  "fridge-shopping": "foto di frigorifero, dispensa o prodotti della spesa",
 });
 
 const PANTRY_IMPORT_CATEGORIES = Object.freeze([
@@ -1025,6 +1027,55 @@ function normalizePantryImportItems(payload) {
     }))
     .filter((item) => item.name)
     .slice(0, 40);
+}
+
+function normalizeGeneratedGroceryListItems(payload) {
+  const rawItems = Array.isArray(payload?.items) ? payload.items : [];
+
+  return rawItems
+    .map((item) => ({
+      name: String(item?.name || "").trim(),
+      quantity: String(item?.quantity || "1 confezione").trim() || "1 confezione",
+      category: normalizePantryImportCategory(item?.category),
+      expiryDate: /^\d{4}-\d{2}-\d{2}$/.test(String(item?.expiryDate || "")) ? String(item.expiryDate) : "",
+      barcode: sanitizeBarcode(item?.barcode),
+      reason: String(item?.reason || "").trim(),
+    }))
+    .filter((item) => item.name)
+    .slice(0, 18);
+}
+
+function buildGroceryListGenerationMessages(context) {
+  const contextMessage = [
+    stringifyContextBlock("Dispensa attuale", context.pantry),
+    stringifyContextBlock("Lista della spesa corrente", context.groceryItems),
+    stringifyContextBlock("Profilo, preferenze e condizioni mediche", context.profile),
+    stringifyContextBlock("Pasti recenti", context.recentMeals),
+    stringifyContextBlock("Ricetta corrente", context.currentRecipe),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return [
+    {
+      role: "system",
+      content:
+        "Sei un assistente nutrizionale per una web app di gestione dispensa e meal planning. Devi generare una lista della spesa concreta, prudente e personalizzata. Rispetta allergie, condizioni mediche, preferenze alimentari e obiettivi nutrizionali. Usa la dispensa come fonte attendibile: non suggerire prodotti gia presenti in quantita plausibilmente sufficiente, salvo piccoli complementi necessari. Evita sprechi: proponi quantita conservative, versatili e realistiche per una spesa breve. Rispondi solo con JSON valido.",
+    },
+    ...(contextMessage
+      ? [
+          {
+            role: "system",
+            content: `Contesto applicativo disponibile:\n${contextMessage}`,
+          },
+        ]
+      : []),
+    {
+      role: "user",
+      content:
+        "Genera una lista della spesa essenziale per integrare quello che manca rispetto alla dispensa e al profilo utente. Preferisci alimenti versatili, salutari e facilmente combinabili con gli ingredienti gia disponibili. Evita duplicati, porzioni eccessive e prodotti incompatibili con allergie, condizioni mediche o preferenze. Restituisci al massimo 12 prodotti. Le categorie ammesse sono: Frutta e verdura, Latticini, Carne e pesce, Cereali, Dispensa, Surgelati, Bevande. Formato JSON richiesto: {\"items\":[{\"name\":\"\",\"quantity\":\"\",\"category\":\"\",\"expiryDate\":\"\",\"barcode\":\"\",\"reason\":\"\"}]}. Lascia expiryDate vuota se non serve.",
+    },
+  ];
 }
 
 function sanitizePantryImportImageDataUrl(value) {
@@ -1552,6 +1603,89 @@ async function handleOpenFoodFactsProduct(urlPath, response) {
   }
 }
 
+async function handleGroceryListGenerate(request, response) {
+  let errorPhase = "init";
+
+  try {
+    errorPhase = "read-body";
+    const payload = await readJsonBody(request);
+    errorPhase = "resolve-user";
+    const userContext = await resolveRequestUserContext(request);
+    errorPhase = "read-state";
+    const savedState = await getNutriTrackState(userContext);
+    const requestedState = payload?.state && typeof payload.state === "object" ? payload.state : null;
+    errorPhase = "build-context";
+    const context = buildRecipesAssistantContext({
+      state: requestedState || savedState,
+    });
+
+    console.log("[Server] Richiesta generazione lista spesa ricevuta.", {
+      pantryItems: Array.isArray(context.pantry) ? context.pantry.length : 0,
+      groceryItems: Array.isArray(context.groceryItems) ? context.groceryItems.length : 0,
+      hasAllergies: Boolean(context.profile?.allergies),
+      hasMedicalConditions: Boolean(context.profile?.medicalConditions),
+      hasDietaryPreferences: Boolean(context.profile?.dietaryPreferences),
+    });
+
+    errorPhase = "azure-completion";
+    const messages = buildGroceryListGenerationMessages(context);
+    let completion;
+
+    try {
+      completion = await createAzureChatCompletion(messages, {
+        maxTokens: 1000,
+        responseFormat: { type: "json_object" },
+        temperature: 0.25,
+      });
+    } catch (error) {
+      if (!isAzureResponseFormatUnsupported(error)) {
+        throw error;
+      }
+
+      console.warn("[Server] Generazione lista spesa: response_format non supportato, riprovo senza JSON mode.", {
+        azureCode: error.details?.error?.code || "",
+        message: error.details?.error?.message || error.message,
+      });
+      completion = await createAzureChatCompletion(messages, {
+        maxTokens: 1000,
+        temperature: 0.25,
+      });
+    }
+
+    const rawContent = completion.choices?.[0]?.message?.content;
+
+    if (!rawContent) {
+      sendJson(response, 502, { error: "Risposta Azure OpenAI non valida." });
+      return;
+    }
+
+    errorPhase = "parse-json";
+    const parsedPayload = parseJsonObjectFromCompletion(rawContent);
+    errorPhase = "normalize-items";
+    const items = normalizeGeneratedGroceryListItems(parsedPayload);
+
+    sendJson(response, 200, {
+      items,
+      usage: completion.usage || null,
+    });
+  } catch (error) {
+    const azureError = error.details?.error?.message;
+    const statusCode = error.statusCode || (azureError ? 502 : 500);
+    console.error("[Server] Errore nella route /api/grocery/generate-list.", {
+      phase: errorPhase,
+      statusCode,
+      azureStatusCode: error.statusCode || null,
+      azureStatusText: error.statusText || "",
+      azureCode: error.details?.error?.code || "",
+      message: azureError || error.message,
+    });
+    sendJson(response, statusCode, {
+      error: azureError || error.message || "Impossibile generare la lista della spesa.",
+      phase: errorPhase,
+    });
+  }
+}
+
 async function handlePantryImageImport(request, response) {
   try {
     await resolveRequestUserContext(request);
@@ -1886,6 +2020,11 @@ const requestHandler = async (request, response) => {
 
   if (request.method === "GET" && requestPath.startsWith("/api/openfoodfacts/product/")) {
     await handleOpenFoodFactsProduct(requestPath, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestPath === "/api/grocery/generate-list") {
+    await handleGroceryListGenerate(request, response);
     return;
   }
 
