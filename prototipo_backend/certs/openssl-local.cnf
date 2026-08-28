@@ -11,7 +11,7 @@ ST = Rome
 L = Rome
 O = NutriTrack Local
 OU = Prototype
-CN = 192.168.43.210
+CN = 192.168.1.110
 
 [v3_req]
 subjectAltName = @alt_names
@@ -19,5 +19,5 @@ keyUsage = digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
 
 [alt_names]
-IP.1 = 192.168.43.210
+IP.1 = 192.168.1.110
 DNS.1 = localhost

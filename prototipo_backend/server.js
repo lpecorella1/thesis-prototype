@@ -977,6 +977,371 @@ function isAzureResponseFormatUnsupported(error) {
   );
 }
 
+const MEAL_COMPONENT_ESTIMATES = Object.freeze([
+  {
+    keywords: ["pasta", "lenticchie"],
+    item: { name: "Pasta con lenticchie", quantity: "1 piatto", calories: 560, protein: 24, carbs: 88, fats: 10, confidence: 0.62 },
+  },
+  {
+    keywords: ["brioche", "gelato"],
+    item: { name: "Brioche con gelato", quantity: "1 porzione", calories: 430, protein: 8, carbs: 62, fats: 17, confidence: 0.55 },
+  },
+  {
+    keywords: ["banana"],
+    item: { name: "Banana", quantity: "1 media", calories: 105, protein: 1, carbs: 27, fats: 0, confidence: 0.74 },
+  },
+  {
+    keywords: ["pasta"],
+    item: { name: "Pasta", quantity: "1 piatto", calories: 480, protein: 15, carbs: 82, fats: 9, confidence: 0.54 },
+  },
+  {
+    keywords: ["riso"],
+    item: { name: "Riso", quantity: "1 piatto", calories: 430, protein: 9, carbs: 86, fats: 4, confidence: 0.54 },
+  },
+  {
+    keywords: ["pollo"],
+    item: { name: "Pollo", quantity: "1 porzione", calories: 260, protein: 38, carbs: 0, fats: 10, confidence: 0.58 },
+  },
+  {
+    keywords: ["insalata"],
+    item: { name: "Insalata", quantity: "1 porzione", calories: 160, protein: 5, carbs: 14, fats: 9, confidence: 0.5 },
+  },
+  {
+    keywords: ["gelato"],
+    item: { name: "Gelato", quantity: "1 coppetta", calories: 220, protein: 5, carbs: 30, fats: 9, confidence: 0.52 },
+  },
+  {
+    keywords: ["brioche", "cornetto"],
+    item: { name: "Brioche", quantity: "1 pezzo", calories: 260, protein: 6, carbs: 35, fats: 11, confidence: 0.56 },
+  },
+]);
+
+function splitMealDescriptionIntoComponents(description) {
+  return String(description || "")
+    .split(/\s*(?:\+|;|,|\n|\b(?:e|ed)\b)\s*/gi)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function estimateMealComponentFromText(rawText) {
+  const normalized = normalizeRetrievalText(rawText);
+  const matchedEstimate = MEAL_COMPONENT_ESTIMATES.find((estimate) =>
+    estimate.keywords.every((keyword) => normalized.includes(normalizeRetrievalText(keyword)))
+  );
+
+  if (matchedEstimate) {
+    return {
+      ...matchedEstimate.item,
+      rawText,
+      source: "standard-portion-fallback",
+    };
+  }
+
+  return {
+    rawText,
+    name: String(rawText || "Componente pasto").trim(),
+    quantity: "1 porzione",
+    calories: 320,
+    protein: 12,
+    carbs: 35,
+    fats: 12,
+    confidence: 0.35,
+    source: "generic-fallback",
+  };
+}
+
+function buildFallbackMealAnalysis(description) {
+  const items = splitMealDescriptionIntoComponents(description).map(estimateMealComponentFromText);
+
+  if (items.length === 0) {
+    throw new Error("Descrizione pasto obbligatoria.");
+  }
+
+  const totals = items.reduce(
+    (result, item) => {
+      result.calories += roundMacroValue(item.calories);
+      result.protein += roundMacroValue(item.protein);
+      result.carbs += roundMacroValue(item.carbs);
+      result.fats += roundMacroValue(item.fats);
+      return result;
+    },
+    { calories: 0, protein: 0, carbs: 0, fats: 0 }
+  );
+
+  return {
+    name: description,
+    items,
+    totals,
+    confidence: Math.min(...items.map((item) => item.confidence ?? 0.35)),
+    source: "fallback-standard-portions",
+    reviewNote: "Stima basata su porzioni standard: da far confermare o correggere all'utente.",
+  };
+}
+
+function buildMealAnalysisMessages(description, context = {}) {
+  const references = Array.isArray(context.openFoodFactsKnowledge?.records)
+    ? context.openFoodFactsKnowledge.records.slice(0, 12).map((record) => ({
+        title: record.title,
+        brand: record.brand,
+        serving: record.serving,
+        quantity: record.quantity,
+        nutrition: record.nutrition,
+        source: record.source,
+      }))
+    : [];
+
+  const standardPortions = MEAL_COMPONENT_ESTIMATES.map((estimate) => estimate.item);
+
+  return [
+    {
+      role: "system",
+      content:
+        "Sei un motore di analisi per diario alimentare. Devi convertire una descrizione libera di un intero pasto in dati nutrizionali strutturati. Usa i riferimenti OpenFoodFacts forniti solo quando pertinenti; altrimenti usa porzioni standard prudenti e dichiara confidence piu bassa. Non fornire consigli medici. Rispondi solo con JSON valido.",
+    },
+    {
+      role: "user",
+      content: [
+        `Descrizione pasto: ${description}`,
+        "I separatori +, virgola, punto e virgola, nuova riga e le congiunzioni italiane e/ed indicano componenti diversi del pasto quando presenti. Se una quantita e' scritta vicino a un alimento, assegnala a quell'item specifico.",
+        `Riferimenti OpenFoodFacts disponibili: ${JSON.stringify(references)}`,
+        `Porzioni standard fallback: ${JSON.stringify(standardPortions)}`,
+        "Restituisci JSON nel formato esatto {\"name\":\"\",\"items\":[{\"rawText\":\"\",\"name\":\"\",\"quantity\":\"\",\"calories\":0,\"protein\":0,\"carbs\":0,\"fats\":0,\"confidence\":0.0,\"source\":\"openfoodfacts|standard-portion|ai-estimate\"}],\"totals\":{\"calories\":0,\"protein\":0,\"carbs\":0,\"fats\":0},\"confidence\":0.0,\"reviewNote\":\"\"}. I totals devono essere la somma degli items.",
+      ].join("\n"),
+    },
+  ];
+}
+
+function buildMealPhotoDescriptionMessages(imageDataUrl) {
+  return [
+    {
+      role: "system",
+      content:
+        "Sei un motore di riconoscimento visivo per diario alimentare. Devi osservare una foto di un pasto e convertirla in una descrizione testuale breve, in italiano, adatta a essere analizzata da un calcolatore nutrizionale. Non inventare alimenti non visibili. Quando possibile indica quantita o porzioni stimate vicino a ogni alimento. Rispondi solo con JSON valido.",
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text:
+            "Analizza la foto del pasto. Restituisci JSON nel formato {\"description\":\"\",\"items\":[{\"name\":\"\",\"quantity\":\"\",\"confidence\":0.0}],\"reviewNote\":\"\"}. " +
+            "La description deve essere una singola frase pronta per il form, separando gli alimenti con virgole o con 'e'. Esempio: \"80 g pasta con lenticchie, 1 banana e brioche con gelato\".",
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: imageDataUrl,
+          },
+        },
+      ],
+    },
+  ];
+}
+
+function normalizeMealPhotoDescriptionPayload(payload) {
+  const itemDescriptions = Array.isArray(payload?.items)
+    ? payload.items
+        .map((item) => {
+          const name = String(item?.name || "").trim();
+          const quantity = String(item?.quantity || "").trim();
+          return name ? `${quantity ? `${quantity} ` : ""}${name}` : "";
+        })
+        .filter(Boolean)
+    : [];
+  const description = String(payload?.description || "").trim() || itemDescriptions.join(", ");
+
+  if (!description) {
+    throw new Error("Nessun alimento riconoscibile nella foto.");
+  }
+
+  return {
+    description,
+    items: itemDescriptions,
+    reviewNote: String(payload?.reviewNote || "Controlla la descrizione prima di aggiungere il pasto.").trim(),
+  };
+}
+
+function normalizeMealAnalysisItem(item) {
+  return {
+    rawText: String(item?.rawText || item?.name || "").trim(),
+    name: String(item?.name || item?.rawText || "Alimento").trim(),
+    quantity: String(item?.quantity || "1 porzione").trim(),
+    calories: roundMacroValue(item?.calories),
+    protein: roundMacroValue(item?.protein),
+    carbs: roundMacroValue(item?.carbs),
+    fats: roundMacroValue(item?.fats),
+    confidence: normalizePantryImportConfidence(item?.confidence) ?? 0.45,
+    source: String(item?.source || "ai-estimate").trim(),
+  };
+}
+
+function normalizeMealAnalysisPayload(payload, description) {
+  const items = Array.isArray(payload?.items)
+    ? payload.items.map(normalizeMealAnalysisItem).filter((item) => item.name)
+    : [];
+
+  if (items.length === 0) {
+    return buildFallbackMealAnalysis(description);
+  }
+
+  const totals = items.reduce(
+    (result, item) => {
+      result.calories += item.calories;
+      result.protein += item.protein;
+      result.carbs += item.carbs;
+      result.fats += item.fats;
+      return result;
+    },
+    { calories: 0, protein: 0, carbs: 0, fats: 0 }
+  );
+
+  return {
+    name: String(payload?.name || description).trim(),
+    items: items.slice(0, 12),
+    totals,
+    confidence: normalizePantryImportConfidence(payload?.confidence) ?? Math.min(...items.map((item) => item.confidence)),
+    source: "ai-meal-analysis",
+    reviewNote: String(payload?.reviewNote || "Rivedi le porzioni prima di salvare.").trim(),
+  };
+}
+
+async function handleMealPhotoDescription(request, response) {
+  try {
+    const payload = await readJsonBody(request);
+    const imageDataUrl = sanitizePantryImportImageDataUrl(payload?.image?.dataUrl || payload?.imageDataUrl);
+    const messages = buildMealPhotoDescriptionMessages(imageDataUrl);
+    let completion;
+
+    try {
+      completion = await createAzureChatCompletion(messages, {
+        maxTokens: 700,
+        responseFormat: { type: "json_object" },
+        temperature: 0.1,
+      });
+    } catch (error) {
+      if (!isAzureResponseFormatUnsupported(error)) {
+        throw error;
+      }
+
+      completion = await createAzureChatCompletion(messages, {
+        maxTokens: 700,
+        temperature: 0.1,
+      });
+    }
+
+    const rawContent = completion.choices?.[0]?.message?.content;
+
+    if (!rawContent) {
+      sendJson(response, 502, { error: "Risposta Azure OpenAI non valida." });
+      return;
+    }
+
+    const parsedPayload = parseJsonObjectFromCompletion(rawContent);
+    const result = normalizeMealPhotoDescriptionPayload(parsedPayload);
+
+    sendJson(response, 200, {
+      ...result,
+      usage: completion.usage || null,
+    });
+  } catch (error) {
+    const azureError = error.details?.error?.message;
+    const statusCode = error.message === "Formato immagine non valido." || error.message?.startsWith("Immagine troppo grande") ? 400 : error.statusCode || 500;
+    console.error("[Server] Errore nella route /api/nutrition/describe-meal-image.", azureError || error.message);
+    sendJson(response, statusCode, {
+      error: azureError || error.message || "Impossibile riconoscere il pasto dalla foto.",
+    });
+  }
+}
+
+async function handleMealNutritionAnalysis(request, response) {
+  let errorPhase = "init";
+  let fallbackDescription = "";
+
+  try {
+    errorPhase = "read-body";
+    const payload = await readJsonBody(request);
+    const description = String(payload?.description || "").trim();
+    fallbackDescription = description;
+
+    if (!description) {
+      sendJson(response, 400, { error: "La descrizione del pasto e' obbligatoria." });
+      return;
+    }
+
+    const requestedState = payload?.state && typeof payload.state === "object" ? payload.state : null;
+    let stateForContext = requestedState;
+
+    if (!stateForContext) {
+      errorPhase = "resolve-user";
+      const userContext = await resolveRequestUserContext(request);
+      errorPhase = "read-state";
+      stateForContext = await getNutriTrackState(userContext);
+    }
+
+    errorPhase = "build-context";
+    const context = buildRecipesAssistantContext({
+      state: stateForContext,
+    });
+
+    errorPhase = "azure-completion";
+    const messages = buildMealAnalysisMessages(description, context);
+    let completion;
+
+    try {
+      completion = await createAzureChatCompletion(messages, {
+        maxTokens: 1000,
+        responseFormat: { type: "json_object" },
+        temperature: 0.15,
+      });
+    } catch (error) {
+      if (!isAzureResponseFormatUnsupported(error)) {
+        throw error;
+      }
+
+      completion = await createAzureChatCompletion(messages, {
+        maxTokens: 1000,
+        temperature: 0.15,
+      });
+    }
+
+    const rawContent = completion.choices?.[0]?.message?.content;
+
+    if (!rawContent) {
+      throw new Error("Risposta Azure OpenAI non valida.");
+    }
+
+    errorPhase = "parse-json";
+    const parsedPayload = parseJsonObjectFromCompletion(rawContent);
+    errorPhase = "normalize-analysis";
+    const analysis = normalizeMealAnalysisPayload(parsedPayload, description);
+
+    sendJson(response, 200, {
+      analysis,
+      usage: completion.usage || null,
+    });
+  } catch (error) {
+    const azureError = error.details?.error?.message;
+    console.warn("[Server] Analisi pasto AI non disponibile, uso fallback.", {
+      phase: errorPhase,
+      message: azureError || error.message,
+    });
+
+    try {
+      sendJson(response, 200, {
+        analysis: buildFallbackMealAnalysis(fallbackDescription),
+        usage: null,
+        fallback: true,
+      });
+    } catch {
+      sendJson(response, error.statusCode || 500, {
+        error: azureError || error.message || "Impossibile analizzare il pasto.",
+        phase: errorPhase,
+      });
+    }
+  }
+}
+
 const PANTRY_IMPORT_SOURCE_LABELS = Object.freeze({
   photo: "foto di prodotti alimentari, scontrino, spesa o frigorifero",
   receipt: "foto di uno scontrino della spesa",
@@ -1965,6 +2330,16 @@ const requestHandler = async (request, response) => {
 
   if (request.method === "POST" && requestPath === "/api/recipes/apply-to-diet") {
     await handleApplyRecipeToDiet(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestPath === "/api/nutrition/analyze-meal") {
+    await handleMealNutritionAnalysis(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestPath === "/api/nutrition/describe-meal-image") {
+    await handleMealPhotoDescription(request, response);
     return;
   }
 
