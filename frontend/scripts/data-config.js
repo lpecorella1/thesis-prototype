@@ -154,6 +154,7 @@ const defaultState = {
       medications: "",
       medicalConditions: "",
       dietaryPreferences: "",
+      labMetrics: [],
     },
     goals: {
       primaryObjective: "",

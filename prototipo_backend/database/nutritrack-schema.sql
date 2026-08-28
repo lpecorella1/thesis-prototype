@@ -49,6 +49,7 @@ CREATE TABLE user_profiles (
     medications TEXT,
     medical_conditions TEXT,
     dietary_preferences TEXT,
+    medical_lab_metrics JSONB NOT NULL DEFAULT '[]'::jsonb,
     primary_objective VARCHAR(80),
     secondary_objective VARCHAR(80),
     health_focus VARCHAR(80),

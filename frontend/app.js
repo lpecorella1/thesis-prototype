@@ -204,12 +204,69 @@ function createImportedNutritionDraft(values, sourceLabel) {
   };
 }
 
-function getNutritionDraftForMeal(name) {
+function parseMetricQuantityLabel(value) {
+  const matches = String(value || "").matchAll(/(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l)\b/gi);
+
+  for (const match of matches) {
+    const amount = normalizeNumber(match[1]);
+    const unit = String(match[2] || "").toLowerCase();
+
+    if (amount === null || amount <= 0) {
+      continue;
+    }
+
+    const baseQuantity = convertQuantityToBaseUnit(amount, unit);
+
+    if (baseQuantity.unit === "g" || baseQuantity.unit === "ml") {
+      return baseQuantity;
+    }
+  }
+
+  return null;
+}
+
+function getOpenFoodFactsNutritionBaseAmount(product) {
+  if (!product) {
+    return null;
+  }
+
+  if (product.macroBasis !== "serving") {
+    return 100;
+  }
+
+  const servingQuantity = parseMetricQuantityLabel(product.serving) || parseMetricQuantityLabel(product.quantity);
+  return servingQuantity?.value || null;
+}
+
+function scaleNutritionValues(values, factor) {
+  return createNutritionSnapshot({
+    calories: (normalizeNumber(values?.calories) || 0) * factor,
+    protein: (normalizeNumber(values?.protein) || 0) * factor,
+    carbs: (normalizeNumber(values?.carbs) || 0) * factor,
+    fats: (normalizeNumber(values?.fats) || 0) * factor,
+  });
+}
+
+function getScaledOpenFoodFactsNutritionDraft(product, consumedAmount) {
+  const baseAmount = getOpenFoodFactsNutritionBaseAmount(product);
+  const effectiveAmount = consumedAmount || baseAmount || null;
+  const factor = effectiveAmount && baseAmount > 0 ? effectiveAmount / baseAmount : 1;
+
+  return {
+    ...scaleNutritionValues(product, factor),
+    nutritionSource: "imported",
+    nutritionSourceLabel: "Importato da OpenFoodFacts",
+    consumedAmount: effectiveAmount,
+    referenceAmount: baseAmount,
+  };
+}
+
+function getNutritionDraftForMeal(name, options = {}) {
   // Quando un prodotto OpenFoodFacts è collegato al form, i macro del pasto
   // non vengono stimati dall'IA: prendiamo direttamente i nutrienti strutturati
-  // già normalizzati dal lookup API/dataset e li usiamo come fonte primaria.
+  // già normalizzati dal lookup API/dataset e li scaliamo sulla quantità consumata.
   if (openFoodFactsRuntime.nutritionLookup) {
-    return createImportedNutritionDraft(openFoodFactsRuntime.nutritionLookup, "Importato da OpenFoodFacts");
+    return getScaledOpenFoodFactsNutritionDraft(openFoodFactsRuntime.nutritionLookup, options.consumedAmount);
   }
 
   if (openFoodFactsRuntime.nutritionDraft) {
@@ -221,6 +278,190 @@ function getNutritionDraftForMeal(name) {
   }
 
   return estimateNutritionFromMealName(name);
+}
+
+function shouldAnalyzeMealDescription(name, linkedProduct) {
+  const description = String(name || "").trim();
+
+  if (!description) {
+    return false;
+  }
+
+  return !linkedProduct || /[+;,\n]|\b(?:e|ed)\b/i.test(description) || description.length > 48;
+}
+
+function splitMealDescriptionIntoComponents(description) {
+  return String(description || "")
+    .split(/\s*(?:\+|;|,|\n|\b(?:e|ed)\b)\s*/gi)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function createFallbackMealAnalysis(description) {
+  const items = splitMealDescriptionIntoComponents(description).map((component) => {
+    const estimate = estimateNutritionFromMealName(component);
+
+    return {
+      rawText: component,
+      name: component,
+      quantity: "1 porzione",
+      calories: estimate.calories,
+      protein: estimate.protein,
+      carbs: estimate.carbs,
+      fats: estimate.fats,
+      confidence: 0.35,
+      source: "local-estimate",
+    };
+  });
+
+  const effectiveItems = items.length > 0
+    ? items
+    : [
+        {
+          rawText: description,
+          name: description,
+          quantity: "1 porzione",
+          ...estimateNutritionFromMealName(description),
+          confidence: 0.35,
+          source: "local-estimate",
+        },
+      ];
+  const totals = effectiveItems.reduce(
+    (result, item) => {
+      result.calories += roundMacroValue(normalizeNumber(item.calories) || 0);
+      result.protein += roundMacroValue(normalizeNumber(item.protein) || 0);
+      result.carbs += roundMacroValue(normalizeNumber(item.carbs) || 0);
+      result.fats += roundMacroValue(normalizeNumber(item.fats) || 0);
+      return result;
+    },
+    { calories: 0, protein: 0, carbs: 0, fats: 0 }
+  );
+
+  return {
+    name: description,
+    items: effectiveItems,
+    totals,
+    confidence: 0.35,
+    source: "local-fallback",
+    reviewNote: "Stima locale: controlla le porzioni.",
+  };
+}
+
+function normalizeMealAnalysisItem(item) {
+  return {
+    rawText: String(item?.rawText || item?.name || "").trim(),
+    name: String(item?.name || item?.rawText || "Alimento").trim(),
+    quantity: String(item?.quantity || "1 porzione").trim(),
+    calories: roundMacroValue(normalizeNumber(item?.calories) || 0),
+    protein: roundMacroValue(normalizeNumber(item?.protein) || 0),
+    carbs: roundMacroValue(normalizeNumber(item?.carbs) || 0),
+    fats: roundMacroValue(normalizeNumber(item?.fats) || 0),
+    confidence: Math.max(0, Math.min(1, normalizeNumber(item?.confidence) ?? 0.45)),
+    source: String(item?.source || "ai-estimate").trim(),
+  };
+}
+
+function normalizeMealAnalysisPayload(analysis, description) {
+  const items = Array.isArray(analysis?.items)
+    ? analysis.items.map(normalizeMealAnalysisItem).filter((item) => item.name)
+    : [];
+
+  if (items.length === 0) {
+    return createFallbackMealAnalysis(description);
+  }
+
+  const totals = items.reduce(
+    (result, item) => {
+      result.calories += item.calories;
+      result.protein += item.protein;
+      result.carbs += item.carbs;
+      result.fats += item.fats;
+      return result;
+    },
+    { calories: 0, protein: 0, carbs: 0, fats: 0 }
+  );
+
+  return {
+    name: String(analysis?.name || description).trim(),
+    items,
+    totals,
+    confidence: Math.max(0, Math.min(1, normalizeNumber(analysis?.confidence) ?? 0.45)),
+    source: String(analysis?.source || "ai-meal-analysis").trim(),
+    reviewNote: String(analysis?.reviewNote || "").trim(),
+  };
+}
+
+async function requestMealNutritionAnalysis(description) {
+  const response = await fetch(window.NutriTrackBootstrap.buildNutriTrackApiPath("/api/nutrition/analyze-meal"), {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      description,
+      state: buildPersistableNutriTrackState(appState),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorPayload = await response.json().catch(() => null);
+    throw new Error(errorPayload?.error || "Analisi del pasto non disponibile.");
+  }
+
+  const payload = await response.json();
+  return normalizeMealAnalysisPayload(payload.analysis, description);
+}
+
+async function requestMealPhotoDescription(file) {
+  if (typeof compressImageForPantryImport !== "function") {
+    throw new Error("Compressione immagine non disponibile.");
+  }
+
+  const imageDataUrl = await compressImageForPantryImport(file);
+  const response = await fetch(window.NutriTrackBootstrap.buildNutriTrackApiPath("/api/nutrition/describe-meal-image"), {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      image: {
+        dataUrl: imageDataUrl,
+      },
+    }),
+  });
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      window.handleNutriTrackUnauthorized?.();
+    }
+
+    throw new Error(payload?.error || "Riconoscimento foto non riuscito.");
+  }
+
+  const description = String(payload?.description || "").trim();
+
+  if (!description) {
+    throw new Error("Nessun alimento riconoscibile nella foto.");
+  }
+
+  return {
+    description,
+    reviewNote: String(payload?.reviewNote || "").trim(),
+  };
+}
+
+function buildMealAnalysisSourceNote(analysis) {
+  const itemLines = Array.isArray(analysis?.items)
+    ? analysis.items
+        .map((item) => `${item.name}${item.quantity ? ` (${item.quantity})` : ""}: ${item.calories} kcal`)
+        .slice(0, 8)
+    : [];
+
+  return itemLines.length > 0 ? itemLines.join("; ") : String(analysis?.reviewNote || "").trim();
 }
 
 // Shared draft and totals helpers for nutrition and progress snapshots.
@@ -794,6 +1035,7 @@ function renderLookupResult(containerSelector, product, emptyMessage) {
 
   const quantityLabel = product.quantity || product.serving || "Quantità non disponibile";
   const nutriscoreLabel = product.nutriscoreGrade ? getNutriscoreLabel(product.nutriscoreGrade) : "Nutri-Score assente";
+  const showGroceryAction = container.matches("[data-off-grocery-result]");
   const macroLine = [
     product.calories !== null ? `${product.calories} kcal` : null,
     product.protein !== null ? `${product.protein} g proteine` : null,
@@ -805,6 +1047,15 @@ function renderLookupResult(containerSelector, product, emptyMessage) {
 
   container.innerHTML = `
     <article class="lookup-result-card">
+      ${
+        showGroceryAction
+          ? `
+            <button class="delete-btn lookup-result-dismiss" type="button" aria-label="Rimuovi prodotto scansionato" data-dismiss-grocery-lookup>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" /></svg>
+            </button>
+          `
+          : ""
+      }
       <strong>${escapeHtml(product.name)}</strong>
       <span>${escapeHtml(product.brand || "Brand non disponibile")} · ${escapeHtml(quantityLabel)}</span>
       <div class="lookup-chip-row">
@@ -812,6 +1063,15 @@ function renderLookupResult(containerSelector, product, emptyMessage) {
         <span class="lookup-chip">${product.macroBasis === "serving" ? "Valori per porzione" : "Valori per 100 g/ml"}</span>
       </div>
       ${macroLine ? `<small>${escapeHtml(macroLine)}</small>` : `<small>Macronutrienti non completi nel dataset.</small>`}
+      ${
+        showGroceryAction
+          ? `
+            <div class="lookup-result-actions">
+              <button class="primary-btn primary-btn-green pantry-barcode-add-btn" type="button" data-add-grocery-lookup-to-pantry>Aggiungi in dispensa</button>
+            </div>
+          `
+          : ""
+      }
     </article>
   `;
 }
@@ -902,20 +1162,15 @@ function applyProductToNutritionLookup(product) {
   openFoodFactsRuntime.nutritionLookup = product;
   openFoodFactsRuntime.nutritionDraft = createImportedNutritionDraft(product, "Importato da OpenFoodFacts");
   form.elements.name.value = product.name;
+
+  renderLookupResult("[data-off-nutrition-result]", product);
 }
 
 function applyProductToGroceryLookup(product, barcode) {
-  const form = document.querySelector("[data-grocery-form]");
-
-  if (!form) {
-    return;
-  }
-
-  openFoodFactsRuntime.groceryLookup = product;
-  form.elements.barcode.value = barcode;
-  form.elements.name.value = product.name;
-  form.elements.quantity.value = product.quantity || product.serving || "1 confezione";
-  form.elements.category.value = product.category || "Dispensa";
+  openFoodFactsRuntime.groceryLookup = {
+    ...product,
+    barcode: product.barcode || barcode,
+  };
   renderLookupResult("[data-off-grocery-result]", product);
 }
 
@@ -996,21 +1251,22 @@ async function startBarcodeScanner(target) {
     return;
   }
 
+  barcodeScannerRuntime.isStarting = true;
+  barcodeScannerRuntime.lastDetectedBarcode = "";
+  openBarcodeScannerModal(target);
+
   if (!navigator.mediaDevices?.getUserMedia) {
-    const message = "La camera non è disponibile.";
-    setBarcodeScannerStatus(message);
+    setBarcodeScannerStatus("La scansione live richiede una pagina servita da HTTPS o localhost.");
+    barcodeScannerRuntime.isStarting = false;
     return;
   }
 
   if (!("BarcodeDetector" in window)) {
-    const message = "Questo browser non supporta BarcodeDetector. Per la scansione usa Chrome o Edge recenti.";
-    setBarcodeScannerStatus(message);
+    setBarcodeScannerStatus("Questo browser non supporta BarcodeDetector. Per la scansione usa Chrome o Edge recenti.");
+    barcodeScannerRuntime.isStarting = false;
     return;
   }
 
-  barcodeScannerRuntime.isStarting = true;
-  barcodeScannerRuntime.lastDetectedBarcode = "";
-  openBarcodeScannerModal(target);
   setBarcodeScannerStatus("Richiesta accesso alla camera...");
 
   try {
@@ -1032,9 +1288,14 @@ async function startBarcodeScanner(target) {
     setBarcodeScannerStatus("Centra il bar-code nel riquadro.");
     scheduleBarcodeScannerDetection();
   } catch (error) {
-    closeBarcodeScannerModal();
-    const message = "Accesso alla camera non disponibile. Verifica permessi.";
-    setBarcodeScannerStatus(message);
+    if (barcodeScannerRuntime.stream) {
+      barcodeScannerRuntime.stream.getTracks().forEach((track) => track.stop());
+      barcodeScannerRuntime.stream = null;
+    }
+
+    video.pause();
+    video.srcObject = null;
+    setBarcodeScannerStatus("Accesso alla camera non disponibile. Verifica permessi, HTTPS o localhost.");
   } finally {
     barcodeScannerRuntime.isStarting = false;
   }
@@ -1180,6 +1441,7 @@ function renderMeals() {
               <span>Carboidrati: <strong>${meal.carbs}g</strong></span>
               <span>Grassi: <strong>${meal.fats}g</strong></span>
             </div>
+            ${renderMealItemsBreakdown(meal)}
           </div>
           <div class="meal-meta">
             <time datetime="${meal.time}">${formatMealTime(meal.time)}</time>
@@ -1201,6 +1463,25 @@ function renderNutrition() {
   renderMeals();
   renderNutritionEditForm();
   renderProgress();
+}
+
+function renderMealItemsBreakdown(meal) {
+  const items = Array.isArray(meal?.items) ? meal.items : [];
+
+  if (items.length === 0 && !meal?.sourceNote) {
+    return "";
+  }
+
+  if (items.length === 0) {
+    return `<p class="meal-source-note">${escapeHtml(meal.sourceNote)}</p>`;
+  }
+
+  const itemMarkup = items
+    .slice(0, 6)
+    .map((item) => `<li>${escapeHtml(item.name)}${item.quantity ? ` <span>${escapeHtml(item.quantity)}</span>` : ""} <strong>${escapeHtml(item.calories)} kcal</strong></li>`)
+    .join("");
+
+  return `<ul class="meal-items-breakdown">${itemMarkup}</ul>`;
 }
 
 // Inline nutrition editor state and rendering helpers.
@@ -1248,14 +1529,46 @@ function renderNutritionEditForm() {
 }
 
 // Shared nutrition meal creation and mutation helpers used by the section wiring.
-function createNutritionMealFromForm(form) {
+async function createNutritionMealFromForm(form) {
   const formData = new FormData(form);
   const linkedProduct = openFoodFactsRuntime.nutritionLookup;
+  const description = String(formData.get("name") || "").trim();
+
+  if (shouldAnalyzeMealDescription(description, linkedProduct)) {
+    const analysis = await requestMealNutritionAnalysis(description).catch((error) => {
+      console.warn("Analisi pasto AI non disponibile, uso fallback locale.", error);
+      return createFallbackMealAnalysis(description);
+    });
+
+    return {
+      id: crypto.randomUUID(),
+      name: description,
+      date: getTodayDateKey(),
+      time: String(formData.get("time") || "").trim(),
+      calories: analysis.totals.calories,
+      protein: analysis.totals.protein,
+      carbs: analysis.totals.carbs,
+      fats: analysis.totals.fats,
+      barcode: "",
+      source: "meal-description",
+      brand: "",
+      nutriscoreGrade: "",
+      nutritionSource: analysis.source,
+      nutritionSourceLabel: analysis.source === "local-fallback" ? "Stima locale" : "Analisi AI",
+      sourceNote: buildMealAnalysisSourceNote(analysis),
+      items: analysis.items,
+    };
+  }
+
   const nutritionDraft = getNutritionDraftForMeal(formData.get("name"));
+  const sourceNote =
+    linkedProduct && nutritionDraft.consumedAmount
+      ? `Base nutrizionale OpenFoodFacts: ${formatQuantityValue(nutritionDraft.referenceAmount || nutritionDraft.consumedAmount)} g/ml`
+      : "";
 
   return {
     id: crypto.randomUUID(),
-    name: String(formData.get("name") || "").trim(),
+    name: description,
     date: getTodayDateKey(),
     time: String(formData.get("time") || "").trim(),
     calories: nutritionDraft.calories,
@@ -1268,6 +1581,7 @@ function createNutritionMealFromForm(form) {
     nutriscoreGrade: linkedProduct?.nutriscoreGrade || "",
     nutritionSource: nutritionDraft.nutritionSource,
     nutritionSourceLabel: nutritionDraft.nutritionSourceLabel,
+    sourceNote,
   };
 }
 
@@ -1311,6 +1625,33 @@ function resetNutritionFormAfterSubmit(form) {
   form.reset();
   resetFormValidationState(form);
   clearNutritionDraft();
+  renderLookupResult("[data-off-nutrition-result]", null);
+}
+
+function setNutritionAnalysisStatus(message) {
+  const status = document.querySelector("[data-nutrition-analysis-status]");
+
+  if (status) {
+    status.textContent = message || "";
+  }
+}
+
+function setNutritionFormPendingState(form, isPending) {
+  const submitButton = form?.querySelector('button[type="submit"]');
+
+  if (submitButton) {
+    submitButton.disabled = isPending;
+    submitButton.textContent = isPending ? "Analisi..." : "Aggiungi";
+  }
+}
+
+function setMealPhotoPendingState(button, isPending) {
+  if (!button) {
+    return;
+  }
+
+  button.disabled = isPending;
+  button.textContent = isPending ? "Riconosco..." : "Foto pasto";
 }
 
 // Nutrition section event binding and persistence flow.
@@ -1319,6 +1660,8 @@ function setupNutritionSection() {
   const mealsList = document.querySelector("[data-meals-list]");
   const editForm = document.querySelector("[data-nutrition-edit-form]");
   const editCancelButton = document.querySelector("[data-nutrition-edit-cancel]");
+  const mealPhotoButton = document.querySelector("[data-meal-photo-button]");
+  const mealPhotoInput = document.querySelector("[data-meal-photo-input]");
 
   if (!form || !mealsList || !editForm || !editCancelButton) {
     return;
@@ -1327,19 +1670,64 @@ function setupNutritionSection() {
   bindFormValidationFeedback(form);
   bindFormValidationFeedback(editForm);
 
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-    markFormValidationAttempt(form);
+  mealPhotoButton?.addEventListener("click", () => {
+    mealPhotoInput?.click();
+  });
 
-    const meal = createNutritionMealFromForm(form);
+  mealPhotoInput?.addEventListener("change", async (event) => {
+    const file = event.target.files?.[0];
 
-    if (!isNutritionMealValid(meal)) {
+    if (!file) {
       return;
     }
 
-    appState.nutrition.meals.push(meal);
-    persistNutritionMealChanges(getMealDateKey(meal));
-    resetNutritionFormAfterSubmit(form);
+    setNutritionAnalysisStatus("Riconosco gli alimenti nella foto...");
+    setMealPhotoPendingState(mealPhotoButton, true);
+
+    try {
+      const result = await requestMealPhotoDescription(file);
+      form.elements.name.value = result.description;
+      form.elements.name.dispatchEvent(new Event("input", { bubbles: true }));
+      clearNutritionDraft();
+      renderLookupResult("[data-off-nutrition-result]", null);
+      setNutritionAnalysisStatus(result.reviewNote || "Descrizione generata dalla foto. Controllala prima di aggiungere.");
+    } catch (error) {
+      console.error("Riconoscimento foto pasto non riuscito.", error);
+      setNutritionAnalysisStatus(error.message || "Riconoscimento foto non riuscito.");
+    } finally {
+      setMealPhotoPendingState(mealPhotoButton, false);
+      event.target.value = "";
+    }
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    markFormValidationAttempt(form);
+
+    if (!form.checkValidity()) {
+      return;
+    }
+
+    setNutritionAnalysisStatus("Analizzo il pasto e stimo le porzioni...");
+    setNutritionFormPendingState(form, true);
+
+    try {
+      const meal = await createNutritionMealFromForm(form);
+
+      if (!isNutritionMealValid(meal)) {
+        return;
+      }
+
+      appState.nutrition.meals.push(meal);
+      persistNutritionMealChanges(getMealDateKey(meal));
+      resetNutritionFormAfterSubmit(form);
+      setNutritionAnalysisStatus("");
+    } catch (error) {
+      console.error("Impossibile aggiungere il pasto.", error);
+      setNutritionAnalysisStatus(error.message || "Impossibile analizzare il pasto.");
+    } finally {
+      setNutritionFormPendingState(form, false);
+    }
   });
 
   mealsList.addEventListener("click", (event) => {

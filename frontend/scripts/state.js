@@ -95,6 +95,9 @@ function normalizeNutriTrackState(parsedState) {
       medical: {
         ...structuredClone(defaultState.profile.medical),
         ...((parsedState.profile && parsedState.profile.medical) || {}),
+        labMetrics: Array.isArray(parsedState.profile?.medical?.labMetrics)
+          ? parsedState.profile.medical.labMetrics
+          : structuredClone(defaultState.profile.medical.labMetrics),
       },
       goals: {
         ...structuredClone(defaultState.profile.goals),

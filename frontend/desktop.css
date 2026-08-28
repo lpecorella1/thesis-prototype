@@ -4,6 +4,10 @@
    solo quando lo schermo supera i breakpoint. */
 
 @media (min-width: 841px) {
+  [data-meal-photo-button] {
+    display: none;
+  }
+
   .section-mobile-nav {
     display: none !important;
   }

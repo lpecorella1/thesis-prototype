@@ -70,6 +70,27 @@ function buildGoalSummary(goals = {}) {
   return chunks.join(". ");
 }
 
+function normalizeLabMetricsSummary(metrics = []) {
+  return Array.isArray(metrics)
+    ? metrics
+        .map((metric) => {
+          const label = String(metric?.label || "").trim();
+          const value = String(metric?.value || "").trim();
+
+          if (!label || !value) {
+            return "";
+          }
+
+          const unit = String(metric?.unit || "").trim();
+          const status = String(metric?.status || "").trim();
+          const documentDate = String(metric?.documentDate || "").trim();
+          return [unit ? `${label}: ${value} ${unit}` : `${label}: ${value}`, status ? `stato ${status}` : "", documentDate].filter(Boolean).join(" - ");
+        })
+        .filter(Boolean)
+        .slice(0, 12)
+    : [];
+}
+
 function getDaysUntilIsoDate(dateKey) {
   if (!dateKey) {
     return null;
@@ -315,6 +336,7 @@ function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {
     ...(overrides.generator && typeof overrides.generator === "object" ? cloneJson(overrides.generator) : {}),
   };
   const goalSummary = buildGoalSummary(resolvedGoals);
+  const labMetricsSummary = normalizeLabMetricsSummary(profile.medical?.labMetrics);
 
   return {
     source: {
@@ -347,6 +369,7 @@ function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {
       allergies: String(profile.medical?.allergies || "").trim(),
       medicalConditions: String(profile.medical?.medicalConditions || "").trim(),
       dietaryPreferences: String(profile.medical?.dietaryPreferences || "").trim(),
+      labMetrics: labMetricsSummary,
     },
     generator,
     currentRecipe: currentRecipe

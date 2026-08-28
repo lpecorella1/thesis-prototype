@@ -56,8 +56,321 @@ const profileMetricRanges = {
   weightKg: { min: 20, max: 300 },
 };
 
+const MEDICAL_DOCUMENT_MAX_FILE_BYTES = 5_500_000;
+const MEDICAL_DOCUMENT_SUPPORTED_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+const MEDICAL_DOCUMENT_SUPPORTED_EXTENSIONS = new Set(["png", "jpg", "jpeg", "webp", "pdf", "docx"]);
+
+const medicalLabMetricLabels = {
+  total_cholesterol: "Colesterolo totale",
+  hdl_cholesterol: "Colesterolo HDL",
+  ldl_cholesterol: "Colesterolo LDL",
+  triglycerides: "Trigliceridi",
+  glucose: "Glicemia",
+  hba1c: "Emoglobina glicata",
+  blood_pressure_systolic: "Pressione sistolica",
+  blood_pressure_diastolic: "Pressione diastolica",
+  other: "Altro valore",
+};
+
+const medicalLabMetricStatuses = {
+  low: "Basso",
+  normal: "Nella norma",
+  high: "Alto",
+  unknown: "Da verificare",
+};
+
+function renderMedicalMetricStatusOptions(selectedStatus) {
+  return Object.entries(medicalLabMetricStatuses)
+    .map(
+      ([status, label]) =>
+        `<option value="${escapeHtml(status)}"${status === selectedStatus ? " selected" : ""}>${escapeHtml(label)}</option>`
+    )
+    .join("");
+}
+
 function isProfileMetricInRange(value, range) {
   return Number.isFinite(value) && value >= range.min && value <= range.max;
+}
+
+function normalizeMedicalLabMetrics(metrics) {
+  return Array.isArray(metrics)
+    ? metrics
+        .map((metric) => {
+          const key = String(metric?.key || "other").trim() || "other";
+          const label = String(metric?.label || medicalLabMetricLabels[key] || "Valore clinico").trim();
+          const value = String(metric?.value || "").trim();
+
+          if (!value) {
+            return null;
+          }
+
+          return {
+            id: String(metric?.id || crypto.randomUUID()),
+            key,
+            label,
+            value,
+            unit: String(metric?.unit || "").trim(),
+            referenceRange: String(metric?.referenceRange || "").trim(),
+            status: medicalLabMetricStatuses[metric?.status] ? metric.status : "unknown",
+            confidence: Number.isFinite(Number(metric?.confidence)) ? Math.max(0, Math.min(1, Number(metric.confidence))) : null,
+            documentDate: String(metric?.documentDate || "").trim(),
+            sourceName: String(metric?.sourceName || "").trim(),
+            capturedAt: String(metric?.capturedAt || new Date().toISOString()).trim(),
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 40)
+    : [];
+}
+
+function formatMedicalLabMetric(metric) {
+  const unit = metric.unit ? ` ${metric.unit}` : "";
+  const range = metric.referenceRange ? ` · rif. ${metric.referenceRange}` : "";
+  const date = metric.documentDate ? ` · ${metric.documentDate}` : "";
+  return `${metric.label}: ${metric.value}${unit}${range}${date}`;
+}
+
+function buildMedicalLabMetricsConditionsLine(metrics) {
+  const metricSummary = normalizeMedicalLabMetrics(metrics).map(formatMedicalLabMetric).join("; ");
+  return metricSummary ? `Valori da referto: ${metricSummary}.` : "";
+}
+
+function syncMedicalConditionsFieldFromLabMetrics(form, metrics) {
+  if (!form?.elements?.medicalConditions) {
+    return "";
+  }
+
+  const preservedLines = String(form.elements.medicalConditions.value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("Valori da referto:"));
+  const importLine = buildMedicalLabMetricsConditionsLine(metrics);
+  const nextConditions = [...preservedLines, importLine].filter(Boolean).join("\n");
+  form.elements.medicalConditions.value = nextConditions;
+  return nextConditions;
+}
+
+function getMedicalMetricStatusLabel(status) {
+  return medicalLabMetricStatuses[status] || medicalLabMetricStatuses.unknown;
+}
+
+function renderMedicalLabMetrics() {
+  const list = document.querySelector("[data-medical-metrics-list]");
+
+  if (!list) {
+    return;
+  }
+
+  const metrics = normalizeMedicalLabMetrics(appState.profile?.medical?.labMetrics);
+
+  if (metrics.length === 0) {
+    list.innerHTML = '<p class="medical-doc-empty">Nessun valore importato dai documenti.</p>';
+    return;
+  }
+
+  list.innerHTML = metrics
+    .map(
+      (metric, index) => `
+        <article class="medical-metric-chip" data-medical-metric-card="${index}">
+          <div class="medical-metric-display">
+            <span>${escapeHtml(metric.label)}</span>
+            <strong>${escapeHtml(metric.value)}${metric.unit ? ` ${escapeHtml(metric.unit)}` : ""}</strong>
+            <small>${escapeHtml(getMedicalMetricStatusLabel(metric.status))}${metric.referenceRange ? ` · rif. ${escapeHtml(metric.referenceRange)}` : ""}</small>
+          </div>
+          <div class="medical-metric-edit" data-medical-metric-edit-form="${index}" hidden>
+            <label>
+              <span>Nome</span>
+              <input type="text" name="label" value="${escapeHtml(metric.label)}" required />
+            </label>
+            <label>
+              <span>Valore</span>
+              <input type="text" name="value" value="${escapeHtml(metric.value)}" required />
+            </label>
+            <label>
+              <span>Unita</span>
+              <input type="text" name="unit" value="${escapeHtml(metric.unit)}" />
+            </label>
+            <label>
+              <span>Range</span>
+              <input type="text" name="referenceRange" value="${escapeHtml(metric.referenceRange)}" />
+            </label>
+            <label>
+              <span>Stato</span>
+              <select name="status">${renderMedicalMetricStatusOptions(metric.status)}</select>
+            </label>
+          </div>
+          <div class="medical-metric-actions">
+            <button class="medical-icon-btn" type="button" data-medical-metric-edit="${index}" aria-label="Modifica ${escapeHtml(metric.label)}" title="Modifica">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.8 4.3 4.3-.8L19 8.5 15.5 5 4 16.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" /><path d="m14.5 6 3.5 3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" /></svg>
+            </button>
+            <button class="medical-icon-btn" type="button" data-medical-metric-save="${index}" aria-label="Salva ${escapeHtml(metric.label)}" title="Salva" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" /></svg>
+            </button>
+            <button class="medical-icon-btn" type="button" data-medical-metric-cancel="${index}" aria-label="Annulla modifica ${escapeHtml(metric.label)}" title="Annulla" hidden>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" /></svg>
+            </button>
+            <button class="medical-icon-btn danger" type="button" data-medical-metric-delete="${index}" aria-label="Elimina ${escapeHtml(metric.label)}" title="Elimina">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M9 7l1-2h4l1 2M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
+            </button>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function getMedicalDocumentFileExtension(file) {
+  return String(file?.name || "").split(".").pop().toLowerCase();
+}
+
+function isSupportedMedicalDocumentFile(file) {
+  const mimeType = String(file?.type || "").toLowerCase();
+  const extension = getMedicalDocumentFileExtension(file);
+  return MEDICAL_DOCUMENT_SUPPORTED_MIME_TYPES.has(mimeType) || MEDICAL_DOCUMENT_SUPPORTED_EXTENSIONS.has(extension);
+}
+
+function formatMedicalDocumentFileSize(size) {
+  const megabytes = Number(size || 0) / 1_000_000;
+  return megabytes >= 1 ? `${megabytes.toFixed(1)} MB` : `${Math.max(1, Math.round(Number(size || 0) / 1000))} KB`;
+}
+
+function readMedicalDocumentFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error("Seleziona una foto, un PDF o un documento Word .docx."));
+      return;
+    }
+
+    if (!isSupportedMedicalDocumentFile(file)) {
+      reject(new Error("Formato non supportato. Carica una foto, un PDF o un Word .docx."));
+      return;
+    }
+
+    if (file.size > MEDICAL_DOCUMENT_MAX_FILE_BYTES) {
+      reject(new Error("Documento troppo grande. Prova con un file piu leggero."));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result || "")));
+    reader.addEventListener("error", () => reject(new Error("Impossibile leggere il file selezionato.")));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function analyzeMedicalDocumentFile(file) {
+  const dataUrl = await readMedicalDocumentFile(file);
+  const response = await fetch(window.NutriTrackBootstrap.buildNutriTrackApiPath("/api/profile/analyze-medical-document"), {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      file: {
+        dataUrl,
+        name: file.name,
+        type: file.type,
+      },
+    }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload.error || "Impossibile analizzare il documento.");
+  }
+
+  return payload.analysis;
+}
+
+function setMedicalDocumentStatus(message, tone = "") {
+  const status = document.querySelector("[data-medical-document-status]");
+
+  if (!status) {
+    return;
+  }
+
+  status.textContent = message;
+  status.dataset.statusTone = tone;
+}
+
+function renderMedicalDocumentReview(analysis) {
+  const panel = document.querySelector("[data-medical-document-review]");
+  const list = document.querySelector("[data-medical-document-results]");
+  const note = document.querySelector("[data-medical-document-note]");
+
+  if (!panel || !list || !note) {
+    return;
+  }
+
+  const metrics = normalizeMedicalLabMetrics(analysis?.metrics);
+
+  if (metrics.length === 0) {
+    panel.hidden = true;
+    list.innerHTML = "";
+    note.textContent = "";
+    return;
+  }
+
+  panel.hidden = false;
+  list.innerHTML = metrics
+    .map(
+      (metric, index) => `
+        <article class="medical-document-result">
+          <label>
+            <span>Nome</span>
+            <input type="text" value="${escapeHtml(metric.label)}" data-medical-document-field="${index}:label" />
+          </label>
+          <label>
+            <span>Valore</span>
+            <input type="text" value="${escapeHtml(metric.value)}" data-medical-document-field="${index}:value" />
+          </label>
+          <label>
+            <span>Unita</span>
+            <input type="text" value="${escapeHtml(metric.unit)}" data-medical-document-field="${index}:unit" />
+          </label>
+          <label>
+            <span>Range</span>
+            <input type="text" value="${escapeHtml(metric.referenceRange)}" data-medical-document-field="${index}:referenceRange" />
+          </label>
+          <label>
+            <span>Stato</span>
+            <select data-medical-document-field="${index}:status">${renderMedicalMetricStatusOptions(metric.status)}</select>
+          </label>
+          <button class="medical-icon-btn danger" type="button" data-medical-document-delete="${index}" aria-label="Elimina ${escapeHtml(metric.label)}" title="Elimina">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M9 7l1-2h4l1 2M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
+          </button>
+        </article>
+      `
+    )
+    .join("");
+  note.textContent = analysis?.reviewNote || "Controlla i valori prima di applicarli al profilo.";
+}
+
+function inferHealthFocusFromMetrics(metrics) {
+  const keys = new Set(metrics.map((metric) => metric.key));
+
+  if (keys.has("total_cholesterol") || keys.has("hdl_cholesterol") || keys.has("ldl_cholesterol") || keys.has("triglycerides")) {
+    return "cholesterol";
+  }
+
+  if (keys.has("glucose") || keys.has("hba1c")) {
+    return "glycemia";
+  }
+
+  if (keys.has("blood_pressure_systolic") || keys.has("blood_pressure_diastolic")) {
+    return "blood-pressure";
+  }
+
+  return "";
 }
 
 function toggleHealthFocusField(primaryObjective) {
@@ -253,6 +566,7 @@ function renderProfile() {
   form.elements.goalCarbs.value = goals.carbs;
   form.elements.goalFats.value = goals.fats;
   form.elements.goalWater.value = goals.water;
+  renderMedicalLabMetrics();
 
   document.querySelectorAll("[data-diet-type]").forEach((button) => {
     button.classList.toggle("active", button.dataset.dietType === personal.dietType);
@@ -323,6 +637,7 @@ function setupProfileSection() {
       medications: String(form.elements.medications.value).trim(),
       medicalConditions: String(form.elements.medicalConditions.value).trim(),
       dietaryPreferences: String(form.elements.dietaryPreferences.value).trim(),
+      labMetrics: normalizeMedicalLabMetrics(appState.profile.medical.labMetrics),
     },
     goals: {
       primaryObjective: form.elements.primaryObjective.value,
@@ -442,6 +757,237 @@ function setupProfileSection() {
     return true;
   };
 
+  const medicalDocumentInput = document.querySelector("[data-medical-document-input]");
+  const medicalDocumentAnalyzeButton = document.querySelector("[data-medical-document-analyze]");
+  const medicalDocumentApplyButton = document.querySelector("[data-medical-document-apply]");
+  const medicalDocumentClearButton = document.querySelector("[data-medical-document-clear]");
+  const medicalDocumentReviewPanel = document.querySelector("[data-medical-document-review]");
+  const medicalMetricsList = document.querySelector("[data-medical-metrics-list]");
+  let latestMedicalDocumentAnalysis = null;
+
+  const clearMedicalDocumentReview = () => {
+    latestMedicalDocumentAnalysis = null;
+    renderMedicalDocumentReview(null);
+
+    if (medicalDocumentInput) {
+      medicalDocumentInput.value = "";
+    }
+  };
+
+  const applyMedicalDocumentAnalysis = () => {
+    const metrics = normalizeMedicalLabMetrics(latestMedicalDocumentAnalysis?.metrics).map((metric) => ({
+      ...metric,
+      sourceName: latestMedicalDocumentAnalysis?.documentType || "Documento medico",
+      documentDate: metric.documentDate || latestMedicalDocumentAnalysis?.documentDate || "",
+    }));
+
+    if (metrics.length === 0) {
+      setMedicalDocumentStatus("Nessun valore da applicare.", "error");
+      return;
+    }
+
+    const existingMetrics = normalizeMedicalLabMetrics(appState.profile.medical.labMetrics);
+    const nextLabMetrics = [...metrics, ...existingMetrics].slice(0, 40);
+    const nextConditions = syncMedicalConditionsFieldFromLabMetrics(form, nextLabMetrics);
+    const healthFocus = inferHealthFocusFromMetrics(metrics);
+
+    form.elements.medicalConditions.value = nextConditions;
+
+    if (healthFocus) {
+      form.elements.primaryObjective.value = "health-support";
+      toggleHealthFocusField("health-support");
+      form.elements.healthFocus.value = healthFocus;
+    }
+
+    appState.profile = {
+      ...appState.profile,
+      medical: {
+        ...appState.profile.medical,
+        allergies: String(form.elements.allergies.value).trim(),
+        medications: String(form.elements.medications.value).trim(),
+        medicalConditions: nextConditions,
+        dietaryPreferences: String(form.elements.dietaryPreferences.value).trim(),
+        labMetrics: nextLabMetrics,
+      },
+      goals: {
+        ...appState.profile.goals,
+        primaryObjective: form.elements.primaryObjective.value,
+        secondaryObjective: form.elements.secondaryObjective.value,
+        healthFocus: String(form.elements.healthFocus.value || "").trim(),
+      },
+    };
+
+    saveState();
+    renderProfile();
+    clearMedicalDocumentReview();
+    showProfileSaveConfirmation();
+    setMedicalDocumentStatus("Valori applicati al profilo.", "success");
+    setProfileFeedback("Documento letto e dati medici aggiornati.");
+  };
+
+  const setSavedMedicalMetricEditMode = (index, isEditing) => {
+    const card = medicalMetricsList?.querySelector(`[data-medical-metric-card="${index}"]`);
+
+    if (!card) {
+      return;
+    }
+
+    card.classList.toggle("is-editing", isEditing);
+    card.querySelector(".medical-metric-display").hidden = isEditing;
+    card.querySelector("[data-medical-metric-edit-form]").hidden = !isEditing;
+    card.querySelector("[data-medical-metric-edit]").hidden = isEditing;
+    card.querySelector("[data-medical-metric-delete]").hidden = isEditing;
+    card.querySelector("[data-medical-metric-save]").hidden = !isEditing;
+    card.querySelector("[data-medical-metric-cancel]").hidden = !isEditing;
+  };
+
+  const readSavedMedicalMetricEdit = (index) => {
+    const editContainer = medicalMetricsList?.querySelector(`[data-medical-metric-edit-form="${index}"]`);
+    const existingMetric = normalizeMedicalLabMetrics(appState.profile.medical.labMetrics)[index] || {};
+
+    if (!editContainer) {
+      return null;
+    }
+
+    return normalizeMedicalLabMetrics([
+      {
+        ...existingMetric,
+        label: editContainer.querySelector('[name="label"]')?.value,
+        value: editContainer.querySelector('[name="value"]')?.value,
+        unit: editContainer.querySelector('[name="unit"]')?.value,
+        referenceRange: editContainer.querySelector('[name="referenceRange"]')?.value,
+        status: editContainer.querySelector('[name="status"]')?.value,
+      },
+    ])[0];
+  };
+
+  const persistLabMetricsFromCards = (metrics, message) => {
+    const nextMetrics = normalizeMedicalLabMetrics(metrics);
+    const nextConditions = syncMedicalConditionsFieldFromLabMetrics(form, nextMetrics);
+
+    appState.profile = {
+      ...appState.profile,
+      medical: {
+        ...appState.profile.medical,
+        allergies: String(form.elements.allergies.value).trim(),
+        medications: String(form.elements.medications.value).trim(),
+        medicalConditions: nextConditions,
+        dietaryPreferences: String(form.elements.dietaryPreferences.value).trim(),
+        labMetrics: nextMetrics,
+      },
+    };
+
+    saveState();
+    renderProfile();
+    setMedicalDocumentStatus(message, "success");
+  };
+
+  medicalDocumentInput?.addEventListener("change", () => {
+    const file = medicalDocumentInput.files?.[0];
+    latestMedicalDocumentAnalysis = null;
+    renderMedicalDocumentReview(null);
+
+    if (!file) {
+      setMedicalDocumentStatus("", "");
+      return;
+    }
+
+    if (!isSupportedMedicalDocumentFile(file)) {
+      setMedicalDocumentStatus("Formato non supportato. Usa foto, PDF o Word .docx.", "error");
+      return;
+    }
+
+    if (file.size > MEDICAL_DOCUMENT_MAX_FILE_BYTES) {
+      setMedicalDocumentStatus("Documento troppo grande. Carica un file piu leggero.", "error");
+      return;
+    }
+
+    setMedicalDocumentStatus(`File caricato: ${file.name} (${formatMedicalDocumentFileSize(file.size)}). Pronto per l'analisi.`, "success");
+  });
+
+  const updateMedicalDocumentDraftField = (event) => {
+    const fieldConfig = event.target.closest("[data-medical-document-field]")?.dataset.medicalDocumentField;
+
+    if (!fieldConfig || !latestMedicalDocumentAnalysis) {
+      return;
+    }
+
+    const [indexValue, fieldName] = fieldConfig.split(":");
+    const index = Number(indexValue);
+    const metrics = normalizeMedicalLabMetrics(latestMedicalDocumentAnalysis.metrics);
+
+    if (!Number.isInteger(index) || !metrics[index] || !fieldName) {
+      return;
+    }
+
+    metrics[index] = {
+      ...metrics[index],
+      [fieldName]: event.target.value,
+    };
+    latestMedicalDocumentAnalysis = {
+      ...latestMedicalDocumentAnalysis,
+      metrics,
+    };
+  };
+
+  medicalDocumentReviewPanel?.addEventListener("input", updateMedicalDocumentDraftField);
+  medicalDocumentReviewPanel?.addEventListener("change", updateMedicalDocumentDraftField);
+
+  medicalDocumentReviewPanel?.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest("[data-medical-document-delete]");
+
+    if (!deleteButton || !latestMedicalDocumentAnalysis) {
+      return;
+    }
+
+    const index = Number(deleteButton.dataset.medicalDocumentDelete);
+    const metrics = normalizeMedicalLabMetrics(latestMedicalDocumentAnalysis.metrics).filter((_, metricIndex) => metricIndex !== index);
+    latestMedicalDocumentAnalysis = {
+      ...latestMedicalDocumentAnalysis,
+      metrics,
+    };
+    renderMedicalDocumentReview(latestMedicalDocumentAnalysis);
+    setMedicalDocumentStatus(metrics.length ? "Valore rimosso dalla proposta." : "Nessun valore rimasto nella proposta.", metrics.length ? "success" : "");
+  });
+
+  medicalMetricsList?.addEventListener("click", (event) => {
+    const editButton = event.target.closest("[data-medical-metric-edit]");
+    const saveButton = event.target.closest("[data-medical-metric-save]");
+    const cancelButton = event.target.closest("[data-medical-metric-cancel]");
+    const deleteButton = event.target.closest("[data-medical-metric-delete]");
+
+    if (editButton) {
+      setSavedMedicalMetricEditMode(Number(editButton.dataset.medicalMetricEdit), true);
+      return;
+    }
+
+    if (cancelButton) {
+      renderMedicalLabMetrics();
+      return;
+    }
+
+    if (saveButton) {
+      const index = Number(saveButton.dataset.medicalMetricSave);
+      const metrics = normalizeMedicalLabMetrics(appState.profile.medical.labMetrics);
+      const editedMetric = readSavedMedicalMetricEdit(index);
+
+      if (!editedMetric) {
+        setMedicalDocumentStatus("Inserisci almeno nome e valore per salvare la card.", "error");
+        return;
+      }
+
+      metrics[index] = editedMetric;
+      persistLabMetricsFromCards(metrics, "Valore aggiornato.");
+      return;
+    }
+
+    if (deleteButton) {
+      const index = Number(deleteButton.dataset.medicalMetricDelete);
+      const metrics = normalizeMedicalLabMetrics(appState.profile.medical.labMetrics).filter((_, metricIndex) => metricIndex !== index);
+      persistLabMetricsFromCards(metrics, "Valore eliminato dal profilo.");
+    }
+  });
+
   document.querySelectorAll("[data-diet-type]").forEach((button) => {
     button.addEventListener("click", () => {
       appState.profile.personal.dietType = button.dataset.dietType;
@@ -526,6 +1072,31 @@ function setupProfileSection() {
 
     submitDailyGoals();
     setProfileFeedback("Obiettivi consigliati applicati e salvati.");
+  });
+
+  medicalDocumentAnalyzeButton?.addEventListener("click", async () => {
+    const file = medicalDocumentInput?.files?.[0];
+
+    try {
+      medicalDocumentAnalyzeButton.disabled = true;
+      setMedicalDocumentStatus("Analisi del documento in corso...", "");
+      latestMedicalDocumentAnalysis = await analyzeMedicalDocumentFile(file);
+      renderMedicalDocumentReview(latestMedicalDocumentAnalysis);
+      setMedicalDocumentStatus("Valori rilevati. Verifica il riepilogo prima di applicarli.", "success");
+    } catch (error) {
+      latestMedicalDocumentAnalysis = null;
+      renderMedicalDocumentReview(null);
+      setMedicalDocumentStatus(error.message || "Impossibile analizzare il documento.", "error");
+    } finally {
+      medicalDocumentAnalyzeButton.disabled = false;
+    }
+  });
+
+  medicalDocumentApplyButton?.addEventListener("click", applyMedicalDocumentAnalysis);
+
+  medicalDocumentClearButton?.addEventListener("click", () => {
+    clearMedicalDocumentReview();
+    setMedicalDocumentStatus("Documento scartato.", "");
   });
 
   profileSaveButton.addEventListener("click", submitFullProfile);

@@ -11,7 +11,7 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="mobile-style.css?v=20260706" />
+    <link rel="stylesheet" href="mobile-style.css?v=20260828a" />
     <link rel="stylesheet" href="desktop.css?v=20260706" />
     <script>
       window.NUTRITRACK_BASE_PATH = "/nutritrack";
@@ -165,7 +165,7 @@
                   </svg>
                 </span>
                 <strong>La tua dispensa</strong>
-                <span>Lista acquisti, confronto prodotti e dispensa.</span>
+                <span>Confronto prodotti e dispensa.</span>
                 <small class="home-cloud-meta">Acquisti, dispensa e prodotti</small>
               </button>
 
@@ -339,42 +339,37 @@
           <div class="section-head">
           </div>
 
-          <section class="grocery-summary">
-            <div>
-              <div class="summary-title"><h2>Cosa ti manca...</h2></div>
-              <div class="progress-track grocery-track"><span class="progress-fill grocery-fill" data-grocery-progress style="width: 0%"></span></div>
-            </div>
-            <div class="summary-count">
-              <strong data-grocery-count>0/0</strong>
-              <span>prodotti acquistati</span>
-            </div>
-          </section>
-
           <section class="grocery-section">
-            <div class="card-stack" data-grocery-list></div>
-
-            <div class="inline-actions">
-              <button class="soft-btn" type="button" data-clear-completed>Rimuovi completati</button>
-            </div>
-
             <div class="grocery-layout">
-              <article class="panel">
-                <h3>Aggiungi prodotto alla lista della spesa</h3>
-                <form class="form-grid grocery-form-grid" data-grocery-form novalidate>
-                  <div class="field field-full lookup-block">
-                    <div class="lookup-head">
-                      <button class="grocery-action-btn" type="button" data-open-barcode-scanner="grocery">Scansiona prodotto</button>
-                    </div>
-                    <input type="hidden" name="barcode" />
-                    <div class="lookup-result" data-off-grocery-result></div>
+              <article class="panel pantry-import-panel">
+                <div class="pantry-import-head">
+                  <div>
+                    <h3>Aggiorna la dispensa</h3>
+                    <p>Trasforma una foto in una lista modificabile prima del salvataggio.</p>
                   </div>
+                </div>
+                <div class="pantry-import-actions">
+                  <button class="grocery-action-btn pantry-import-btn" type="button" data-pantry-import-source="receipt">Scatta foto scontrino</button>
+                  <button class="grocery-action-btn pantry-import-btn" type="button" data-pantry-import-source="fridge-shopping">Scatta foto frigo/spesa</button>
+                  <button class="grocery-action-btn pantry-import-btn" type="button" data-open-barcode-scanner="grocery">Scansiona barcode</button>
+                </div>
+                <input type="file" accept="image/*" capture="environment" data-pantry-import-input hidden />
+                <p class="pantry-import-status" data-pantry-import-status aria-live="polite">La proposta AI comparirà qui prima della conferma.</p>
+                <div class="lookup-result pantry-barcode-result" data-off-grocery-result></div>
+                <div class="pantry-import-review" data-pantry-import-review></div>
+              </article>
+
+              <article class="panel">
+                <h3>Aggiungi prodotto</h3>
+                <form class="form-grid grocery-form-grid" data-grocery-form novalidate>
+                  <input type="hidden" name="barcode" />
                   <label class="field field-full">
-                    <span>Nome prodotto</span>
+                    <span>Nome</span>
                     <input type="text" name="name" placeholder="Es. Pomodori pelati" required />
                   </label>
                   <label class="field">
                     <span>Quantità</span>
-                    <input type="text" name="quantity" placeholder="2 confezioni" required />
+                    <input type="text" name="quantity" placeholder="Es. 250g" required />
                   </label>
                   <label class="field">
                     <span>Categoria</span>
@@ -397,21 +392,6 @@
                   </div>
                 </form>
               </article>
-
-              <article class="panel pantry-import-panel">
-                <div class="pantry-import-head">
-                  <div>
-                    <h3>Aggiungi prodotti in dispensa</h3>
-                    <p>Trasforma una foto in una lista modificabile prima del salvataggio.</p>
-                  </div>
-                </div>
-                <div class="pantry-import-actions">
-                  <button class="grocery-action-btn pantry-import-btn" type="button" data-pantry-import-source="photo">Scatta foto</button>
-                </div>
-                <input type="file" accept="image/*" capture="environment" data-pantry-import-input hidden />
-                <p class="pantry-import-status" data-pantry-import-status aria-live="polite">La proposta AI comparirà qui prima della conferma.</p>
-                <div class="pantry-import-review" data-pantry-import-review></div>
-              </article>
             </div>
 
             <article class="panel pantry-panel">
@@ -420,6 +400,25 @@
               </div>
               <div class="pantry-list" data-pantry-list></div>
             </article>
+
+            <section class="grocery-summary">
+              <div>
+                <div class="summary-title"><h2>Shopping list</h2></div>
+                <div class="progress-track grocery-track"><span class="progress-fill grocery-fill" data-grocery-progress style="width: 0%"></span></div>
+              </div>
+              <div class="summary-count">
+                <strong data-grocery-count>0/0</strong>
+                <span>prodotti acquistati</span>
+              </div>
+            </section>
+
+            <div class="inline-actions">
+              <button class="grocery-action-btn" type="button" data-grocery-generate-list>Genera lista della spesa</button>
+              <button class="soft-btn" type="button" data-clear-completed>Rimuovi acquistati</button>
+            </div>
+            <p class="grocery-generation-status" data-grocery-generation-status aria-live="polite"></p>
+
+            <div class="card-stack" data-grocery-list></div>
 
             <article class="panel grocery-ar-panel">
               <div class="section-head grocery-ar-head">
@@ -446,7 +445,7 @@
                 <div class="grocery-ar-stage">
                   <video class="grocery-ar-video" data-grocery-ar-video playsinline muted></video>
                   <div class="grocery-ar-placeholder" data-grocery-ar-placeholder>
-                    <strong>Scansiona barcode</strong>
+                    <strong>Scansiona due barcode</strong>
                   </div>
                   <div class="grocery-ar-overlay" data-grocery-ar-overlay></div>
                 </div>
@@ -485,26 +484,46 @@
           </div>
 
           <div class="stats-grid">
-            <article class="stat-card">
-              <h2>Calorie</h2>
+            <article class="stat-card nutrition-stat-card nutrition-stat-calories">
+              <div class="nutrition-stat-head">
+                <span class="nutrition-stat-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M13 2 6 13h5l-1 9 8-12h-5l1-8Z" /></svg>
+                </span>
+                <h2>Calorie</h2>
+              </div>
               <div class="metric"><span data-nutrition-total="calories">0</span> <span>kcal</span></div>
               <p><span data-nutrition-total="calories">0</span> su <span data-nutrition-goal="calories">2000</span> kcal</p>
               <div class="progress-track"><span class="progress-fill blue" data-nutrition-progress="calories" style="width: 0%"></span></div>
             </article>
-            <article class="stat-card">
-              <h2>Proteine</h2>
+            <article class="stat-card nutrition-stat-card nutrition-stat-protein">
+              <div class="nutrition-stat-head">
+                <span class="nutrition-stat-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8M3 9v6M21 9v6" /></svg>
+                </span>
+                <h2>Proteine</h2>
+              </div>
               <div class="metric"><span data-nutrition-total="protein">0</span> <span>g</span></div>
               <p><span data-nutrition-total="protein">0</span> su <span data-nutrition-goal="protein">150</span> g</p>
               <div class="progress-track"><span class="progress-fill red" data-nutrition-progress="protein" style="width: 0%"></span></div>
             </article>
-            <article class="stat-card">
-              <h2>Carboidrati</h2>
+            <article class="stat-card nutrition-stat-card nutrition-stat-carbs">
+              <div class="nutrition-stat-head">
+                <span class="nutrition-stat-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M6 10c1.7-3.8 5.3-5.2 10-5.8 1.1 4.5-.5 8.1-4.3 9.8C9.2 15.1 6.8 13.3 6 10Z" /><path d="M12 14c-1.5 2.2-3.4 3.8-6 5" /></svg>
+                </span>
+                <h2>Carboidrati</h2>
+              </div>
               <div class="metric"><span data-nutrition-total="carbs">0</span> <span>g</span></div>
               <p><span data-nutrition-total="carbs">0</span> su <span data-nutrition-goal="carbs">250</span> g</p>
               <div class="progress-track"><span class="progress-fill yellow" data-nutrition-progress="carbs" style="width: 0%"></span></div>
             </article>
-            <article class="stat-card">
-              <h2>Grassi</h2>
+            <article class="stat-card nutrition-stat-card nutrition-stat-fats">
+              <div class="nutrition-stat-head">
+                <span class="nutrition-stat-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 3C8.5 7.4 6 10.9 6 14a6 6 0 0 0 12 0c0-3.1-2.5-6.6-6-11Z" /></svg>
+                </span>
+                <h2>Grassi</h2>
+              </div>
               <div class="metric"><span data-nutrition-total="fats">0</span> <span>g</span></div>
               <p><span data-nutrition-total="fats">0</span> su <span data-nutrition-goal="fats">65</span> g</p>
               <div class="progress-track"><span class="progress-fill green" data-nutrition-progress="fats" style="width: 0%"></span></div>
@@ -518,17 +537,19 @@
 
             <div class="nutrition-layout">
               <article class="panel">
-                <h3>Aggiungi un pasto</h3>
+                <h3>Aggiungi pasto</h3>
                 <form class="form-grid nutrition-form-grid" data-nutrition-form novalidate>
                   <div class="field field-full lookup-block">
                     <div class="lookup-head">
                       <button class="grocery-action-btn" type="button" data-open-barcode-scanner="nutrition">Scansiona prodotto</button>
+                      <button class="grocery-action-btn" type="button" data-meal-photo-button>Foto pasto</button>
                     </div>
                     <div class="lookup-result" data-off-nutrition-result></div>
                   </div>
+                  <input type="file" accept="image/*" capture="environment" data-meal-photo-input hidden />
                   <label class="field field-full">
-                    <span>Nome pasto</span>
-                    <input type="text" name="name" placeholder="Es. Yogurt con frutta" required />
+                    <span>Descrizione pasto</span>
+                    <textarea name="name" rows="3" placeholder="Es. 80g pasta con lenticchie, 1 banana e 200ml di succo d'arancia" required></textarea>
                   </label>
                   <label class="field">
                     <span>Orario</span>
@@ -537,6 +558,7 @@
                   <div class="field field-full nutrition-form-row">
                     <button class="primary-btn primary-btn-blue" type="submit">Aggiungi</button>
                   </div>
+                  <p class="save-hint field-full" data-nutrition-analysis-status aria-live="polite"></p>
                 </form>
               </article>
 
@@ -724,6 +746,31 @@
                 <label class="field"><span>Condizioni mediche</span><textarea name="medicalConditions" rows="4" placeholder="Indica eventuali condizioni mediche (diabete, ipertensione, ecc.)..."></textarea></label>
                 <label class="field"><span>Preferenze alimentari</span><textarea name="dietaryPreferences" rows="4" placeholder="Es. vegetariana, senza lattosio, pochi zuccheri..."></textarea></label>
               </div>
+              <div class="medical-document-box">
+                <div class="medical-document-head">
+                  <div>
+                    <h4>Importa referto</h4>
+                    <p>Carica una foto, un PDF testuale o un documento Word .docx con analisi del sangue, valori pressori o esami utili.</p>
+                  </div>
+                  <label class="medical-document-upload">
+                    <input type="file" accept="image/png,image/jpeg,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.pdf,.docx" data-medical-document-input />
+                    <span>Seleziona file</span>
+                  </label>
+                </div>
+                <div class="medical-document-actions">
+                  <button class="ghost-btn primary" type="button" data-medical-document-analyze>Leggi con AI</button>
+                  <span class="medical-document-status" data-medical-document-status aria-live="polite"></span>
+                </div>
+                <div class="medical-document-review" data-medical-document-review hidden>
+                  <div class="medical-document-results" data-medical-document-results></div>
+                  <p data-medical-document-note></p>
+                  <div class="medical-document-actions">
+                    <button class="apply-btn" type="button" data-medical-document-apply>Applica al profilo</button>
+                    <button class="ghost-btn" type="button" data-medical-document-clear>Scarta</button>
+                  </div>
+                </div>
+                <div class="medical-metrics-list" data-medical-metrics-list></div>
+              </div>
             </article>
 
             <article class="panel">
@@ -857,10 +904,10 @@
       </div>
     </div>
 
-    <script src="scripts/data-config.js?v=20260727b"></script>
+    <script src="scripts/data-config.js?v=20260828a"></script>
     <script src="scripts/bootstrap.js?v=20260727b"></script>
     <script src="scripts/shared-utils.js?v=20260727b"></script>
-    <script src="scripts/state.js?v=20260727b"></script>
+    <script src="scripts/state.js?v=20260828a"></script>
     <script src="scripts/navigation.js?v=20260727b"></script>
     <script src="app.js?v=20260727b"></script>
     <script src="scripts/auth.js?v=20260727b"></script>
@@ -868,7 +915,7 @@
     <script src="scripts/devices.js?v=20260727b"></script>
     <script src="scripts/progress.js?v=20260727b"></script>
     <script src="scripts/recipes.js?v=20260727b"></script>
-    <script src="scripts/profile.js?v=20260727b"></script>
+    <script src="scripts/profile.js?v=20260828a"></script>
     <script>
       window.initializeNutriTrackApp?.();
     </script>

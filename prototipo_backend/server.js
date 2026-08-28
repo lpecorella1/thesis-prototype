@@ -5,6 +5,7 @@ const https = require("https");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const zlib = require("zlib");
 const { createAzureChatCompletion } = require("./azure-openai");
 const { fetchOpenFoodFactsProduct, sanitizeBarcode } = require("./openfoodfacts");
 const {
@@ -1342,6 +1343,458 @@ async function handleMealNutritionAnalysis(request, response) {
   }
 }
 
+const MEDICAL_DOCUMENT_METRIC_KEYS = new Set([
+  "total_cholesterol",
+  "hdl_cholesterol",
+  "ldl_cholesterol",
+  "triglycerides",
+  "glucose",
+  "hba1c",
+  "blood_pressure_systolic",
+  "blood_pressure_diastolic",
+  "other",
+]);
+
+const MEDICAL_DOCUMENT_STATUSES = new Set(["low", "normal", "high", "unknown"]);
+const MEDICAL_DOCUMENT_IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
+const MEDICAL_DOCUMENT_TEXT_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+const MAX_MEDICAL_DOCUMENT_BYTES = 5_500_000;
+
+function sanitizeMedicalDocumentText(value, maxLength = 180) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+function normalizeMedicalDocumentDate(value) {
+  const normalized = sanitizeMedicalDocumentText(value, 24);
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : "";
+}
+
+function inferMedicalDocumentMimeType(value, fileName = "") {
+  const mimeType = String(value || "").trim().toLowerCase();
+
+  if (MEDICAL_DOCUMENT_IMAGE_MIME_TYPES.has(mimeType) || MEDICAL_DOCUMENT_TEXT_MIME_TYPES.has(mimeType)) {
+    return mimeType;
+  }
+
+  const extension = path.extname(String(fileName || "").toLowerCase());
+
+  if (extension === ".pdf") {
+    return "application/pdf";
+  }
+
+  if (extension === ".docx") {
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  }
+
+  if (extension === ".png") {
+    return "image/png";
+  }
+
+  if (extension === ".jpg" || extension === ".jpeg") {
+    return "image/jpeg";
+  }
+
+  if (extension === ".webp") {
+    return "image/webp";
+  }
+
+  return mimeType;
+}
+
+function sanitizeMedicalDocumentDataUrl(value, options = {}) {
+  const dataUrl = String(value || "").trim().replace(/\s/g, "");
+  const match = dataUrl.match(/^data:([^;,]*);base64,([a-z0-9+/=]+)$/i);
+
+  if (!match) {
+    throw new Error("Formato documento non valido.");
+  }
+
+  const mimeType = inferMedicalDocumentMimeType(options.mimeType || match[1], options.fileName);
+
+  if (!MEDICAL_DOCUMENT_IMAGE_MIME_TYPES.has(mimeType) && !MEDICAL_DOCUMENT_TEXT_MIME_TYPES.has(mimeType)) {
+    throw new Error("Formato non supportato. Carica immagine, PDF o Word .docx.");
+  }
+
+  if (dataUrl.length > MAX_JSON_BODY_BYTES - 200_000) {
+    throw new Error("Documento troppo grande. Carica un file piu leggero o una foto compressa.");
+  }
+
+  const buffer = Buffer.from(match[2], "base64");
+
+  if (buffer.length > MAX_MEDICAL_DOCUMENT_BYTES) {
+    throw new Error("Documento troppo grande. Carica un file piu leggero o una foto compressa.");
+  }
+
+  return {
+    dataUrl,
+    mimeType,
+    buffer,
+    isImage: MEDICAL_DOCUMENT_IMAGE_MIME_TYPES.has(mimeType),
+  };
+}
+
+function decodeXmlEntities(value) {
+  return String(value || "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+function readZipEntries(buffer, wantedNames) {
+  const entries = {};
+  const minEndOffset = Math.max(0, buffer.length - 0xffff - 22);
+  let eocdOffset = -1;
+
+  for (let index = buffer.length - 22; index >= minEndOffset; index -= 1) {
+    if (buffer.readUInt32LE(index) === 0x06054b50) {
+      eocdOffset = index;
+      break;
+    }
+  }
+
+  if (eocdOffset === -1) {
+    throw new Error("Documento Word non leggibile.");
+  }
+
+  const entryCount = buffer.readUInt16LE(eocdOffset + 10);
+  const centralDirectoryOffset = buffer.readUInt32LE(eocdOffset + 16);
+  let offset = centralDirectoryOffset;
+
+  for (let index = 0; index < entryCount; index += 1) {
+    if (buffer.readUInt32LE(offset) !== 0x02014b50) {
+      break;
+    }
+
+    const compressionMethod = buffer.readUInt16LE(offset + 10);
+    const compressedSize = buffer.readUInt32LE(offset + 20);
+    const fileNameLength = buffer.readUInt16LE(offset + 28);
+    const extraLength = buffer.readUInt16LE(offset + 30);
+    const commentLength = buffer.readUInt16LE(offset + 32);
+    const localHeaderOffset = buffer.readUInt32LE(offset + 42);
+    const fileName = buffer.toString("utf8", offset + 46, offset + 46 + fileNameLength);
+
+    if (wantedNames.has(fileName)) {
+      const localFileNameLength = buffer.readUInt16LE(localHeaderOffset + 26);
+      const localExtraLength = buffer.readUInt16LE(localHeaderOffset + 28);
+      const dataStart = localHeaderOffset + 30 + localFileNameLength + localExtraLength;
+      const compressedData = buffer.subarray(dataStart, dataStart + compressedSize);
+
+      if (compressionMethod === 0) {
+        entries[fileName] = compressedData;
+      } else if (compressionMethod === 8) {
+        entries[fileName] = zlib.inflateRawSync(compressedData);
+      }
+    }
+
+    offset += 46 + fileNameLength + extraLength + commentLength;
+  }
+
+  return entries;
+}
+
+function extractTextFromDocx(buffer) {
+  const wantedNames = new Set(["word/document.xml", "word/header1.xml", "word/header2.xml", "word/footer1.xml", "word/footer2.xml"]);
+  const entries = readZipEntries(buffer, wantedNames);
+  const text = Object.values(entries)
+    .map((entry) =>
+      decodeXmlEntities(
+        entry
+          .toString("utf8")
+          .replace(/<\/w:p>/g, "\n")
+          .replace(/<[^>]+>/g, " ")
+      )
+    )
+    .join("\n")
+    .replace(/\s+\n/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+
+  if (!text) {
+    throw new Error("Documento Word senza testo leggibile.");
+  }
+
+  return text.slice(0, 12_000);
+}
+
+function decodePdfString(value) {
+  return String(value || "")
+    .replace(/\\([nrtbf()\\])/g, (_, token) => {
+      const replacements = { n: "\n", r: "\r", t: "\t", b: "", f: "", "(": "(", ")": ")", "\\": "\\" };
+      return replacements[token] ?? token;
+    })
+    .replace(/\\([0-7]{1,3})/g, (_, octal) => String.fromCharCode(parseInt(octal, 8)));
+}
+
+function extractPdfTextFromContent(content) {
+  const chunks = [];
+  const textOperatorPattern = /\((?:\\.|[^\\)])*\)\s*Tj/g;
+  const arrayOperatorPattern = /\[((?:.|\n)*?)\]\s*TJ/g;
+  let match;
+
+  while ((match = textOperatorPattern.exec(content))) {
+    const rawText = match[0].match(/\(((?:\\.|[^\\)])*)\)/)?.[1] || "";
+    chunks.push(decodePdfString(rawText));
+  }
+
+  while ((match = arrayOperatorPattern.exec(content))) {
+    const arrayText = [];
+    const stringPattern = /\((?:\\.|[^\\)])*\)/g;
+    let stringMatch;
+
+    while ((stringMatch = stringPattern.exec(match[1]))) {
+      arrayText.push(decodePdfString(stringMatch[0].slice(1, -1)));
+    }
+
+    if (arrayText.length) {
+      chunks.push(arrayText.join(""));
+    }
+  }
+
+  return chunks.join("\n");
+}
+
+function extractTextFromPdf(buffer) {
+  const raw = buffer.toString("latin1");
+  const chunks = [extractPdfTextFromContent(raw)];
+  let searchOffset = 0;
+
+  while (searchOffset < raw.length) {
+    const streamMarkerOffset = raw.indexOf("stream", searchOffset);
+
+    if (streamMarkerOffset === -1) {
+      break;
+    }
+
+    const streamEndOffset = raw.indexOf("endstream", streamMarkerOffset);
+
+    if (streamEndOffset === -1) {
+      break;
+    }
+
+    const dictionaryStartOffset = raw.lastIndexOf("<<", streamMarkerOffset);
+    const dictionary = dictionaryStartOffset === -1 ? "" : raw.slice(dictionaryStartOffset, streamMarkerOffset);
+    let dataStart = streamMarkerOffset + "stream".length;
+
+    if (raw[dataStart] === "\r" && raw[dataStart + 1] === "\n") {
+      dataStart += 2;
+    } else if (raw[dataStart] === "\n") {
+      dataStart += 1;
+    }
+
+    let dataEnd = streamEndOffset;
+
+    if (raw[dataEnd - 2] === "\r" && raw[dataEnd - 1] === "\n") {
+      dataEnd -= 2;
+    } else if (raw[dataEnd - 1] === "\n") {
+      dataEnd -= 1;
+    }
+
+    const streamBuffer = buffer.subarray(dataStart, dataEnd);
+
+    try {
+      const decodedStream = /\/FlateDecode/.test(dictionary) ? zlib.inflateSync(streamBuffer).toString("latin1") : streamBuffer.toString("latin1");
+      chunks.push(extractPdfTextFromContent(decodedStream));
+    } catch {
+      // Some PDF streams are images or use filters this lightweight extractor does not support.
+    }
+
+    searchOffset = streamEndOffset + "endstream".length;
+  }
+
+  const text = chunks
+    .join("\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  if (text.length < 20) {
+    throw new Error("PDF senza testo leggibile. Per PDF scannerizzati carica una foto o immagine della pagina.");
+  }
+
+  return text.slice(0, 12_000);
+}
+
+function extractMedicalDocumentText(documentPayload) {
+  if (documentPayload.mimeType === "application/pdf") {
+    return extractTextFromPdf(documentPayload.buffer);
+  }
+
+  if (documentPayload.mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    return extractTextFromDocx(documentPayload.buffer);
+  }
+
+  throw new Error("Formato documento non supportato.");
+}
+
+function buildMedicalDocumentAnalysisMessages(imageDataUrl) {
+  return [
+    {
+      role: "system",
+      content:
+        "Sei un motore di estrazione dati per una web app nutrizionale. Devi leggere referti medici fotografati o scannerizzati e restituire solo JSON valido. Estrai solo valori chiaramente leggibili; non fare diagnosi, prescrizioni o terapia. Se un valore e' incerto usa confidence bassa e status unknown.",
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text:
+            "Analizza il documento e cerca soprattutto colesterolo totale, HDL, LDL, trigliceridi, glicemia, emoglobina glicata e pressione. " +
+            "Restituisci JSON nel formato {\"documentType\":\"\",\"documentDate\":\"YYYY-MM-DD oppure vuoto\",\"patientName\":\"\",\"metrics\":[{\"key\":\"total_cholesterol|hdl_cholesterol|ldl_cholesterol|triglycerides|glucose|hba1c|blood_pressure_systolic|blood_pressure_diastolic|other\",\"label\":\"\",\"value\":\"\",\"unit\":\"\",\"referenceRange\":\"\",\"status\":\"low|normal|high|unknown\",\"confidence\":0.0}],\"nutritionSignals\":[\"\"],\"reviewNote\":\"\"}. " +
+            "Usa unita di misura esattamente come nel documento quando leggibili. Lascia fuori dati non utili all'alimentazione o non leggibili.",
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: imageDataUrl,
+          },
+        },
+      ],
+    },
+  ];
+}
+
+function buildMedicalDocumentTextAnalysisMessages(extractedText, fileName) {
+  return [
+    {
+      role: "system",
+      content:
+        "Sei un motore di estrazione dati per una web app nutrizionale. Devi leggere testo estratto da referti medici e restituire solo JSON valido. Estrai solo valori chiaramente presenti; non fare diagnosi, prescrizioni o terapia. Se un valore e' incerto usa confidence bassa e status unknown.",
+    },
+    {
+      role: "user",
+      content: [
+        `Nome file: ${sanitizeMedicalDocumentText(fileName, 160) || "documento caricato"}`,
+        "Testo estratto dal documento:",
+        extractedText,
+        "Cerca soprattutto colesterolo totale, HDL, LDL, trigliceridi, glicemia, emoglobina glicata e pressione.",
+        "Restituisci JSON nel formato {\"documentType\":\"\",\"documentDate\":\"YYYY-MM-DD oppure vuoto\",\"patientName\":\"\",\"metrics\":[{\"key\":\"total_cholesterol|hdl_cholesterol|ldl_cholesterol|triglycerides|glucose|hba1c|blood_pressure_systolic|blood_pressure_diastolic|other\",\"label\":\"\",\"value\":\"\",\"unit\":\"\",\"referenceRange\":\"\",\"status\":\"low|normal|high|unknown\",\"confidence\":0.0}],\"nutritionSignals\":[\"\"],\"reviewNote\":\"\"}.",
+      ].join("\n\n"),
+    },
+  ];
+}
+
+function normalizeMedicalDocumentMetric(metric, documentDate) {
+  const rawKey = sanitizeMedicalDocumentText(metric?.key, 60).toLowerCase();
+  const key = MEDICAL_DOCUMENT_METRIC_KEYS.has(rawKey) ? rawKey : "other";
+  const label = sanitizeMedicalDocumentText(metric?.label, 90);
+  const value = sanitizeMedicalDocumentText(metric?.value, 60);
+
+  if (!value) {
+    return null;
+  }
+
+  const rawStatus = sanitizeMedicalDocumentText(metric?.status, 30).toLowerCase();
+  const status = MEDICAL_DOCUMENT_STATUSES.has(rawStatus) ? rawStatus : "unknown";
+
+  return {
+    key,
+    label: label || key.replace(/_/g, " "),
+    value,
+    unit: sanitizeMedicalDocumentText(metric?.unit, 40),
+    referenceRange: sanitizeMedicalDocumentText(metric?.referenceRange, 80),
+    status,
+    confidence: normalizePantryImportConfidence(metric?.confidence),
+    documentDate,
+  };
+}
+
+function normalizeMedicalDocumentAnalysisPayload(payload) {
+  const documentDate = normalizeMedicalDocumentDate(payload?.documentDate);
+  const metrics = Array.isArray(payload?.metrics)
+    ? payload.metrics.map((metric) => normalizeMedicalDocumentMetric(metric, documentDate)).filter(Boolean).slice(0, 20)
+    : [];
+
+  if (metrics.length === 0) {
+    throw new Error("Non ho trovato valori clinici leggibili nel documento.");
+  }
+
+  const nutritionSignals = Array.isArray(payload?.nutritionSignals)
+    ? payload.nutritionSignals.map((signal) => sanitizeMedicalDocumentText(signal, 180)).filter(Boolean).slice(0, 8)
+    : [];
+
+  return {
+    documentType: sanitizeMedicalDocumentText(payload?.documentType, 80) || "Referto medico",
+    documentDate,
+    patientName: sanitizeMedicalDocumentText(payload?.patientName, 120),
+    metrics,
+    nutritionSignals,
+    reviewNote:
+      sanitizeMedicalDocumentText(payload?.reviewNote, 240) ||
+      "Controlla i valori estratti prima di applicarli al profilo. Non sostituiscono il parere medico.",
+  };
+}
+
+async function handleMedicalDocumentAnalysis(request, response) {
+  try {
+    await resolveRequestUserContext(request);
+    const payload = await readJsonBody(request);
+    const fileName = payload?.file?.name || payload?.image?.name || "";
+    const fileMimeType = payload?.file?.type || payload?.image?.type || "";
+    const documentPayload = sanitizeMedicalDocumentDataUrl(payload?.file?.dataUrl || payload?.image?.dataUrl || payload?.imageDataUrl, {
+      fileName,
+      mimeType: fileMimeType,
+    });
+    const messages = documentPayload.isImage
+      ? buildMedicalDocumentAnalysisMessages(documentPayload.dataUrl)
+      : buildMedicalDocumentTextAnalysisMessages(extractMedicalDocumentText(documentPayload), fileName);
+    let completion;
+
+    try {
+      completion = await createAzureChatCompletion(messages, {
+        maxTokens: 1100,
+        responseFormat: { type: "json_object" },
+        temperature: 0.05,
+      });
+    } catch (error) {
+      if (!isAzureResponseFormatUnsupported(error)) {
+        throw error;
+      }
+
+      completion = await createAzureChatCompletion(messages, {
+        maxTokens: 1100,
+        temperature: 0.05,
+      });
+    }
+
+    const rawContent = completion.choices?.[0]?.message?.content;
+
+    if (!rawContent) {
+      sendJson(response, 502, { error: "Risposta Azure OpenAI non valida." });
+      return;
+    }
+
+    const parsedPayload = parseJsonObjectFromCompletion(rawContent);
+    const analysis = normalizeMedicalDocumentAnalysisPayload(parsedPayload);
+
+    sendJson(response, 200, {
+      analysis,
+      usage: completion.usage || null,
+    });
+  } catch (error) {
+    const azureError = error.details?.error?.message;
+    const statusCode =
+      error.message === "Formato documento non valido." ||
+      error.message?.startsWith("Formato non supportato") ||
+      error.message?.startsWith("Documento troppo grande") ||
+      error.message?.includes("senza testo leggibile")
+        ? 400
+        : error.statusCode || 502;
+    console.error("[Server] Errore analisi documento medico.", azureError || error.message);
+    sendJson(response, statusCode, {
+      error: azureError || error.message || "Impossibile leggere il documento medico.",
+    });
+  }
+}
+
 const PANTRY_IMPORT_SOURCE_LABELS = Object.freeze({
   photo: "foto di prodotti alimentari, scontrino, spesa o frigorifero",
   receipt: "foto di uno scontrino della spesa",
@@ -2340,6 +2793,11 @@ const requestHandler = async (request, response) => {
 
   if (request.method === "POST" && requestPath === "/api/nutrition/describe-meal-image") {
     await handleMealPhotoDescription(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestPath === "/api/profile/analyze-medical-document") {
+    await handleMedicalDocumentAnalysis(request, response);
     return;
   }
 

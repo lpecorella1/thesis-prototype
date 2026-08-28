@@ -37,6 +37,10 @@ function normalizeJsonObject(value, fallback = {}) {
   return value && typeof value === "object" && !Array.isArray(value) ? cloneJson(value) : cloneJson(fallback);
 }
 
+function normalizeJsonArray(value, fallback = []) {
+  return Array.isArray(value) ? cloneJson(value) : cloneJson(fallback);
+}
+
 function padNumber(value) {
   return String(value).padStart(2, "0");
 }
@@ -314,6 +318,7 @@ async function replaceUserProfile(client, userId, profileState = {}) {
     ["medications", normalizeString(medical.medications)],
     ["medical_conditions", normalizeString(medical.medicalConditions)],
     ["dietary_preferences", normalizeString(medical.dietaryPreferences)],
+    ["medical_lab_metrics", JSON.stringify(normalizeJsonArray(medical.labMetrics))],
     ["primary_objective", normalizeString(goals.primaryObjective)],
     ["secondary_objective", normalizeString(goals.secondaryObjective)],
     ["health_focus", normalizeString(goals.healthFocus)],
@@ -690,6 +695,7 @@ async function readUserProfile(client, userId) {
     "medications",
     "medical_conditions",
     "dietary_preferences",
+    "medical_lab_metrics",
     "primary_objective",
     "secondary_objective",
     "health_focus",
@@ -735,6 +741,7 @@ async function readUserProfile(client, userId) {
       medications: row.medications || "",
       medicalConditions: row.medical_conditions || "",
       dietaryPreferences: row.dietary_preferences || "",
+      labMetrics: normalizeJsonArray(row.medical_lab_metrics),
     },
     goals: {
       primaryObjective: row.primary_objective || "",

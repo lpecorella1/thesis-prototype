@@ -26,6 +26,8 @@ function removePantryItem(groceryItemId) {
 
 const PANTRY_IMPORT_SOURCE_LABELS = {
   photo: "prodotti",
+  receipt: "dello scontrino",
+  "fridge-shopping": "frigo/spesa",
 };
 
 const PANTRY_IMPORT_CATEGORIES = [
@@ -43,6 +45,10 @@ const pantryImportRuntime = {
   lastFile: null,
   isLoading: false,
   draftItems: [],
+};
+
+const groceryListGenerationRuntime = {
+  isLoading: false,
 };
 
 function normalizePantryImportCategory(value) {
@@ -66,6 +72,25 @@ function setPantryImportStatus(message) {
 
   if (status) {
     status.textContent = message;
+  }
+}
+
+function setGroceryGenerationStatus(message) {
+  const status = document.querySelector("[data-grocery-generation-status]");
+
+  if (status) {
+    status.textContent = message;
+  }
+}
+
+function setGroceryListGenerationLoading(isLoading) {
+  groceryListGenerationRuntime.isLoading = isLoading;
+
+  const button = document.querySelector("[data-grocery-generate-list]");
+
+  if (button) {
+    button.disabled = isLoading;
+    button.textContent = isLoading ? "Generazione in corso..." : "Genera lista della spesa";
   }
 }
 
@@ -217,6 +242,48 @@ async function requestPantryImageImport(file, sourceType) {
   return Array.isArray(payload?.items) ? payload.items.map(normalizePantryImportItem).filter((item) => item.name) : [];
 }
 
+function normalizeGeneratedGroceryListItem(item) {
+  return {
+    id: crypto.randomUUID(),
+    name: String(item?.name || "").trim(),
+    quantity: String(item?.quantity || "1 confezione").trim(),
+    expiryDate: String(item?.expiryDate || "").trim(),
+    category: normalizePantryImportCategory(item?.category),
+    completed: false,
+    barcode: sanitizeBarcode(item?.barcode),
+    source: "ai-generated",
+    nutriscoreGrade: "",
+    reason: String(item?.reason || "").trim(),
+  };
+}
+
+async function requestGeneratedGroceryList() {
+  const response = await fetch(window.NutriTrackBootstrap.buildNutriTrackApiPath("/api/grocery/generate-list"), {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      state: buildPersistableNutriTrackState(appState),
+    }),
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      window.handleNutriTrackUnauthorized?.();
+    }
+
+    throw new Error(payload?.error || "Generazione lista della spesa non riuscita.");
+  }
+
+  return Array.isArray(payload?.items)
+    ? payload.items.map(normalizeGeneratedGroceryListItem).filter((item) => item.name && item.quantity && item.category)
+    : [];
+}
+
 async function importPantryImageFile(file, sourceType) {
   if (!file || pantryImportRuntime.isLoading) {
     return;
@@ -275,6 +342,39 @@ function addPantryImportDraftToPantry(items) {
   });
 
   appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
+}
+
+function addScannedGroceryLookupToPantry() {
+  const product = openFoodFactsRuntime.groceryLookup;
+
+  if (!product?.name) {
+    setPantryImportStatus("Scansiona un prodotto valido prima di aggiungerlo.");
+    return false;
+  }
+
+  appState.grocery.pantry.push({
+    id: crypto.randomUUID(),
+    name: product.name,
+    quantity: product.quantity || product.serving || "1 confezione",
+    expiryDate: "",
+    category: normalizePantryImportCategory(product.category),
+    barcode: sanitizeBarcode(product.barcode),
+    source: product.source || "openfoodfacts",
+    nutriscoreGrade: product.nutriscoreGrade || "",
+  });
+  appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
+  openFoodFactsRuntime.groceryLookup = null;
+  renderLookupResult("[data-off-grocery-result]", null, "");
+  setPantryImportStatus(`${product.name} aggiunto alla dispensa.`);
+  saveState();
+  renderGrocery();
+  return true;
+}
+
+function dismissScannedGroceryLookup() {
+  openFoodFactsRuntime.groceryLookup = null;
+  renderLookupResult("[data-off-grocery-result]", null, "");
+  setPantryImportStatus("Prodotto scansionato rimosso. Puoi riprovare con un nuovo barcode.");
 }
 
 function renderGrocerySummary() {
@@ -655,13 +755,14 @@ function setupGrocerySection() {
   const form = document.querySelector("[data-grocery-form]");
   const list = document.querySelector("[data-grocery-list]");
   const pantryList = document.querySelector("[data-pantry-list]");
+  const generateListButton = document.querySelector("[data-grocery-generate-list]");
   const clearCompletedButton = document.querySelector("[data-clear-completed]");
   const arToggleButton = document.querySelector("[data-grocery-ar-toggle]");
   const arClearButton = document.querySelector("[data-grocery-ar-clear]");
   const pantryImportInput = document.querySelector("[data-pantry-import-input]");
   const pantryImportPanel = document.querySelector(".pantry-import-panel");
 
-  if (!form || !list || !pantryList || !clearCompletedButton || !arToggleButton || !arClearButton) {
+  if (!form || !list || !pantryList || !generateListButton || !clearCompletedButton || !arToggleButton || !arClearButton) {
     return;
   }
 
@@ -680,7 +781,6 @@ function setupGrocerySection() {
     markFormValidationAttempt(form);
 
     const formData = new FormData(form);
-    const linkedProduct = openFoodFactsRuntime.groceryLookup;
     const item = {
       id: crypto.randomUUID(),
       name: String(formData.get("name") || "").trim(),
@@ -688,24 +788,32 @@ function setupGrocerySection() {
       expiryDate: String(formData.get("expiryDate") || "").trim(),
       category: String(formData.get("category") || "").trim(),
       completed: false,
-      barcode: linkedProduct?.barcode || sanitizeBarcode(formData.get("barcode")),
-      source: linkedProduct?.source || "manual",
-      nutriscoreGrade: linkedProduct?.nutriscoreGrade || "",
+      barcode: sanitizeBarcode(formData.get("barcode")),
+      source: "manual",
+      nutriscoreGrade: "",
     };
 
     if (!item.name || !item.quantity || !item.category) {
       return;
     }
 
-    appState.grocery.items.push(item);
+    appState.grocery.pantry.push({
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      expiryDate: item.expiryDate,
+      category: item.category,
+      barcode: item.barcode,
+      source: item.source,
+      nutriscoreGrade: item.nutriscoreGrade,
+    });
+    appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
     saveState();
     renderGrocery();
     form.reset();
     resetFormValidationState(form);
     form.elements.category.value = "Frutta e verdura";
-    openFoodFactsRuntime.groceryLookup = null;
     form.elements.barcode.value = "";
-    renderLookupResult("[data-off-grocery-result]", null, "");
   });
 
   list.addEventListener("click", (event) => {
@@ -762,6 +870,33 @@ function setupGrocerySection() {
     }
   });
 
+  generateListButton.addEventListener("click", async () => {
+    if (groceryListGenerationRuntime.isLoading) {
+      return;
+    }
+
+    setGroceryListGenerationLoading(true);
+    setGroceryGenerationStatus("Sto generando una lista coerente con dispensa, profilo e sprechi.");
+
+    try {
+      const items = await requestGeneratedGroceryList();
+
+      if (items.length === 0) {
+        setGroceryGenerationStatus("Non ho trovato prodotti utili da aggiungere alla lista in questo momento.");
+        return;
+      }
+
+      appState.grocery.items = items;
+      saveState();
+      renderGrocery();
+      setGroceryGenerationStatus(`${items.length} prodotti aggiunti alla lista della spesa.`);
+    } catch (error) {
+      setGroceryGenerationStatus(error.message || "Generazione lista della spesa non riuscita.");
+    } finally {
+      setGroceryListGenerationLoading(false);
+    }
+  });
+
   pantryList.addEventListener("click", (event) => {
     const deleteButton = event.target.closest("[data-pantry-delete-id]");
 
@@ -808,6 +943,20 @@ function setupGrocerySection() {
   });
 
   pantryImportPanel?.addEventListener("click", (event) => {
+    const dismissScannedProductButton = event.target.closest("[data-dismiss-grocery-lookup]");
+
+    if (dismissScannedProductButton) {
+      dismissScannedGroceryLookup();
+      return;
+    }
+
+    const addScannedProductButton = event.target.closest("[data-add-grocery-lookup-to-pantry]");
+
+    if (addScannedProductButton) {
+      addScannedGroceryLookupToPantry();
+      return;
+    }
+
     const sourceButton = event.target.closest("[data-pantry-import-source]");
 
     if (sourceButton && pantryImportInput) {

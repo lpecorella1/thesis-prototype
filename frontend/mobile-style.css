@@ -486,10 +486,11 @@ textarea {
 }
 
 .section-links {
-  display: flex;
-  gap: 8px;
-  overflow-x: visible;
-  padding-bottom: 2px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  overflow: hidden;
+  padding: 0;
   scrollbar-width: none;
 }
 
@@ -498,18 +499,22 @@ textarea {
 }
 
 .section-link {
-  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
-  min-height: 34px;
-  padding: 0 6px;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 6px;
   border-radius: 999px;
   background: var(--surface-muted);
   border: 1px solid rgba(18, 24, 38, 0.08);
   color: var(--text-soft);
-  font-size: 0.72rem;
+  font-size: 0.64rem;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.1;
   text-align: center;
+  white-space: nowrap;
 }
 
 .section-link.is-active {
@@ -545,6 +550,105 @@ textarea {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+.nutrition-stat-card {
+  position: relative;
+  gap: 10px;
+  min-height: 168px;
+  overflow: hidden;
+  border: 1px solid rgba(18, 24, 38, 0.08);
+  box-shadow: 0 14px 32px rgba(18, 24, 38, 0.08);
+}
+
+.nutrition-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.48));
+  pointer-events: none;
+}
+
+.nutrition-stat-card > * {
+  position: relative;
+}
+
+.nutrition-stat-calories {
+  background: #eef5ff;
+}
+
+.nutrition-stat-protein {
+  background: #fff1f3;
+}
+
+.nutrition-stat-carbs {
+  background: #fff8db;
+}
+
+.nutrition-stat-fats {
+  background: #eaf8ef;
+}
+
+.nutrition-stat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.nutrition-stat-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 13px;
+  color: #fff;
+}
+
+.nutrition-stat-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.nutrition-stat-calories .nutrition-stat-icon {
+  background: #2f7cf6;
+}
+
+.nutrition-stat-protein .nutrition-stat-icon {
+  background: #f04f63;
+}
+
+.nutrition-stat-carbs .nutrition-stat-icon {
+  background: #e4a900;
+}
+
+.nutrition-stat-fats .nutrition-stat-icon {
+  background: #18a957;
+}
+
+.stat-card.nutrition-stat-card h2 {
+  color: #2a3446;
+  font-weight: 800;
+}
+
+.nutrition-stat-card .metric span:first-child {
+  color: #111827;
+  font-size: 1em;
+}
+
+.nutrition-stat-card .metric span:last-child {
+  font-size: 0.64em;
+  font-weight: 800;
+}
+
+.nutrition-stat-card .progress-track {
+  background: rgba(17, 24, 39, 0.1);
 }
 
 .stat-card h2,
@@ -724,6 +828,35 @@ textarea {
   font-weight: 700;
 }
 
+.meal-items-breakdown {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.meal-items-breakdown li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: space-between;
+}
+
+.meal-items-breakdown span,
+.meal-source-note {
+  color: var(--text-muted);
+}
+
+.meal-source-note {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .lookup-block {
   display: grid;
   gap: 12px;
@@ -765,10 +898,22 @@ textarea {
 }
 
 .lookup-result-card {
+  position: relative;
   padding: 14px;
   border-radius: 14px;
   border: 1px solid #e1e7ee;
   background: #fff;
+}
+
+.lookup-result-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.lookup-result-dismiss svg {
+  width: 18px;
+  height: 18px;
 }
 
 .lookup-result-card strong,
@@ -786,6 +931,16 @@ textarea {
   margin-top: 8px;
   color: var(--text-muted);
   line-height: 1.45;
+}
+
+.lookup-result-actions {
+  display: flex;
+  margin-top: 12px;
+}
+
+.lookup-result-actions .primary-btn {
+  width: 100%;
+  justify-content: center;
 }
 
 .scanner-modal[hidden] {
@@ -1635,21 +1790,30 @@ textarea {
 }
 
 .pantry-import-head p,
-.pantry-import-status {
+.pantry-import-status,
+.grocery-generation-status {
   margin: 6px 0 0;
   color: var(--text-muted);
   font-size: 0.86rem;
   line-height: 1.45;
 }
 
+.grocery-generation-status:empty {
+  display: none;
+}
+
 .pantry-import-actions {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 10px;
+  align-items: stretch;
 }
 
 .pantry-import-btn {
   width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  height: 100%;
   justify-content: center;
   white-space: normal;
   text-align: center;
@@ -2494,6 +2658,17 @@ textarea {
 }
 
 @media (max-width: 640px) {
+  .pantry-import-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pantry-import-actions [data-open-barcode-scanner="grocery"] {
+    grid-column: 1 / -1;
+    justify-self: center;
+    min-height: 44px;
+    width: calc((100% - 10px) / 2);
+  }
+
   [data-progress-section] .panel {
     padding: 34px 18px 20px;
   }
@@ -2578,6 +2753,237 @@ textarea {
 .bmi-box em {
   color: var(--green-dark);
   font-style: normal;
+}
+
+.medical-document-box {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #edf0f4;
+}
+
+.medical-document-head,
+.medical-document-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.medical-document-head h4 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.medical-document-head p,
+.medical-document-review p {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  line-height: 1.45;
+}
+
+.medical-document-upload {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #bfd8ff;
+  border-radius: 12px;
+  color: #2454d6;
+  background: #f2f7ff;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.medical-document-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.medical-document-status {
+  min-height: 20px;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.medical-document-status[data-status-tone="success"] {
+  color: #0f8f62;
+}
+
+.medical-document-status[data-status-tone="error"] {
+  color: #d33b31;
+}
+
+.medical-document-review {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #dce6f5;
+  border-radius: 12px;
+  background: #fbfdff;
+}
+
+.medical-document-review[hidden] {
+  display: none;
+}
+
+.medical-document-results,
+.medical-metrics-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.medical-document-result,
+.medical-metric-chip {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e2e9f4;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.medical-document-result {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.3fr) minmax(80px, 0.8fr) minmax(70px, 0.55fr) minmax(100px, 0.9fr) minmax(92px, 0.8fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.medical-metric-chip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.medical-metric-chip.is-editing {
+  grid-template-columns: 1fr;
+}
+
+.medical-metric-display {
+  min-width: 0;
+}
+
+.medical-metric-edit {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.2fr) minmax(80px, 0.8fr) minmax(70px, 0.55fr) minmax(90px, 0.8fr) minmax(92px, 0.8fr);
+  gap: 8px;
+}
+
+.medical-document-result label,
+.medical-metric-edit label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.medical-document-result span,
+.medical-metric-chip span {
+  display: block;
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.medical-document-result strong,
+.medical-metric-chip strong {
+  display: block;
+  margin-top: 4px;
+  color: #14243a;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.medical-document-result small,
+.medical-metric-chip small {
+  display: block;
+  margin-top: 4px;
+  color: #6d7788;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.medical-document-result small {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.medical-document-result input,
+.medical-document-result select,
+.medical-metric-edit input,
+.medical-metric-edit select {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  border: 1px solid #d7e1ef;
+  border-radius: 10px;
+  background: #fff;
+  color: #14243a;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.medical-document-result input,
+.medical-metric-edit input {
+  padding: 0 10px;
+}
+
+.medical-document-result select,
+.medical-metric-edit select {
+  padding: 0 8px;
+}
+
+.medical-metric-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.medical-metric-chip.is-editing .medical-metric-actions {
+  justify-content: flex-start;
+}
+
+.medical-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d7e1ef;
+  border-radius: 10px;
+  color: #44536a;
+  background: #f8fbff;
+}
+
+.medical-icon-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.medical-icon-btn.danger {
+  color: #d33b31;
+  background: #fff4f3;
+  border-color: #ffd7d2;
+}
+
+.medical-doc-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.88rem;
 }
 
 .ai-profile-panel {
@@ -2947,6 +3353,9 @@ textarea {
   .meal-card,
   .result-head,
   .recipe-actions-row,
+  .medical-document-head,
+  .medical-document-actions,
+  .medical-document-result,
   .device-top,
   .permission-row {
     flex-direction: column;
@@ -2985,6 +3394,20 @@ textarea {
   .save-row {
     justify-content: flex-end;
     text-align: right;
+  }
+
+  .medical-document-results,
+  .medical-metrics-list {
+    grid-template-columns: 1fr;
+  }
+
+  .medical-document-result,
+  .medical-metric-edit {
+    grid-template-columns: 1fr;
+  }
+
+  .medical-document-result small {
+    text-align: left;
   }
 
   .message-card {
@@ -3258,6 +3681,43 @@ textarea {
     line-height: 1.1;
   }
 
+  .medical-document-box {
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+
+  .medical-document-head h4 {
+    font-size: 0.86rem;
+    line-height: 1.15;
+  }
+
+  .medical-document-head p,
+  .medical-document-review p,
+  .medical-document-status,
+  .medical-doc-empty {
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .medical-document-upload,
+  .medical-document-actions .apply-btn {
+    min-height: 34px;
+    padding-inline: 10px;
+    font-size: 0.72rem;
+  }
+
+  .medical-document-review {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
+  .medical-document-result,
+  .medical-metric-chip {
+    padding: 10px;
+    border-radius: 10px;
+  }
+
   .stat-card,
   .mini-stat-card {
     padding: 12px 11px;
@@ -3491,7 +3951,7 @@ textarea {
   }
 
   .pantry-import-actions {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .pantry-import-item {
@@ -3973,9 +4433,35 @@ textarea {
   }
 
   /* Nutrition mobile */
+  .stats-grid {
+    gap: 10px;
+  }
+
   .stat-card {
     padding: 11px 10px;
     border-radius: 14px;
+  }
+
+  .nutrition-stat-card {
+    gap: 8px;
+    min-height: 128px;
+    box-shadow: 0 10px 24px rgba(18, 24, 38, 0.08);
+  }
+
+  .nutrition-stat-head {
+    gap: 8px;
+  }
+
+  .nutrition-stat-icon {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    border-radius: 11px;
+  }
+
+  .nutrition-stat-icon svg {
+    width: 17px;
+    height: 17px;
   }
 
   .stat-card h2 {
@@ -4031,18 +4517,19 @@ textarea {
 
   .metric,
   .stat-value {
-    margin-top: 8px;
-    font-size: 1.36rem;
+    margin-top: 4px;
+    font-size: 1.32rem;
+    letter-spacing: 0;
   }
 
   .stat-card p {
-    margin: 6px 0 8px;
+    margin: 0 0 6px;
     font-size: 0.68rem;
     line-height: 1.35;
   }
 
   .stats-grid .progress-track {
-    height: 9px;
+    height: 7px;
   }
 }
 
