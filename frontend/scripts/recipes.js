@@ -390,14 +390,6 @@ function inferRecipeMealType(recipe) {
   return appState.recipes.generator.mealType || recipe?.mealTypes?.[0] || "lunch";
 }
 
-function createRecipeNutritionDraft(recipe) {
-  if (!recipe) {
-    return null;
-  }
-
-  return createImportedNutritionDraft(recipe, RECIPE_NUTRITION_SOURCE_LABEL);
-}
-
 function setRecipeApplyFeedback(message, tone = "neutral") {
   const feedback = document.querySelector("[data-recipe-apply-feedback]");
 

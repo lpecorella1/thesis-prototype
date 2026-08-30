@@ -18,14 +18,6 @@ function getBmiLabel(bmi) {
   return "Obesita";
 }
 
-function setProfileFeedback(message) {
-  const feedback = document.querySelector("[data-profile-feedback]");
-
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
-
 function getActivityMultiplier(level) {
   const multipliers = {
     sedentary: 1.2,
@@ -691,7 +683,6 @@ function setupProfileSection() {
     renderProgress();
     resetFormValidationState(form);
     showProfileSaveConfirmation();
-    setProfileFeedback("Profilo salvato e sincronizzato.");
     return true;
   };
 
@@ -721,7 +712,6 @@ function setupProfileSection() {
     renderNutrition();
     resetFormValidationState(form);
     showGoalsSaveConfirmation();
-    setProfileFeedback("Obiettivi nutrizionali salvati.");
     return true;
   };
 
@@ -729,7 +719,6 @@ function setupProfileSection() {
     const didSaveProfile = submitProfileDetails();
 
     if (!didSaveProfile) {
-      setProfileFeedback("Completa i campi obbligatori del profilo.");
       return false;
     }
 
@@ -753,7 +742,6 @@ function setupProfileSection() {
       renderNutrition();
     }
 
-    setProfileFeedback("Profilo salvato e sincronizzato.");
     return true;
   };
 
@@ -822,7 +810,6 @@ function setupProfileSection() {
     clearMedicalDocumentReview();
     showProfileSaveConfirmation();
     setMedicalDocumentStatus("Valori applicati al profilo.", "success");
-    setProfileFeedback("Documento letto e dati medici aggiornati.");
   };
 
   const setSavedMedicalMetricEditMode = (index, isEditing) => {
@@ -1061,7 +1048,6 @@ function setupProfileSection() {
     });
 
     if (!recommendations.calories) {
-      setProfileFeedback("Completa eta, altezza e peso prima di applicare le raccomandazioni.");
       return;
     }
 
@@ -1071,7 +1057,6 @@ function setupProfileSection() {
     form.elements.goalFats.value = recommendations.fats;
 
     submitDailyGoals();
-    setProfileFeedback("Obiettivi consigliati applicati e salvati.");
   });
 
   medicalDocumentAnalyzeButton?.addEventListener("click", async () => {

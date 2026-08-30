@@ -905,14 +905,6 @@ function getComparableProductByKey(productKey) {
   return getCachedOpenFoodFactsProduct(String(productKey).slice(4));
 }
 
-function getCatalogProductFromGroceryItem(item) {
-  if (item?.barcode) {
-    return getCachedOpenFoodFactsProduct(item.barcode);
-  }
-
-  return null;
-}
-
 function calculateGroceryComparisonScore(product) {
   if (!product) {
     return 0;

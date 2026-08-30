@@ -27,14 +27,6 @@ function getConnectedDevices() {
   return devicesCatalog.filter((device) => getDeviceState(device.id)?.connected);
 }
 
-function getLatestDevicesSyncAt() {
-  return getConnectedDevices()
-    .map((device) => getDeviceState(device.id)?.lastSyncAt || "")
-    .filter(Boolean)
-    .sort()
-    .at(-1) || "";
-}
-
 function formatDeviceSyncLabel(value) {
   if (!value) {
     return "Mai";
