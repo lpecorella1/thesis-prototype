@@ -55,10 +55,6 @@ function pickAvailableSectionSources(postgresState) {
   );
 }
 
-function hasCompletePostgresStructuredState(postgresState) {
-  return pickAvailableSectionSources(postgresState).length === POSTGRES_PRIMARY_SECTIONS.length;
-}
-
 function buildLegacyUiCacheState(fullState) {
   const sourceState = cloneNutriTrackState(fullState) || {};
 
@@ -120,24 +116,6 @@ function buildStructuredPostgresState(postgresState) {
     devices: {
       ...(cloneNutriTrackState(postgresState.devices) || {}),
     },
-  };
-}
-
-function buildStateFromLegacyUiCache(legacyUiCacheState) {
-  const sourceState = hasMeaningfulNutriTrackState(legacyUiCacheState) ? cloneNutriTrackState(legacyUiCacheState) : {};
-
-  return {
-    ...(sourceState.recipes ? { recipes: sourceState.recipes } : {}),
-    ...(sourceState.datasets ? { datasets: sourceState.datasets } : {}),
-    ...(sourceState.devices?.showPermissionsPanel !== undefined
-      ? {
-          devices: {
-            showPermissionsPanel: sourceState.devices.showPermissionsPanel,
-          },
-        }
-      : {}),
-    ...(sourceState.grocery?.ar ? { grocery: { ar: sourceState.grocery.ar } } : {}),
-    ...(sourceState.progress?.autoSnapshots ? { progress: { autoSnapshots: sourceState.progress.autoSnapshots } } : {}),
   };
 }
 

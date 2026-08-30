@@ -78,10 +78,6 @@ const DEVICE_DEFAULTS = Object.freeze({
 });
 
 function sendJson(response, statusCode, payload, extraHeaders = {}) {
-  console.log("[Server] Invio risposta JSON.", {
-    statusCode,
-    keys: payload && typeof payload === "object" ? Object.keys(payload) : []
-  });
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
@@ -194,7 +190,6 @@ function sendFile(response, filePath) {
       return;
     }
 
-    console.log("[Server] Invio file statico.", { filePath });
     response.writeHead(200, {
       "Content-Type": contentType,
       "Cache-Control": cacheControl,
@@ -2075,13 +2070,6 @@ async function handleApiChat(request, response) {
         currentRecipe: body.currentRecipe && typeof body.currentRecipe === "object" ? body.currentRecipe : undefined,
       },
     });
-    console.log("[Server] Richiesta chat ricevuta.", {
-      path: request.url,
-      messageLength: message.length,
-      historyLength: history.length,
-      pantryItems: Array.isArray(context.pantry) ? context.pantry.length : 0,
-      recentMeals: Array.isArray(context.recentMeals) ? context.recentMeals.length : 0,
-    });
 
     if (!message) {
       sendJson(response, 400, { error: "Il messaggio è obbligatorio." });
@@ -2090,10 +2078,6 @@ async function handleApiChat(request, response) {
 
     const completion = await createAzureChatCompletion(buildRecipeAssistantMessages(message, history, context));
     const reply = completion.choices?.[0]?.message?.content;
-    console.log("[Server] Risposta Azure elaborata.", {
-      hasReply: Boolean(reply),
-      replyLength: reply ? reply.length : 0
-    });
 
     if (!reply) {
       sendJson(response, 502, { error: "Risposta Azure OpenAI non valida." });
@@ -2160,13 +2144,6 @@ async function handleRecipesAssistantChat(request, response) {
       },
     });
     const intent = classifyRecipeAssistantIntent(message);
-
-    console.log("[Server] Richiesta recipes assistant chat ricevuta.", {
-      path: request.url,
-      messageLength: message.length,
-      historyLength: history.length,
-      intent,
-    });
 
     if (!message) {
       sendJson(response, 400, { error: "Il messaggio è obbligatorio." });
@@ -2241,15 +2218,6 @@ async function handleApiRecipeGenerate(request, response) {
         currentRecipe: body.currentRecipe && typeof body.currentRecipe === "object" ? body.currentRecipe : undefined,
       },
     });
-    console.log("[Server] Richiesta generazione ricetta ricevuta.", {
-      path: request.url,
-      mealType: filters.mealType,
-      dietType: filters.dietType,
-      hasPrompt: Boolean(filters.prompt),
-      pantryItems: Array.isArray(context.pantry) ? context.pantry.length : 0,
-      groceryItems: Array.isArray(context.groceryItems) ? context.groceryItems.length : 0,
-      recentMeals: Array.isArray(context.recentMeals) ? context.recentMeals.length : 0,
-    });
 
     errorPhase = "azure-completion";
     const generationMessages = buildRecipeGenerationMessages(filters, context);
@@ -2275,12 +2243,6 @@ async function handleApiRecipeGenerate(request, response) {
     }
 
     const rawContent = completion.choices?.[0]?.message?.content;
-    console.log("[Server] Generazione ricetta: risposta Azure ricevuta.", {
-      finishReason: completion.choices?.[0]?.finish_reason || "",
-      contentLength: rawContent ? rawContent.length : 0,
-      completionTokens: completion.usage?.completion_tokens ?? null,
-      totalTokens: completion.usage?.total_tokens ?? null,
-    });
 
     if (!rawContent) {
       sendJson(response, 502, { error: "Risposta Azure OpenAI non valida." });
@@ -2396,10 +2358,6 @@ function handleDatabaseStatus(response) {
 async function handleOpenFoodFactsProduct(urlPath, response) {
   try {
     const barcode = sanitizeBarcode(urlPath.split("/").pop());
-    console.log("[Server] Richiesta OpenFoodFacts ricevuta.", {
-      path: urlPath,
-      barcode
-    });
 
     if (!barcode) {
       sendJson(response, 400, { error: "Barcode non valido." });
@@ -2407,11 +2365,6 @@ async function handleOpenFoodFactsProduct(urlPath, response) {
     }
 
     const result = await fetchOpenFoodFactsProduct(barcode);
-    console.log("[Server] Prodotto OpenFoodFacts pronto per il frontend.", {
-      barcode,
-      name: result.product.product_name || result.product.product_name_it || null,
-      source: result.source
-    });
     sendJson(response, 200, result);
   } catch (error) {
     const message = error.message || "Errore durante il recupero da OpenFoodFacts.";
@@ -2435,14 +2388,6 @@ async function handleGroceryListGenerate(request, response) {
     errorPhase = "build-context";
     const context = buildRecipesAssistantContext({
       state: requestedState || savedState,
-    });
-
-    console.log("[Server] Richiesta generazione lista spesa ricevuta.", {
-      pantryItems: Array.isArray(context.pantry) ? context.pantry.length : 0,
-      groceryItems: Array.isArray(context.groceryItems) ? context.groceryItems.length : 0,
-      hasAllergies: Boolean(context.profile?.allergies),
-      hasMedicalConditions: Boolean(context.profile?.medicalConditions),
-      hasDietaryPreferences: Boolean(context.profile?.dietaryPreferences),
     });
 
     errorPhase = "azure-completion";
@@ -2722,11 +2667,6 @@ const requestHandler = async (request, response) => {
   const requestUrl = new URL(request.url, `http://${request.headers.host}`);
   const routedRequest = resolveRequestPath(requestUrl.pathname);
   const requestPath = routedRequest.path;
-  console.log("[Server] Richiesta HTTP in ingresso.", {
-    method: request.method,
-    path: requestUrl.pathname,
-    routePath: requestPath
-  });
 
   if (request.method === "GET" && APP_BASE_PATH && requestUrl.pathname === APP_BASE_PATH) {
     response.writeHead(308, {
