@@ -246,15 +246,7 @@ function buildOpenFoodFactsRagRecord(product, sourceConfig = {}) {
   };
 }
 
-function mergePreferredArray(primaryItems = [], fallbackItems = []) {
-  if (Array.isArray(primaryItems) && primaryItems.length > 0) {
-    return primaryItems;
-  }
-
-  return Array.isArray(fallbackItems) ? fallbackItems : [];
-}
-
-function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {} } = {}) {
+function buildRecipesAssistantContext({ state, overrides = {} } = {}) {
   const safeState = state && typeof state === "object" ? state : {};
   const profile = safeState.profile && typeof safeState.profile === "object" ? safeState.profile : {};
   const grocery = safeState.grocery && typeof safeState.grocery === "object" ? safeState.grocery : {};
@@ -263,12 +255,7 @@ function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {
   const datasets = safeState.datasets && typeof safeState.datasets === "object" ? safeState.datasets : {};
 
   const normalizedPantry = sortInventoryItems(
-    mergePreferredArray(
-      Array.isArray(grocery.pantry) ? grocery.pantry.map((item) => normalizeInventoryItem(item, "pantry")).filter(Boolean) : [],
-      Array.isArray(legacyContext.pantry)
-        ? legacyContext.pantry.map((item) => normalizeInventoryItem(item, "pantry")).filter(Boolean)
-        : []
-    )
+    Array.isArray(grocery.pantry) ? grocery.pantry.map((item) => normalizeInventoryItem(item, "pantry")).filter(Boolean) : []
   ).slice(0, 24);
 
   const normalizedGroceryItems = sortInventoryItems(
@@ -279,33 +266,19 @@ function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {
     Array.isArray(nutrition.meals) ? nutrition.meals.map(normalizeRecentMeal).filter(Boolean) : []
   ).slice(0, 12);
 
-  const recentRecipes = mergePreferredArray(
-    Array.isArray(recipes.history)
-      ? recipes.history
-          .map((entry) => ({
-            id: String(entry.id || ""),
-            title: String(entry.title || "").trim(),
-            generatedAt: String(entry.generatedAt || "").trim(),
-            signature: String(entry.signature || entry.id || "").trim(),
-            ingredients: Array.isArray(recipes.generatedRecipesById?.[entry.id]?.ingredients)
-              ? recipes.generatedRecipesById[entry.id].ingredients.map((item) => String(item || "").trim()).filter(Boolean)
-              : [],
-          }))
-          .filter((entry) => entry.title)
-      : [],
-    Array.isArray(legacyContext.recentRecipes)
-      ? legacyContext.recentRecipes
-          .map((entry) => ({
-            id: String(entry.id || ""),
-            title: String(entry.title || "").trim(),
-            generatedAt: String(entry.generatedAt || "").trim(),
-            signature: String(entry.signature || entry.id || "").trim(),
-            ingredients: Array.isArray(entry.ingredients)
-              ? entry.ingredients.map((item) => String(item || "").trim()).filter(Boolean)
-              : [],
-          }))
-          .filter((entry) => entry.title)
-      : []
+  const recentRecipes = (Array.isArray(recipes.history)
+    ? recipes.history
+        .map((entry) => ({
+          id: String(entry.id || ""),
+          title: String(entry.title || "").trim(),
+          generatedAt: String(entry.generatedAt || "").trim(),
+          signature: String(entry.signature || entry.id || "").trim(),
+          ingredients: Array.isArray(recipes.generatedRecipesById?.[entry.id]?.ingredients)
+            ? recipes.generatedRecipesById[entry.id].ingredients.map((item) => String(item || "").trim()).filter(Boolean)
+            : [],
+        }))
+        .filter((entry) => entry.title)
+    : []
   ).slice(0, 8);
 
   const openFoodFactsSource =
@@ -322,17 +295,15 @@ function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {
       ? profile.goals
       : nutrition.goals && typeof nutrition.goals === "object"
       ? nutrition.goals
-      : legacyContext.profile || {};
+      : {};
 
   const currentRecipe =
     overrides.currentRecipe ||
     recipes.currentRecipe ||
-    legacyContext.currentRecipe ||
     null;
 
   const generator = {
     ...(recipes.generator && typeof recipes.generator === "object" ? cloneJson(recipes.generator) : {}),
-    ...(legacyContext.generator && typeof legacyContext.generator === "object" ? cloneJson(legacyContext.generator) : {}),
     ...(overrides.generator && typeof overrides.generator === "object" ? cloneJson(overrides.generator) : {}),
   };
   const goalSummary = buildGoalSummary(resolvedGoals);
@@ -344,8 +315,6 @@ function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {
       pantrySource:
         Array.isArray(grocery.pantry) && grocery.pantry.length > 0
           ? "nutritrack-state"
-          : Array.isArray(legacyContext.pantry) && legacyContext.pantry.length > 0
-          ? "legacy-client-context"
           : "empty",
     },
     pantry: normalizedPantry,
@@ -364,8 +333,8 @@ function buildRecipesAssistantContext({ state, legacyContext = {}, overrides = {
       protein: toFiniteNumber(resolvedGoals.protein, 150),
       carbs: toFiniteNumber(resolvedGoals.carbs, 250),
       fats: toFiniteNumber(resolvedGoals.fats, 65),
-      dietType: String(profile.personal?.dietType || generator.dietType || legacyContext.profile?.dietType || "").trim(),
-      activityLevel: String(profile.personal?.activityLevel || legacyContext.profile?.activityLevel || "").trim(),
+      dietType: String(profile.personal?.dietType || generator.dietType || "").trim(),
+      activityLevel: String(profile.personal?.activityLevel || "").trim(),
       allergies: String(profile.medical?.allergies || "").trim(),
       medicalConditions: String(profile.medical?.medicalConditions || "").trim(),
       dietaryPreferences: String(profile.medical?.dietaryPreferences || "").trim(),

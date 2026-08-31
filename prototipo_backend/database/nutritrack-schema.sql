@@ -34,6 +34,17 @@ CREATE TABLE user_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE password_reset_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    user_agent VARCHAR(512),
+    ip_address VARCHAR(128),
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE user_profiles (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
@@ -272,6 +283,8 @@ ON CONFLICT (provider_key) DO NOTHING;
 CREATE INDEX idx_user_profiles_user_id ON user_profiles(user_id);
 CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id, created_at DESC);
 CREATE INDEX idx_user_sessions_active_lookup ON user_sessions(session_token_hash, expires_at) WHERE revoked_at IS NULL;
+CREATE INDEX idx_password_reset_tokens_user_id ON password_reset_tokens(user_id, created_at DESC);
+CREATE INDEX idx_password_reset_tokens_active_lookup ON password_reset_tokens(token_hash, expires_at) WHERE used_at IS NULL;
 CREATE INDEX idx_recipes_created_by_user_id ON recipes(created_by_user_id);
 CREATE UNIQUE INDEX idx_recipes_app_recipe_id ON recipes(created_by_user_id, app_recipe_id) WHERE app_recipe_id IS NOT NULL;
 CREATE INDEX idx_recipes_meal_type ON recipes(meal_type);

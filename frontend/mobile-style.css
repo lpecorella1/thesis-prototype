@@ -146,6 +146,18 @@ body {
   justify-content: center;
 }
 
+.auth-text-button {
+  justify-self: center;
+  width: fit-content;
+  padding: 2px 0;
+  background: transparent;
+  color: var(--blue);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
 button,
 input,
 select,

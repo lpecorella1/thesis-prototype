@@ -103,13 +103,17 @@ Le più importanti sono:
 
 - `NUTRITRACK_APP_MODE=authenticated-user|single-user-local`
 - `NUTRITRACK_BASE_PATH=/nutritrack`
+- `NUTRITRACK_PUBLIC_URL=https://mercurio.isti.cnr.it/nutritrack/`
 - `NUTRITRACK_USE_POSTGRES=0|1`
 - `DATABASE_URL=postgresql://...`
 - `NUTRITRACK_LOCAL_USER_EMAIL=app-local@nutritrack.local`
+- `NUTRITRACK_SMTP_HOST`, `NUTRITRACK_SMTP_PORT`, `NUTRITRACK_SMTP_USER`, `NUTRITRACK_SMTP_PASS`
 - `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`
 - `SCALE_PROVIDER=mock`
 
-Uso `authenticated-user` su Mercurio/Docker quando voglio provare registrazione, login, cookie di sessione e persistenza per utente su PostgreSQL. Tengo `single-user-local` solo per sviluppo locale rapido senza login.
+Uso `authenticated-user` come modalità predefinita per Mercurio/Docker e per i test locali con credenziali, così registro login, cookie di sessione e persistenza per utente su PostgreSQL. `single-user-local` resta disponibile solo come opzione esplicita per controlli locali rapidi senza login.
+
+Per il recupero password reale via Gmail, attiva la verifica in due passaggi sull'account mittente, genera una password per app e inseriscila in `NUTRITRACK_SMTP_PASS`. Il link inviato via email resta valido per 30 minuti e porta alla pagina NutriTrack con il token monouso.
 
 ## Database
 
@@ -138,8 +142,7 @@ Le route principali sono:
 
 - `POST /nutritrack/api/recipes/generate`: genera una ricetta usando filtri e contesto backend;
 - `POST /nutritrack/api/recipes/assistant/chat`: gestisce la chat Recipes con classificazione minima dell'intento;
-- `POST /nutritrack/api/recipes/apply-to-diet`: applica una ricetta alla giornata alimentare e aggiorna lo stato;
-- `POST /nutritrack/api/chat`: resta disponibile come chat generale, usando comunque il contesto NutriTrack costruito lato server.
+- `POST /nutritrack/api/recipes/apply-to-diet`: applica una ricetta alla giornata alimentare e aggiorna lo stato.
 
 La chat riconosce già intenti come applicare la ricetta corrente alla dieta, chiedere una lista della spesa, generare o modificare una ricetta, usare ingredienti disponibili e proseguire una conversazione generica. Per ora solo l'applicazione della ricetta corrente produce un'azione strutturata immediata; gli altri intenti passano ancora dalla risposta conversazionale di Azure OpenAI.
 

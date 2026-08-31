@@ -26,7 +26,7 @@
         </div>
 
         <div class="auth-form-panel">
-          <div class="auth-mode-switch" aria-label="Selezione modalità autenticazione">
+          <div class="auth-mode-switch" data-auth-mode-switch aria-label="Selezione modalità autenticazione">
             <button class="auth-mode-btn is-active" type="button" data-auth-mode-toggle="login">Accedi</button>
             <button class="auth-mode-btn" type="button" data-auth-mode-toggle="register">Registrati</button>
           </div>
@@ -41,11 +41,11 @@
               <span>Cognome</span>
               <input type="text" name="lastName" autocomplete="family-name" maxlength="75" placeholder="Rossi" />
             </label>
-            <label class="field">
+            <label class="field" data-auth-email-field>
               <span>Email</span>
               <input type="email" name="email" autocomplete="email" required placeholder="nome@esempio.com" />
             </label>
-            <label class="field">
+            <label class="field" data-auth-password-field>
               <span>Password</span>
               <input
                 type="password"
@@ -56,9 +56,21 @@
                 placeholder="Almeno 8 caratteri"
               />
             </label>
+            <label class="field" data-auth-reset-confirm-only hidden>
+              <span>Conferma password</span>
+              <input
+                type="password"
+                name="passwordConfirmation"
+                autocomplete="new-password"
+                minlength="8"
+                placeholder="Ripeti la nuova password"
+              />
+            </label>
             <p class="auth-hint" data-auth-hint>Inserisci le tue credenziali per entrare nell'app.</p>
             <p class="auth-feedback" data-auth-feedback aria-live="polite"></p>
             <button class="primary-btn primary-btn-blue auth-submit" type="submit" data-auth-submit>Accedi</button>
+            <button class="auth-text-button" type="button" data-auth-forgot-password>Password dimenticata?</button>
+            <button class="auth-text-button" type="button" data-auth-back-login hidden>Torna all'accesso</button>
           </form>
         </div>
       </div>

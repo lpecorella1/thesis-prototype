@@ -121,6 +121,31 @@ function buildPersistableNutriTrackState(state) {
   };
 }
 
+function buildServerNutriTrackState(state) {
+  const persistableState = buildPersistableNutriTrackState(state);
+  const { devices, ...serverState } = persistableState;
+  const groceryState = persistableState.grocery && typeof persistableState.grocery === "object"
+    ? { ...persistableState.grocery }
+    : {};
+  const openFoodFactsState = persistableState.datasets?.openFoodFacts || {};
+
+  delete groceryState.ar;
+
+  return {
+    ...serverState,
+    grocery: groceryState,
+    datasets: {
+      ...(persistableState.datasets && typeof persistableState.datasets === "object" ? persistableState.datasets : {}),
+      openFoodFacts: {
+        productsByBarcode:
+          openFoodFactsState.productsByBarcode && typeof openFoodFactsState.productsByBarcode === "object"
+            ? openFoodFactsState.productsByBarcode
+            : {},
+      },
+    },
+  };
+}
+
 function loadNutriTrackStateFromLocalCache() {
   try {
     const savedState = localStorage.getItem(NUTRITRACK_LOCAL_STATE_CACHE_KEY);
@@ -141,6 +166,16 @@ function saveNutriTrackStateToLocalCache() {
     NUTRITRACK_LOCAL_STATE_CACHE_KEY,
     JSON.stringify(buildPersistableNutriTrackState(appState))
   );
+}
+
+function replaceNutriTrackState(nextState) {
+  const normalizedState = normalizeNutriTrackState(nextState);
+  Object.keys(appState).forEach((key) => {
+    delete appState[key];
+  });
+  Object.assign(appState, normalizedState);
+  saveNutriTrackStateToLocalCache();
+  renderNutriTrackState();
 }
 
 function renderNutriTrackState() {
@@ -166,7 +201,7 @@ async function persistNutriTrackStateToApi() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ state: buildPersistableNutriTrackState(appState) }),
+      body: JSON.stringify({ state: buildServerNutriTrackState(appState) }),
     });
 
     if (!response.ok) {
@@ -225,17 +260,16 @@ async function hydrateNutriTrackStateFromApi() {
     const payload = await response.json();
 
     if (!payload?.state) {
+      if (payload?.runtime?.identityMode === "authenticated_user") {
+        replaceNutriTrackState(defaultState);
+        return;
+      }
+
       queueNutriTrackStateSync();
       return;
     }
 
-    const normalizedState = normalizeNutriTrackState(payload.state);
-    Object.keys(appState).forEach((key) => {
-      delete appState[key];
-    });
-    Object.assign(appState, normalizedState);
-    saveNutriTrackStateToLocalCache();
-    renderNutriTrackState();
+    replaceNutriTrackState(payload.state);
   } catch (error) {
     console.warn("Unable to hydrate NutriTrack state from API.", error);
   } finally {

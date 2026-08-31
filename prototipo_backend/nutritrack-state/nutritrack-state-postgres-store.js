@@ -164,7 +164,6 @@ function getDatabaseConfig() {
   const enabled = String(process.env.NUTRITRACK_USE_POSTGRES || "").trim() === "1";
   const localUserEmail = String(
     process.env.NUTRITRACK_LOCAL_USER_EMAIL ||
-      process.env.NUTRITRACK_DEMO_USER_EMAIL ||
       "app-local@nutritrack.local"
   ).trim();
   const pg = getPgModule();

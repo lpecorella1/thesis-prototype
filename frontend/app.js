@@ -401,7 +401,7 @@ async function requestMealNutritionAnalysis(description) {
     },
     body: JSON.stringify({
       description,
-      state: buildPersistableNutriTrackState(appState),
+      state: buildServerNutriTrackState(appState),
     }),
   });
 

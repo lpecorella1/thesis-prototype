@@ -8,6 +8,10 @@ const PASSWORD_ITERATIONS = 120000;
 const PASSWORD_KEY_LENGTH = 32;
 const SESSION_COOKIE_NAME = "nutritrack_session";
 const SESSION_TTL_DAYS = Number(process.env.NUTRITRACK_SESSION_TTL_DAYS || "14");
+const PASSWORD_RESET_TTL_MINUTES = 30;
+
+let nodemailerModule;
+let mailTransporter;
 
 function getPgModule() {
   if (pgModule !== undefined) {
@@ -56,6 +60,20 @@ function getPool() {
   return sharedPool;
 }
 
+function getNodemailerModule() {
+  if (nodemailerModule !== undefined) {
+    return nodemailerModule;
+  }
+
+  try {
+    nodemailerModule = require("nodemailer");
+  } catch (error) {
+    nodemailerModule = null;
+  }
+
+  return nodemailerModule;
+}
+
 async function withClient(callback) {
   const config = getDatabaseConfig();
 
@@ -86,6 +104,10 @@ async function withClient(callback) {
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function normalizePasswordResetToken(value) {
+  return String(value || "").trim();
 }
 
 function normalizeFullName(firstName, lastName) {
@@ -199,6 +221,37 @@ function validateCredentials(email, password) {
   };
 }
 
+function validatePasswordResetEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!normalizedEmail || !normalizedEmail.includes("@")) {
+    const error = new Error("e-mail non valida.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return normalizedEmail;
+}
+
+function validatePasswordResetPayload(password, passwordConfirmation) {
+  const normalizedPassword = String(password || "");
+  const normalizedPasswordConfirmation = String(passwordConfirmation || "");
+
+  if (normalizedPassword.length < 8) {
+    const error = new Error("La password deve contenere almeno 8 caratteri.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (normalizedPassword !== normalizedPasswordConfirmation) {
+    const error = new Error("Le password inserite non corrispondono.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return normalizedPassword;
+}
+
 function validateRegistrationProfile(firstName, lastName) {
   const normalizedFirstName = String(firstName || "").trim();
   const normalizedLastName = String(lastName || "").trim();
@@ -230,8 +283,20 @@ function hashSessionToken(token) {
   return crypto.createHash("sha256").update(String(token || "")).digest("hex");
 }
 
+function buildPasswordResetToken() {
+  return crypto.randomBytes(32).toString("base64url");
+}
+
+function hashPasswordResetToken(token) {
+  return crypto.createHash("sha256").update(String(token || "")).digest("hex");
+}
+
 function buildSessionExpiryDate() {
   return new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000);
+}
+
+function buildPasswordResetExpiryDate() {
+  return new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
 }
 
 function getClientIpAddress(request) {
@@ -251,6 +316,117 @@ function getSessionCookieOptions() {
     secure: String(process.env.HTTPS || "").trim() === "1",
     path: normalizeCookiePath(process.env.NUTRITRACK_BASE_PATH || "/nutritrack"),
   };
+}
+
+function getSmtpConfig() {
+  const host = String(process.env.NUTRITRACK_SMTP_HOST || "smtp.gmail.com").trim();
+  const port = Number(process.env.NUTRITRACK_SMTP_PORT || "587");
+  const secure = String(process.env.NUTRITRACK_SMTP_SECURE || "").trim() === "1";
+  const user = String(process.env.NUTRITRACK_SMTP_USER || process.env.NUTRITRACK_MAIL_USER || "").trim();
+  const pass = String(process.env.NUTRITRACK_SMTP_PASS || process.env.NUTRITRACK_MAIL_PASS || "").trim();
+  const from = String(process.env.NUTRITRACK_MAIL_FROM || `NutriTrack <${user}>`).trim();
+
+  return {
+    host,
+    port,
+    secure,
+    user,
+    pass,
+    from,
+    available: Boolean(host && port && user && pass),
+  };
+}
+
+function getMailTransporter() {
+  const nodemailer = getNodemailerModule();
+  const config = getSmtpConfig();
+
+  if (!nodemailer) {
+    const error = new Error("Invio email non disponibile: dipendenza nodemailer mancante.");
+    error.statusCode = 503;
+    throw error;
+  }
+
+  if (!config.available) {
+    const error = new Error("Invio email non configurato: completa le variabili SMTP nel file .env.");
+    error.statusCode = 503;
+    throw error;
+  }
+
+  if (!mailTransporter) {
+    mailTransporter = nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      auth: {
+        user: config.user,
+        pass: config.pass,
+      },
+    });
+  }
+
+  return {
+    transporter: mailTransporter,
+    from: config.from,
+  };
+}
+
+function normalizePublicAppUrl(value) {
+  const rawValue = String(value || "").trim();
+
+  if (!rawValue) {
+    return "";
+  }
+
+  return rawValue.endsWith("/") ? rawValue : `${rawValue}/`;
+}
+
+function buildRequestPublicAppUrl(request) {
+  const configuredUrl = normalizePublicAppUrl(process.env.NUTRITRACK_PUBLIC_URL);
+
+  if (configuredUrl) {
+    return configuredUrl;
+  }
+
+  const host = String(request?.headers?.["x-forwarded-host"] || request?.headers?.host || "").trim();
+
+  if (!host) {
+    const error = new Error("URL pubblico dell'app non configurato.");
+    error.statusCode = 503;
+    throw error;
+  }
+
+  const protocol = String(request?.headers?.["x-forwarded-proto"] || (process.env.HTTPS === "1" ? "https" : "http"))
+    .split(",")[0]
+    .trim();
+  const basePath = normalizeCookiePath(process.env.NUTRITRACK_BASE_PATH || "/nutritrack");
+
+  return normalizePublicAppUrl(`${protocol}://${host}${basePath}`);
+}
+
+function buildPasswordResetUrl(token, request) {
+  const url = new URL(buildRequestPublicAppUrl(request));
+  url.searchParams.set("resetToken", token);
+  return url.toString();
+}
+
+async function sendPasswordResetEmail({ email, resetUrl }) {
+  const { transporter, from } = getMailTransporter();
+
+  await transporter.sendMail({
+    from,
+    to: email,
+    subject: "Recupero password NutriTrack",
+    text:
+      "Hai richiesto il recupero della password per NutriTrack.\n\n" +
+      `Apri questo link entro ${PASSWORD_RESET_TTL_MINUTES} minuti per impostare una nuova password:\n${resetUrl}\n\n` +
+      "Se non hai richiesto tu questa operazione, puoi ignorare questa email.",
+    html:
+      "<p>Hai richiesto il recupero della password per NutriTrack.</p>" +
+      `<p>Apri questo link entro ${PASSWORD_RESET_TTL_MINUTES} minuti per impostare una nuova password:</p>` +
+      `<p><a href="${resetUrl}">Reimposta password</a></p>` +
+      "<p>Se non hai richiesto tu questa operazione, puoi ignorare questa email.</p>",
+  });
 }
 
 function buildAuthCookie(token, expiresAt) {
@@ -360,6 +536,154 @@ async function authenticateUser({ email, password }) {
       email: user.email,
       fullName: user.full_name || null,
     };
+  });
+}
+
+async function requestPasswordReset({ email }, request) {
+  const normalizedEmail = validatePasswordResetEmail(email);
+
+  return withClient(async (client) => {
+    const result = await client.query(
+      `
+        SELECT id, email, account_status
+        FROM users
+        WHERE email = $1
+        LIMIT 1
+      `,
+      [normalizedEmail]
+    );
+    const user = result.rows[0];
+
+    if (!user || user.account_status !== "active") {
+      const error = new Error("e-mail non valida.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const token = buildPasswordResetToken();
+    const tokenHash = hashPasswordResetToken(token);
+    const expiresAt = buildPasswordResetExpiryDate();
+
+    await client.query(
+      `
+        UPDATE password_reset_tokens
+        SET used_at = CURRENT_TIMESTAMP
+        WHERE user_id = $1
+          AND used_at IS NULL
+      `,
+      [user.id]
+    );
+
+    await client.query(
+      `
+        INSERT INTO password_reset_tokens (
+          user_id,
+          token_hash,
+          expires_at,
+          user_agent,
+          ip_address
+        )
+        VALUES ($1, $2, $3, $4, $5)
+      `,
+      [user.id, tokenHash, expiresAt.toISOString(), String(request?.headers?.["user-agent"] || "").slice(0, 512), getClientIpAddress(request)]
+    );
+
+    const resetUrl = buildPasswordResetUrl(token, request);
+    await sendPasswordResetEmail({
+      email: user.email,
+      resetUrl,
+    });
+
+    return {
+      email: user.email,
+      expiresAt,
+    };
+  });
+}
+
+async function confirmPasswordReset({ token, password, passwordConfirmation }) {
+  const normalizedToken = normalizePasswordResetToken(token);
+
+  if (!normalizedToken) {
+    const error = new Error("Link non valido o scaduto.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const newPassword = validatePasswordResetPayload(password, passwordConfirmation);
+  const tokenHash = hashPasswordResetToken(normalizedToken);
+
+  return withClient(async (client) => {
+    await client.query("BEGIN");
+
+    try {
+      const result = await client.query(
+        `
+          SELECT
+            prt.id,
+            prt.user_id,
+            prt.expires_at,
+            prt.used_at,
+            u.account_status
+          FROM password_reset_tokens prt
+          JOIN users u ON u.id = prt.user_id
+          WHERE prt.token_hash = $1
+          LIMIT 1
+          FOR UPDATE
+        `,
+        [tokenHash]
+      );
+      const resetToken = result.rows[0];
+
+      if (
+        !resetToken ||
+        resetToken.used_at ||
+        resetToken.account_status !== "active" ||
+        new Date(resetToken.expires_at).getTime() <= Date.now()
+      ) {
+        const error = new Error("Link non valido o scaduto.");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      await client.query(
+        `
+          UPDATE users
+          SET password_hash = $1,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = $2
+        `,
+        [buildPasswordHash(newPassword), resetToken.user_id]
+      );
+
+      await client.query(
+        `
+          UPDATE password_reset_tokens
+          SET used_at = CURRENT_TIMESTAMP
+          WHERE id = $1
+        `,
+        [resetToken.id]
+      );
+
+      await client.query(
+        `
+          UPDATE user_sessions
+          SET revoked_at = CURRENT_TIMESTAMP
+          WHERE user_id = $1
+            AND revoked_at IS NULL
+        `,
+        [resetToken.user_id]
+      );
+
+      await client.query("COMMIT");
+
+      return {
+        ok: true,
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    }
   });
 }
 
@@ -473,8 +797,10 @@ module.exports = {
   authenticateUser,
   buildAuthCookie,
   buildClearedAuthCookie,
+  confirmPasswordReset,
   createUserAccount,
   createUserSession,
   readAuthenticatedSessionFromRequest,
+  requestPasswordReset,
   revokeUserSessionByToken,
 };

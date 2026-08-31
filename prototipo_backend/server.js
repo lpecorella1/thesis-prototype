@@ -19,9 +19,11 @@ const {
   authenticateUser,
   buildAuthCookie,
   buildClearedAuthCookie,
+  confirmPasswordReset,
   createUserAccount,
   createUserSession,
   readAuthenticatedSessionFromRequest,
+  requestPasswordReset,
   revokeUserSessionByToken,
 } = require("./auth");
 const { resolveRequestUserContext } = require("./request-user-context");
@@ -254,7 +256,6 @@ function getRuntimeUserPayload(runtime, session) {
   return {
     email: String(
       process.env.NUTRITRACK_LOCAL_USER_EMAIL ||
-        process.env.NUTRITRACK_DEMO_USER_EMAIL ||
         "app-local@nutritrack.local"
     ).trim(),
     mode: "single_user_local",
@@ -2055,45 +2056,47 @@ async function handleAuthLogout(request, response) {
   }
 }
 
-async function handleApiChat(request, response) {
+async function handlePasswordResetRequest(request, response) {
   try {
-    const body = await readJsonBody(request);
-    const message = String(body.message || "").trim();
-    const history = Array.isArray(body.history) ? body.history : [];
-    const legacyContext = body.context && typeof body.context === "object" ? body.context : {};
-    const userContext = await resolveRequestUserContext(request);
-    const nutritrackState = await getNutriTrackState(userContext);
-    const context = buildRecipesAssistantContext({
-      state: nutritrackState,
-      legacyContext,
-      overrides: {
-        currentRecipe: body.currentRecipe && typeof body.currentRecipe === "object" ? body.currentRecipe : undefined,
+    ensureAuthenticatedUserMode();
+    const payload = await readJsonBody(request);
+    await requestPasswordReset(
+      {
+        email: payload?.email,
       },
-    });
-
-    if (!message) {
-      sendJson(response, 400, { error: "Il messaggio è obbligatorio." });
-      return;
-    }
-
-    const completion = await createAzureChatCompletion(buildRecipeAssistantMessages(message, history, context));
-    const reply = completion.choices?.[0]?.message?.content;
-
-    if (!reply) {
-      sendJson(response, 502, { error: "Risposta Azure OpenAI non valida." });
-      return;
-    }
+      request
+    );
 
     sendJson(response, 200, {
-      reply,
-      usage: completion.usage || null
+      ok: true,
+      message: "Link inviato alla mail.",
     });
   } catch (error) {
-    const azureError = error.details?.error?.message;
-    console.error("[Server] Errore nella route /api/chat.", azureError || error.message);
-
+    console.error("[Server] Errore richiesta recupero password.", error);
     sendJson(response, error.statusCode || 500, {
-      error: azureError || error.message || "Errore interno del server."
+      error: error.message || "Impossibile inviare il link di recupero password.",
+    });
+  }
+}
+
+async function handlePasswordResetConfirm(request, response) {
+  try {
+    ensureAuthenticatedUserMode();
+    const payload = await readJsonBody(request);
+    await confirmPasswordReset({
+      token: payload?.token,
+      password: payload?.password,
+      passwordConfirmation: payload?.passwordConfirmation,
+    });
+
+    sendJson(response, 200, {
+      ok: true,
+      message: "Password aggiornata. Effettua l'accesso con la nuova password.",
+    });
+  } catch (error) {
+    console.error("[Server] Errore conferma recupero password.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile aggiornare la password.",
     });
   }
 }
@@ -2133,12 +2136,10 @@ async function handleRecipesAssistantChat(request, response) {
     const body = await readJsonBody(request);
     const message = String(body.message || "").trim();
     const history = Array.isArray(body.history) ? body.history : [];
-    const legacyContext = body.context && typeof body.context === "object" ? body.context : {};
     const userContext = await resolveRequestUserContext(request);
     const nutritrackState = await getNutriTrackState(userContext);
     const context = buildRecipesAssistantContext({
       state: nutritrackState,
-      legacyContext,
       overrides: {
         currentRecipe: body.currentRecipe && typeof body.currentRecipe === "object" ? body.currentRecipe : undefined,
       },
@@ -2204,7 +2205,6 @@ async function handleApiRecipeGenerate(request, response) {
     errorPhase = "read-body";
     const body = await readJsonBody(request);
     const filters = sanitizeRecipeGenerationFilters(body.filters && typeof body.filters === "object" ? body.filters : {});
-    const legacyContext = body.context && typeof body.context === "object" ? body.context : {};
     errorPhase = "resolve-user";
     const userContext = await resolveRequestUserContext(request);
     errorPhase = "read-state";
@@ -2212,7 +2212,6 @@ async function handleApiRecipeGenerate(request, response) {
     errorPhase = "build-context";
     const context = buildRecipesAssistantContext({
       state: nutritrackState,
-      legacyContext,
       overrides: {
         generator: filters,
         currentRecipe: body.currentRecipe && typeof body.currentRecipe === "object" ? body.currentRecipe : undefined,
@@ -2537,9 +2536,6 @@ async function handleDevicesStateRead(request, response) {
           scale: getScaleProviderId(),
         },
         uiStateSource: "none",
-        legacyUiStateFields: snapshot.storage?.legacyFileAvailable
-          ? snapshot.storage.legacyUiCacheSections.filter((field) => field.startsWith("devices."))
-          : [],
         notes: [
           "scale usa una simulazione backend dedicata con contratto stabile in attesa del provider reale",
           "lo stato operativo della bilancia e letto dal provider backend dedicato",
@@ -2706,8 +2702,13 @@ const requestHandler = async (request, response) => {
     return;
   }
 
-  if (request.method === "POST" && requestPath === "/api/chat") {
-    await handleApiChat(request, response);
+  if (request.method === "POST" && requestPath === "/api/auth/password-reset/request") {
+    await handlePasswordResetRequest(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && requestPath === "/api/auth/password-reset/confirm") {
+    await handlePasswordResetConfirm(request, response);
     return;
   }
 

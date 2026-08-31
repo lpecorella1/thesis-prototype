@@ -265,7 +265,7 @@ async function requestGeneratedGroceryList() {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      state: buildPersistableNutriTrackState(appState),
+      state: buildServerNutriTrackState(appState),
     }),
   });
 

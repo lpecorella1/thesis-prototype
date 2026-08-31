@@ -81,10 +81,8 @@ NUTRITRACK_LOCAL_USER_EMAIL=app-local@nutritrack.local
 
 Le modalità runtime sono due:
 
-- `single-user-local`: sviluppo locale senza login, agganciato a un utente implicito definito da `NUTRITRACK_LOCAL_USER_EMAIL`;
-- `authenticated-user`: login, registrazione, cookie di sessione e dati risolti per utente autenticato.
-
-`NUTRITRACK_DEMO_USER_EMAIL` è ancora accettata come variabile legacy, ma nei nuovi riferimenti uso `NUTRITRACK_LOCAL_USER_EMAIL`.
+- `authenticated-user`: modalità principale per Mercurio e per test locali con credenziali, con login, registrazione, cookie di sessione e dati risolti per utente autenticato;
+- `single-user-local`: opzione esplicita per controlli locali senza login, agganciata a un utente implicito definito da `NUTRITRACK_LOCAL_USER_EMAIL`.
 
 ## Persistenza attuale
 

@@ -10,15 +10,6 @@ const {
 } = require("./nutritrack-state-postgres-store");
 
 const POSTGRES_PRIMARY_SECTIONS = ["profile", "nutrition", "grocery", "progress", "recipes", "datasets"];
-const LEGACY_UI_CACHE_SECTIONS = [
-  "recipes.generator",
-  "recipes.currentRecipe",
-  "recipes.chatMessages",
-  "datasets.openFoodFacts.source",
-  "devices.showPermissionsPanel",
-  "grocery.ar",
-  "progress.autoSnapshots",
-];
 
 function cloneNutriTrackState(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -119,7 +110,11 @@ function buildStructuredPostgresState(postgresState) {
   };
 }
 
-function composeNutriTrackState({ postgresState, legacyUiCacheState, databaseStatus }) {
+function canUseLegacyFileState(userContext, databaseStatus) {
+  return !(databaseStatus.enabled && userContext?.type === "authenticated_user");
+}
+
+function composeNutriTrackState({ postgresState, legacyUiCacheState, databaseStatus, allowLegacyFileState }) {
   const structuredPostgresState = buildStructuredPostgresState(postgresState);
 
   if (databaseStatus.enabled) {
@@ -127,16 +122,19 @@ function composeNutriTrackState({ postgresState, legacyUiCacheState, databaseSta
       return structuredPostgresState;
     }
 
-    return hasMeaningfulNutriTrackState(legacyUiCacheState) ? cloneNutriTrackState(legacyUiCacheState) : null;
+    return allowLegacyFileState && hasMeaningfulNutriTrackState(legacyUiCacheState)
+      ? cloneNutriTrackState(legacyUiCacheState)
+      : null;
   }
 
   return hasMeaningfulNutriTrackState(legacyUiCacheState) ? cloneNutriTrackState(legacyUiCacheState) : null;
 }
 
-function buildStorageMetadata({ baseState, postgresState, databaseStatus, state }) {
+function buildStorageMetadata({ baseState, postgresState, databaseStatus, state, allowLegacyFileState }) {
   const postgresPrimarySections = pickAvailableSectionSources(postgresState);
   const postgresStructuredStateComplete = postgresPrimarySections.length === POSTGRES_PRIMARY_SECTIONS.length;
-  const usingLegacyFileFallback = !databaseStatus.enabled || !hasMeaningfulNutriTrackState(postgresState);
+  const usingLegacyFileFallback =
+    allowLegacyFileState && (!databaseStatus.enabled || !hasMeaningfulNutriTrackState(postgresState));
   const primarySource = usingLegacyFileFallback ? "legacy_file" : "postgres_primary";
 
   return {
@@ -145,8 +143,6 @@ function buildStorageMetadata({ baseState, postgresState, databaseStatus, state 
     postgresPrimarySections,
     postgresStructuredStateComplete,
     legacyFileAvailable: hasMeaningfulNutriTrackState(baseState),
-    legacyUiCacheAvailable: hasMeaningfulNutriTrackState(baseState),
-    legacyUiCacheSections: hasMeaningfulNutriTrackState(baseState) ? LEGACY_UI_CACHE_SECTIONS : [],
     revision: computeNutriTrackStateRevision(state, primarySource),
     usesLegacyFileFallback: usingLegacyFileFallback,
   };
@@ -154,20 +150,23 @@ function buildStorageMetadata({ baseState, postgresState, databaseStatus, state 
 
 async function getNutriTrackStateSnapshot(userContext) {
   const databaseStatus = buildDatabaseStatus();
+  const allowLegacyFileState = canUseLegacyFileState(userContext, databaseStatus);
   const [storedState, postgresState] = await Promise.all([
-    readNutriTrackStateFile(),
+    allowLegacyFileState ? readNutriTrackStateFile() : Promise.resolve(null),
     readNutriTrackStateFromPostgres(userContext),
   ]);
   const state = composeNutriTrackState({
     postgresState,
     legacyUiCacheState: storedState,
     databaseStatus,
+    allowLegacyFileState,
   });
   const storage = buildStorageMetadata({
     baseState: storedState,
     postgresState,
     databaseStatus,
     state,
+    allowLegacyFileState,
   });
 
   return {
@@ -198,7 +197,10 @@ async function saveNutriTrackState(userContext, nextState, options = {}) {
 
   if (databaseStatus.enabled) {
     await mirrorNutriTrackStateToPostgres(sanitizedState, userContext);
-    await writeNutriTrackStateFile(buildLegacyUiCacheState(sanitizedState));
+
+    if (canUseLegacyFileState(userContext, databaseStatus)) {
+      await writeNutriTrackStateFile(buildLegacyUiCacheState(sanitizedState));
+    }
   } else {
     if (userContext?.type === "authenticated_user") {
       const error = new Error("Salvataggio utente non disponibile: PostgreSQL non configurato.");

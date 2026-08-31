@@ -16,11 +16,18 @@ const authForm = document.querySelector("[data-auth-form]");
 const authFeedback = document.querySelector("[data-auth-feedback]");
 const authHint = document.querySelector("[data-auth-hint]");
 const authSubmitButton = document.querySelector("[data-auth-submit]");
+const authModeSwitch = document.querySelector("[data-auth-mode-switch]");
 const authModeButtons = document.querySelectorAll("[data-auth-mode-toggle]");
 const authLogoutButton = document.querySelector("[data-auth-logout]");
 const sessionUserLabel = document.querySelector("[data-session-user-label]");
+const authEmailField = document.querySelector("[data-auth-email-field]");
+const authPasswordField = document.querySelector("[data-auth-password-field]");
 const authRegisterOnlyFields = document.querySelectorAll("[data-auth-register-only]");
+const authResetConfirmOnlyFields = document.querySelectorAll("[data-auth-reset-confirm-only]");
+const authForgotPasswordButton = document.querySelector("[data-auth-forgot-password]");
+const authBackLoginButton = document.querySelector("[data-auth-back-login]");
 const buildAuthApiPath = window.NutriTrackBootstrap.buildNutriTrackApiPath;
+const passwordResetToken = new URLSearchParams(window.location.search).get("resetToken") || "";
 
 async function readAuthJsonResponse(response, endpointLabel) {
   const responseText = await response.text();
@@ -92,7 +99,8 @@ function bindAuthFormValidationFeedback(form) {
 }
 
 function getAuthMode() {
-  return authForm?.elements?.mode?.value === "register" ? "register" : "login";
+  const mode = authForm?.elements?.mode?.value;
+  return ["register", "password-reset-request", "password-reset-confirm"].includes(mode) ? mode : "login";
 }
 
 function updateAuthMode(mode) {
@@ -100,35 +108,88 @@ function updateAuthMode(mode) {
     return;
   }
 
-  authForm.elements.mode.value = mode;
+  const nextMode = ["login", "register", "password-reset-request", "password-reset-confirm"].includes(mode) ? mode : "login";
+  authForm.elements.mode.value = nextMode;
 
   authModeButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.authModeToggle === mode);
+    button.classList.toggle("is-active", button.dataset.authModeToggle === nextMode);
   });
 
   authRegisterOnlyFields.forEach((field) => {
-    field.hidden = mode !== "register";
+    field.hidden = nextMode !== "register";
+  });
+
+  authResetConfirmOnlyFields.forEach((field) => {
+    field.hidden = nextMode !== "password-reset-confirm";
   });
 
   if (authForm.elements.firstName) {
-    authForm.elements.firstName.required = mode === "register";
+    authForm.elements.firstName.required = nextMode === "register";
   }
 
   if (authForm.elements.lastName) {
-    authForm.elements.lastName.required = mode === "register";
+    authForm.elements.lastName.required = nextMode === "register";
+  }
+
+  if (authEmailField) {
+    authEmailField.hidden = nextMode === "password-reset-confirm";
+  }
+
+  if (authPasswordField) {
+    authPasswordField.hidden = nextMode === "password-reset-request";
+  }
+
+  if (authForm.elements.email) {
+    authForm.elements.email.required = nextMode !== "password-reset-confirm";
+  }
+
+  if (authForm.elements.password) {
+    authForm.elements.password.required = nextMode !== "password-reset-request";
+    authForm.elements.password.autocomplete =
+      nextMode === "login" ? "current-password" : "new-password";
+    authForm.elements.password.placeholder =
+      nextMode === "password-reset-confirm" ? "Nuova password" : "Almeno 8 caratteri";
+  }
+
+  if (authForm.elements.passwordConfirmation) {
+    authForm.elements.passwordConfirmation.required = nextMode === "password-reset-confirm";
+  }
+
+  if (authModeSwitch) {
+    authModeSwitch.hidden = nextMode === "password-reset-request" || nextMode === "password-reset-confirm";
   }
 
   if (authSubmitButton) {
-    authSubmitButton.textContent = mode === "register" ? "Crea account" : "Accedi";
+    authSubmitButton.textContent =
+      nextMode === "register"
+        ? "Crea account"
+        : nextMode === "password-reset-request"
+        ? "Invia link"
+        : nextMode === "password-reset-confirm"
+        ? "Aggiorna password"
+        : "Accedi";
+  }
+
+  if (authForgotPasswordButton) {
+    authForgotPasswordButton.hidden = nextMode !== "login";
+  }
+
+  if (authBackLoginButton) {
+    authBackLoginButton.hidden = nextMode === "login";
   }
 
   if (authHint) {
     authHint.textContent =
-      mode === "register"
+      nextMode === "register"
         ? "Crea un account per collegare i tuoi dati al tuo profilo personale."
+        : nextMode === "password-reset-request"
+        ? "Inserisci la mail associata al tuo account: riceverai un link valido per 30 minuti."
+        : nextMode === "password-reset-confirm"
+        ? "Inserisci una nuova password e ripetila per confermare il cambio."
         : "Inserisci le tue credenziali per entrare nell'app.";
   }
 
+  authForm.dataset.validationState = "";
   setAuthFeedback("");
 }
 
@@ -193,9 +254,15 @@ async function submitAuthForm() {
   }
 
   const mode = getAuthMode();
+
+  if (mode === "password-reset-confirm" && authForm.elements.password.value !== authForm.elements.passwordConfirmation.value) {
+    setAuthFeedback("Le password inserite non corrispondono.");
+    return;
+  }
+
   const payload = {
-    email: authForm.elements.email.value.trim(),
-    password: authForm.elements.password.value,
+    email: authForm.elements.email?.value.trim() || "",
+    password: authForm.elements.password?.value || "",
   };
 
   if (mode === "register") {
@@ -203,11 +270,33 @@ async function submitAuthForm() {
     payload.lastName = authForm.elements.lastName.value.trim();
   }
 
+  if (mode === "password-reset-confirm") {
+    payload.token = passwordResetToken;
+    payload.passwordConfirmation = authForm.elements.passwordConfirmation.value;
+  }
+
   authSubmitButton.disabled = true;
-  setAuthFeedback(mode === "register" ? "Creazione account in corso..." : "Accesso in corso...", "success");
+  setAuthFeedback(
+    mode === "register"
+      ? "Creazione account in corso..."
+      : mode === "password-reset-request"
+      ? "Invio link in corso..."
+      : mode === "password-reset-confirm"
+      ? "Aggiornamento password in corso..."
+      : "Accesso in corso...",
+    "success"
+  );
 
   try {
-    const endpoint = buildAuthApiPath(mode === "register" ? "/api/auth/register" : "/api/auth/login");
+    const endpoint = buildAuthApiPath(
+      mode === "register"
+        ? "/api/auth/register"
+        : mode === "password-reset-request"
+        ? "/api/auth/password-reset/request"
+        : mode === "password-reset-confirm"
+        ? "/api/auth/password-reset/confirm"
+        : "/api/auth/login"
+    );
     const response = await fetch(endpoint, {
       method: "POST",
       credentials: "same-origin",
@@ -221,6 +310,19 @@ async function submitAuthForm() {
 
     if (!response.ok) {
       throw new Error(result.error || `Autenticazione fallita (${response.status}).`);
+    }
+
+    if (mode === "password-reset-request") {
+      setAuthFeedback(result.message || "Link inviato alla mail.", "success");
+      return;
+    }
+
+    if (mode === "password-reset-confirm") {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      authForm.reset();
+      updateAuthMode("login");
+      setAuthFeedback(result.message || "Password aggiornata. Effettua l'accesso con la nuova password.", "success");
+      return;
     }
 
     clearFrontendLocalCache();
@@ -279,7 +381,21 @@ function setupAuthenticationUi() {
     });
   }
 
-  updateAuthMode("login");
+  if (authForgotPasswordButton) {
+    authForgotPasswordButton.addEventListener("click", () => {
+      updateAuthMode("password-reset-request");
+    });
+  }
+
+  if (authBackLoginButton) {
+    authBackLoginButton.addEventListener("click", () => {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      authForm.reset();
+      updateAuthMode("login");
+    });
+  }
+
+  updateAuthMode(passwordResetToken ? "password-reset-confirm" : "login");
 }
 
 async function bootstrapAuthenticationGate() {
