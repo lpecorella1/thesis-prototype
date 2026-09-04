@@ -71,6 +71,101 @@ function getTodayDateKey() {
   return getRelativeDateKey(0);
 }
 
+function getSelectedNutritionDateKey() {
+  if (!appState.nutrition || typeof appState.nutrition !== "object") {
+    appState.nutrition = {};
+  }
+
+  if (!isValidDateKey(appState.nutrition.selectedDate)) {
+    appState.nutrition.selectedDate = getTodayDateKey();
+  }
+
+  return appState.nutrition.selectedDate;
+}
+
+function createLocalDateFromKey(dateKey) {
+  return new Date(`${dateKey}T12:00:00`);
+}
+
+function formatDateKey(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function shiftDateKey(dateKey, offsetDays) {
+  const date = createLocalDateFromKey(dateKey);
+
+  if (Number.isNaN(date.getTime())) {
+    return getTodayDateKey();
+  }
+
+  date.setDate(date.getDate() + offsetDays);
+  return formatDateKey(date);
+}
+
+function formatNutritionDateLabel(dateKey) {
+  const todayKey = getTodayDateKey();
+
+  if (dateKey === todayKey) {
+    return "Oggi";
+  }
+
+  if (dateKey === shiftDateKey(todayKey, -1)) {
+    return "Ieri";
+  }
+
+  if (dateKey === shiftDateKey(todayKey, 1)) {
+    return "Domani";
+  }
+
+  const date = createLocalDateFromKey(dateKey);
+
+  if (Number.isNaN(date.getTime())) {
+    return dateKey;
+  }
+
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "2-digit",
+    month: "short",
+  }).format(date);
+}
+
+function formatNutritionDateSubtitle(dateKey) {
+  const date = createLocalDateFromKey(dateKey);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("it-IT", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatMealsSectionTitle(dateKey) {
+  const todayKey = getTodayDateKey();
+
+  if (dateKey === todayKey) {
+    return "Pasti di oggi";
+  }
+
+  if (dateKey === shiftDateKey(todayKey, -1)) {
+    return "Pasti di ieri";
+  }
+
+  if (dateKey === shiftDateKey(todayKey, 1)) {
+    return "Pasti di domani";
+  }
+
+  return `Pasti del ${formatNutritionDateLabel(dateKey)}`;
+}
+
 function getProgressRangeDays() {
   return appState.progress.selectedRange === "month" ? 30 : 7;
 }
@@ -468,16 +563,6 @@ function buildMealAnalysisSourceNote(analysis) {
 function clearNutritionDraft() {
   openFoodFactsRuntime.nutritionLookup = null;
   openFoodFactsRuntime.nutritionDraft = null;
-}
-
-function getNutritionTotals() {
-  const totals = getNutritionTotalsForDate(getTodayDateKey());
-  return {
-    calories: totals.calories,
-    protein: totals.protein,
-    carbs: totals.carbs,
-    fats: totals.fats,
-  };
 }
 
 function getNutritionTotalsForDate(dateKey) {
@@ -1336,17 +1421,10 @@ const nutritionEditorRuntime = {
   mealId: "",
 };
 
-function formatNutritionGoalValue(value, unit = "") {
-  if (value == null || value === "") {
-    return "-";
-  }
-
-  return unit ? `${value} ${unit}` : String(value);
-}
-
 // Nutrition core rendering and setup remain here because they coordinate shared state.
 function renderNutritionSummary() {
-  const totals = getNutritionTotals();
+  const selectedDateKey = getSelectedNutritionDateKey();
+  const totals = getNutritionTotalsForDate(selectedDateKey);
   const { goals } = appState.nutrition;
 
   Object.entries(totals).forEach(([key, value]) => {
@@ -1369,11 +1447,43 @@ function renderNutritionSummary() {
     }
   });
 
-  const calorieGoalDisplay = document.querySelector("[data-calorie-goal-display]");
+  const numericCalorieGoal = normalizeNumber(goals.calories);
+  const remainingCalories = numericCalorieGoal == null ? null : Math.max(0, roundMacroValue(numericCalorieGoal - totals.calories));
+  const calorieProgress = numericCalorieGoal && numericCalorieGoal > 0
+    ? Math.min((totals.calories / numericCalorieGoal) * 100, 100)
+    : 0;
 
-  if (calorieGoalDisplay) {
-    calorieGoalDisplay.textContent = formatNutritionGoalValue(goals.calories, "kcal");
-  }
+  document.querySelectorAll("[data-nutrition-remaining-calories]").forEach((element) => {
+    element.textContent = remainingCalories == null ? "-" : String(remainingCalories);
+  });
+
+  document.querySelectorAll("[data-nutrition-calorie-ring]").forEach((element) => {
+    element.style.setProperty("--nutrition-calorie-progress", `${calorieProgress}%`);
+  });
+
+  document.querySelectorAll("[data-nutrition-burned-calories]").forEach((element) => {
+    element.textContent = "0";
+  });
+
+  document.querySelectorAll("[data-nutrition-selected-date-label]").forEach((element) => {
+    element.textContent = formatNutritionDateLabel(selectedDateKey);
+  });
+
+  document.querySelectorAll("[data-nutrition-selected-date-subtitle]").forEach((element) => {
+    element.textContent = formatNutritionDateSubtitle(selectedDateKey);
+  });
+
+  document.querySelectorAll("[data-nutrition-date-input]").forEach((element) => {
+    element.value = selectedDateKey;
+  });
+
+  document.querySelectorAll("[data-nutrition-day-count]").forEach((element) => {
+    element.textContent = totals.count === 1 ? "1 pasto registrato" : `${totals.count} pasti registrati`;
+  });
+
+  document.querySelectorAll("[data-meals-section-title]").forEach((element) => {
+    element.textContent = formatMealsSectionTitle(selectedDateKey);
+  });
 }
 
 // Sync profile goals into the nutrition dashboard summary.
@@ -1389,26 +1499,27 @@ function syncNutritionGoalsFromProfile() {
   };
 }
 
-// Render the list of meals currently tracked for today.
+// Render the list of meals currently tracked for the selected day.
 function renderMeals() {
   const list = document.querySelector("[data-meals-list]");
-  const todayMeals = appState.nutrition.meals.filter((meal) => getMealDateKey(meal) === getTodayDateKey());
+  const selectedDateKey = getSelectedNutritionDateKey();
+  const selectedMeals = appState.nutrition.meals.filter((meal) => getMealDateKey(meal) === selectedDateKey);
 
   if (!list) {
     return;
   }
 
-  if (todayMeals.length === 0) {
+  if (selectedMeals.length === 0) {
     list.innerHTML = `
       <article class="panel empty-state">
         <h3>Nessun pasto inserito</h3>
-        <p>Costruisci il tuo diario alimentare.</p>
+        <p>Aggiungi il primo pasto per questa giornata.</p>
       </article>
     `;
     return;
   }
 
-  list.innerHTML = todayMeals
+  list.innerHTML = selectedMeals
     .slice()
     .sort((firstMeal, secondMeal) => firstMeal.time.localeCompare(secondMeal.time))
     .map(
@@ -1521,10 +1632,11 @@ function renderNutritionEditForm() {
 }
 
 // Shared nutrition meal creation and mutation helpers used by the section wiring.
-async function createNutritionMealFromForm(form) {
+async function createNutritionMealFromForm(form, dateKey = getSelectedNutritionDateKey()) {
   const formData = new FormData(form);
   const linkedProduct = openFoodFactsRuntime.nutritionLookup;
   const description = String(formData.get("name") || "").trim();
+  const resolvedDateKey = isValidDateKey(dateKey) ? dateKey : getTodayDateKey();
 
   if (shouldAnalyzeMealDescription(description, linkedProduct)) {
     const analysis = await requestMealNutritionAnalysis(description).catch((error) => {
@@ -1535,7 +1647,7 @@ async function createNutritionMealFromForm(form) {
     return {
       id: crypto.randomUUID(),
       name: description,
-      date: getTodayDateKey(),
+      date: resolvedDateKey,
       time: String(formData.get("time") || "").trim(),
       calories: analysis.totals.calories,
       protein: analysis.totals.protein,
@@ -1561,7 +1673,7 @@ async function createNutritionMealFromForm(form) {
   return {
     id: crypto.randomUUID(),
     name: description,
-    date: getTodayDateKey(),
+    date: resolvedDateKey,
     time: String(formData.get("time") || "").trim(),
     calories: nutritionDraft.calories,
     protein: nutritionDraft.protein,
@@ -1613,6 +1725,31 @@ function removeNutritionMeal(mealId) {
   persistNutritionMealChanges(mealDateKey);
 }
 
+function setSelectedNutritionDate(dateKey) {
+  if (!isValidDateKey(dateKey)) {
+    return;
+  }
+
+  const currentDateKey = getSelectedNutritionDateKey();
+
+  if (currentDateKey === dateKey) {
+    renderNutrition();
+    return;
+  }
+
+  captureProgressSnapshotForDate(currentDateKey);
+  appState.nutrition.selectedDate = dateKey;
+
+  const activeMeal = getActiveNutritionEditMeal();
+
+  if (activeMeal && getMealDateKey(activeMeal) !== dateKey) {
+    nutritionEditorRuntime.mealId = "";
+  }
+
+  saveState();
+  renderNutrition();
+}
+
 function resetNutritionFormAfterSubmit(form) {
   form.reset();
   resetFormValidationState(form);
@@ -1654,6 +1791,8 @@ function setupNutritionSection() {
   const editCancelButton = document.querySelector("[data-nutrition-edit-cancel]");
   const mealPhotoButton = document.querySelector("[data-meal-photo-button]");
   const mealPhotoInput = document.querySelector("[data-meal-photo-input]");
+  const dateInput = document.querySelector("[data-nutrition-date-input]");
+  const dateStepButtons = document.querySelectorAll("[data-nutrition-date-shift]");
 
   if (!form || !mealsList || !editForm || !editCancelButton) {
     return;
@@ -1661,6 +1800,17 @@ function setupNutritionSection() {
 
   bindFormValidationFeedback(form);
   bindFormValidationFeedback(editForm);
+
+  dateStepButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const offsetDays = Number(button.dataset.nutritionDateShift);
+      setSelectedNutritionDate(shiftDateKey(getSelectedNutritionDateKey(), Number.isFinite(offsetDays) ? offsetDays : 0));
+    });
+  });
+
+  dateInput?.addEventListener("change", () => {
+    setSelectedNutritionDate(dateInput.value);
+  });
 
   mealPhotoButton?.addEventListener("click", () => {
     mealPhotoInput?.click();
@@ -1704,7 +1854,8 @@ function setupNutritionSection() {
     setNutritionFormPendingState(form, true);
 
     try {
-      const meal = await createNutritionMealFromForm(form);
+      const targetDateKey = getSelectedNutritionDateKey();
+      const meal = await createNutritionMealFromForm(form, targetDateKey);
 
       if (!isNutritionMealValid(meal)) {
         return;

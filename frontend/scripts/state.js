@@ -17,6 +17,9 @@ function normalizeNutriTrackState(parsedState) {
     nutrition: {
       ...structuredClone(defaultState.nutrition),
       ...(parsedState.nutrition || {}),
+      selectedDate: isValidDateKey(parsedState.nutrition?.selectedDate)
+        ? parsedState.nutrition.selectedDate
+        : getTodayDateKey(),
       meals: parsedMeals,
     },
     recipes: {

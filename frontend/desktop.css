@@ -44,21 +44,9 @@
     font-size: clamp(1.08rem, 1.45vw, 1.35rem);
   }
 
-  .goal-panel {
-    text-align: right;
-  }
-
   .hero-side-panels {
     min-width: 230px;
     justify-items: stretch;
-  }
-
-  .goal-panel span {
-    font-size: 1rem;
-  }
-
-  .goal-panel strong {
-    font-size: clamp(1.7rem, 2vw, 2.3rem);
   }
 
   .session-panel {
@@ -424,6 +412,22 @@
   .nutrition-layout {
     grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
     gap: 20px;
+  }
+
+  .nutrition-day-dashboard {
+    gap: 18px;
+  }
+
+  .nutrition-day-overview {
+    width: 100%;
+  }
+
+  .nutrition-macro-details summary {
+    width: 100%;
+  }
+
+  .nutrition-date-nav {
+    width: 100%;
   }
 
   .section-note {

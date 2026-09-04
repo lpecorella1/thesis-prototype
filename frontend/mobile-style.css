@@ -225,22 +225,6 @@ textarea {
   color: var(--text-soft);
 }
 
-.goal-panel {
-  text-align: left;
-}
-
-.goal-panel span {
-  display: block;
-  color: var(--text-soft);
-  font-size: 0.84rem;
-}
-
-.goal-panel strong {
-  font-size: clamp(1.28rem, 5.4vw, 1.8rem);
-  color: var(--blue);
-  letter-spacing: -0.04em;
-}
-
 .session-panel {
   display: flex;
   align-items: center;
@@ -661,6 +645,203 @@ textarea {
 
 .nutrition-stat-card .progress-track {
   background: rgba(17, 24, 39, 0.1);
+}
+
+.nutrition-day-dashboard {
+  display: grid;
+  gap: 14px;
+}
+
+.nutrition-day-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(128px, 0.95fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px;
+  border: 1px solid rgba(18, 24, 38, 0.08);
+  border-radius: 18px;
+  background: #dfe7f2;
+  color: #213047;
+}
+
+.nutrition-day-total,
+.nutrition-kcal-ring {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.nutrition-day-total strong {
+  color: #ffffff;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.nutrition-day-total span,
+.nutrition-kcal-ring span {
+  color: #4d5a70;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.nutrition-kcal-ring {
+  position: relative;
+  width: min(34vw, 150px);
+  aspect-ratio: 1;
+  justify-self: center;
+  align-content: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    #2f7cf6 var(--nutrition-calorie-progress, 0%),
+    rgba(255, 255, 255, 0.34) 0
+  );
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.nutrition-kcal-ring::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: rgba(223, 231, 242, 0.92);
+  z-index: -1;
+}
+
+.nutrition-kcal-ring strong {
+  color: #ffffff;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.nutrition-macro-details {
+  display: grid;
+  gap: 12px;
+}
+
+.nutrition-macro-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid rgba(18, 24, 38, 0.1);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  list-style: none;
+}
+
+.nutrition-macro-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.nutrition-macro-details summary span {
+  display: grid;
+  gap: 4px;
+}
+
+.nutrition-macro-details summary strong {
+  color: #213047;
+  font-size: 1.05rem;
+}
+
+.nutrition-macro-details summary small {
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
+.nutrition-macro-details summary svg {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  transition: transform 0.2s ease;
+}
+
+.nutrition-macro-details[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.nutrition-macro-details .nutrition-stats-grid {
+  margin-top: 12px;
+}
+
+.nutrition-date-nav {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 54px;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.nutrition-date-step,
+.nutrition-date-pill {
+  min-height: 58px;
+  border: 1px solid rgba(18, 24, 38, 0.08);
+  border-radius: 18px;
+  background: #f3f6fb;
+  color: #213047;
+  box-shadow: var(--shadow);
+}
+
+.nutrition-date-step {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+}
+
+.nutrition-date-step svg {
+  width: 26px;
+  height: 26px;
+}
+
+.nutrition-date-pill {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 14px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.nutrition-date-pill > svg {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+}
+
+.nutrition-date-pill span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nutrition-date-pill strong {
+  font-size: 1.22rem;
+  line-height: 1.1;
+}
+
+.nutrition-date-pill small {
+  max-width: 100%;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nutrition-date-pill input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .stat-card h2,
@@ -3397,7 +3578,6 @@ textarea {
     gap: 10px;
   }
 
-  .goal-panel,
   .summary-count,
   .calorie-badge {
     text-align: left;
@@ -3469,10 +3649,6 @@ textarea {
 
   .hero p {
     font-size: clamp(0.8rem, 3.6vw, 0.94rem);
-  }
-
-  .goal-panel strong {
-    font-size: clamp(1.08rem, 4.8vw, 1.42rem);
   }
 
   .tabs {
@@ -3840,6 +4016,42 @@ textarea {
   /* Nutrition mobile */
   .nutrition-layout {
     gap: 10px;
+  }
+
+  .nutrition-day-dashboard {
+    gap: 10px;
+  }
+
+  .nutrition-day-overview {
+    padding: 14px 12px;
+    border-radius: 16px;
+  }
+
+  .nutrition-kcal-ring {
+    width: min(33vw, 136px);
+  }
+
+  .nutrition-kcal-ring::before {
+    inset: 10px;
+  }
+
+  .nutrition-date-nav {
+    grid-template-columns: 46px minmax(0, 1fr) 46px;
+    gap: 8px;
+  }
+
+  .nutrition-date-step,
+  .nutrition-date-pill {
+    min-height: 50px;
+    border-radius: 14px;
+  }
+
+  .nutrition-date-pill strong {
+    font-size: 1rem;
+  }
+
+  .nutrition-date-pill small {
+    font-size: 0.64rem;
   }
 
   /* Grocery mobile */

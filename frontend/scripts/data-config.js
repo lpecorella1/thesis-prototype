@@ -46,11 +46,19 @@ function getDefaultRecipeChatMessages() {
   return [];
 }
 
+function formatDateKey(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
 function getRelativeDateKey(offsetDays) {
   const date = new Date();
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + offsetDays);
-  return date.toISOString().slice(0, 10);
+  return formatDateKey(date);
 }
 
 function getDefaultProgressState() {
@@ -108,6 +116,7 @@ function getDefaultDevicesState() {
 
 const defaultState = {
   nutrition: {
+    selectedDate: getRelativeDateKey(0),
     goals: {
       calories: 2000,
       protein: 150,

@@ -3,11 +3,6 @@ function switchToTab(target) {
   panels.forEach((panel) => panel.classList.toggle("is-active", panel.dataset.tabPanel === target));
   sectionLinks.forEach((item) => item.classList.toggle("is-active", item.dataset.sectionLinkTarget === target));
 
-  const heroGoalPanel = document.querySelector("[data-hero-goal-panel]");
-  if (heroGoalPanel) {
-    heroGoalPanel.hidden = target === "home";
-  }
-
   if (target !== "grocery" && groceryArRuntime.stream) {
     stopGroceryArCamera();
   }

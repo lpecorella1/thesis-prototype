@@ -91,11 +91,6 @@
             </div>
             <button class="soft-btn session-logout-btn" type="button" data-auth-logout hidden>Esci</button>
           </div>
-
-          <div class="goal-panel" data-hero-goal-panel>
-            <span>Obiettivo di oggi</span>
-            <strong data-calorie-goal-display>-</strong>
-          </div>
         </div>
       </header>
 
@@ -486,56 +481,108 @@
             </div>
           </div>
 
-          <div class="stats-grid">
-            <article class="stat-card nutrition-stat-card nutrition-stat-calories">
-              <div class="nutrition-stat-head">
-                <span class="nutrition-stat-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M13 2 6 13h5l-1 9 8-12h-5l1-8Z" /></svg>
-                </span>
-                <h2>Calorie</h2>
+          <section class="nutrition-day-dashboard" aria-label="Diario alimentare giornaliero">
+            <div class="nutrition-day-overview">
+              <div class="nutrition-day-total">
+                <strong data-nutrition-total="calories">0</strong>
+                <span>Consumate</span>
               </div>
-              <div class="metric"><span data-nutrition-total="calories">0</span> <span>kcal</span></div>
-              <p><span data-nutrition-total="calories">0</span> su <span data-nutrition-goal="calories">2000</span> kcal</p>
-              <div class="progress-track"><span class="progress-fill blue" data-nutrition-progress="calories" style="width: 0%"></span></div>
-            </article>
-            <article class="stat-card nutrition-stat-card nutrition-stat-protein">
-              <div class="nutrition-stat-head">
-                <span class="nutrition-stat-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8M3 9v6M21 9v6" /></svg>
-                </span>
-                <h2>Proteine</h2>
+              <div class="nutrition-kcal-ring" data-nutrition-calorie-ring>
+                <strong data-nutrition-remaining-calories>-</strong>
+                <span>kcal rimaste</span>
               </div>
-              <div class="metric"><span data-nutrition-total="protein">0</span> <span>g</span></div>
-              <p><span data-nutrition-total="protein">0</span> su <span data-nutrition-goal="protein">150</span> g</p>
-              <div class="progress-track"><span class="progress-fill red" data-nutrition-progress="protein" style="width: 0%"></span></div>
-            </article>
-            <article class="stat-card nutrition-stat-card nutrition-stat-carbs">
-              <div class="nutrition-stat-head">
-                <span class="nutrition-stat-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M6 10c1.7-3.8 5.3-5.2 10-5.8 1.1 4.5-.5 8.1-4.3 9.8C9.2 15.1 6.8 13.3 6 10Z" /><path d="M12 14c-1.5 2.2-3.4 3.8-6 5" /></svg>
-                </span>
-                <h2>Carboidrati</h2>
+              <div class="nutrition-day-total">
+                <strong data-nutrition-burned-calories>0</strong>
+                <span>Spese</span>
               </div>
-              <div class="metric"><span data-nutrition-total="carbs">0</span> <span>g</span></div>
-              <p><span data-nutrition-total="carbs">0</span> su <span data-nutrition-goal="carbs">250</span> g</p>
-              <div class="progress-track"><span class="progress-fill yellow" data-nutrition-progress="carbs" style="width: 0%"></span></div>
-            </article>
-            <article class="stat-card nutrition-stat-card nutrition-stat-fats">
-              <div class="nutrition-stat-head">
-                <span class="nutrition-stat-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M12 3C8.5 7.4 6 10.9 6 14a6 6 0 0 0 12 0c0-3.1-2.5-6.6-6-11Z" /></svg>
+            </div>
+
+            <details class="nutrition-macro-details" data-nutrition-macro-details open>
+              <summary>
+                <span>
+                  <strong>Macronutrienti</strong>
+                  <small data-nutrition-day-count>0 pasti registrati</small>
                 </span>
-                <h2>Grassi</h2>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m7 10 5 5 5-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
+                </svg>
+              </summary>
+
+              <div class="stats-grid nutrition-stats-grid">
+                <article class="stat-card nutrition-stat-card nutrition-stat-calories">
+                  <div class="nutrition-stat-head">
+                    <span class="nutrition-stat-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M13 2 6 13h5l-1 9 8-12h-5l1-8Z" /></svg>
+                    </span>
+                    <h2>Calorie</h2>
+                  </div>
+                  <div class="metric"><span data-nutrition-total="calories">0</span> <span>kcal</span></div>
+                  <p><span data-nutrition-total="calories">0</span> su <span data-nutrition-goal="calories">2000</span> kcal</p>
+                  <div class="progress-track"><span class="progress-fill blue" data-nutrition-progress="calories" style="width: 0%"></span></div>
+                </article>
+                <article class="stat-card nutrition-stat-card nutrition-stat-protein">
+                  <div class="nutrition-stat-head">
+                    <span class="nutrition-stat-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M4 12h16M7 8v8M17 8v8M3 9v6M21 9v6" /></svg>
+                    </span>
+                    <h2>Proteine</h2>
+                  </div>
+                  <div class="metric"><span data-nutrition-total="protein">0</span> <span>g</span></div>
+                  <p><span data-nutrition-total="protein">0</span> su <span data-nutrition-goal="protein">150</span> g</p>
+                  <div class="progress-track"><span class="progress-fill red" data-nutrition-progress="protein" style="width: 0%"></span></div>
+                </article>
+                <article class="stat-card nutrition-stat-card nutrition-stat-carbs">
+                  <div class="nutrition-stat-head">
+                    <span class="nutrition-stat-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M6 10c1.7-3.8 5.3-5.2 10-5.8 1.1 4.5-.5 8.1-4.3 9.8C9.2 15.1 6.8 13.3 6 10Z" /><path d="M12 14c-1.5 2.2-3.4 3.8-6 5" /></svg>
+                    </span>
+                    <h2>Carboidrati</h2>
+                  </div>
+                  <div class="metric"><span data-nutrition-total="carbs">0</span> <span>g</span></div>
+                  <p><span data-nutrition-total="carbs">0</span> su <span data-nutrition-goal="carbs">250</span> g</p>
+                  <div class="progress-track"><span class="progress-fill yellow" data-nutrition-progress="carbs" style="width: 0%"></span></div>
+                </article>
+                <article class="stat-card nutrition-stat-card nutrition-stat-fats">
+                  <div class="nutrition-stat-head">
+                    <span class="nutrition-stat-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M12 3C8.5 7.4 6 10.9 6 14a6 6 0 0 0 12 0c0-3.1-2.5-6.6-6-11Z" /></svg>
+                    </span>
+                    <h2>Grassi</h2>
+                  </div>
+                  <div class="metric"><span data-nutrition-total="fats">0</span> <span>g</span></div>
+                  <p><span data-nutrition-total="fats">0</span> su <span data-nutrition-goal="fats">65</span> g</p>
+                  <div class="progress-track"><span class="progress-fill green" data-nutrition-progress="fats" style="width: 0%"></span></div>
+                </article>
               </div>
-              <div class="metric"><span data-nutrition-total="fats">0</span> <span>g</span></div>
-              <p><span data-nutrition-total="fats">0</span> su <span data-nutrition-goal="fats">65</span> g</p>
-              <div class="progress-track"><span class="progress-fill green" data-nutrition-progress="fats" style="width: 0%"></span></div>
-            </article>
-          </div>
+            </details>
+
+            <div class="nutrition-date-nav" aria-label="Selezione giornata diario">
+              <button class="nutrition-date-step" type="button" data-nutrition-date-shift="-1" aria-label="Giorno precedente">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m15 18-6-6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" />
+                </svg>
+              </button>
+              <label class="nutrition-date-pill">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 3v3M17 3v3M4.5 9h15M6.5 5h11a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-11a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+                </svg>
+                <span>
+                  <strong data-nutrition-selected-date-label>Oggi</strong>
+                  <small data-nutrition-selected-date-subtitle></small>
+                </span>
+                <input type="date" data-nutrition-date-input aria-label="Scegli una giornata" />
+              </label>
+              <button class="nutrition-date-step" type="button" data-nutrition-date-shift="1" aria-label="Giorno successivo">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" />
+                </svg>
+              </button>
+            </div>
+          </section>
 
           <section class="meals-section">
             <div class="section-head">
-              <h2>Pasti di oggi</h2>
+              <h2 data-meals-section-title>Pasti di oggi</h2>
             </div>
 
             <div class="nutrition-layout">
@@ -608,8 +655,8 @@
 
             <div class="progress-layout">
               <article class="panel">
-                <h3>Log giornaliero</h3>
-                <p class="progress-panel-copy">I dati di oggi si aggiornano in automatico dall’area dieta e dai dati personali. Qui puoi aggiungere o correggere manualmente la tua giornata.</p>
+                <h3>Peso e idratazione</h3>
+                <p class="progress-panel-copy">I pasti e le calorie arrivano dal diario alimentare. Qui registri solo le metriche giornaliere che non fanno parte della dieta.</p>
                 <form class="form-grid progress-form-grid" data-progress-log-form novalidate>
                   <label class="field">
                     <span>Data</span>
@@ -622,14 +669,6 @@
                   <label class="field">
                     <span>Acqua (bicchieri)</span>
                     <input type="number" name="waterGlasses" min="0" step="1" placeholder="8" />
-                  </label>
-                  <label class="field">
-                    <span>Calorie manuali</span>
-                    <input type="number" name="calories" min="0" step="1" placeholder="Lascia vuoto per usare i pasti registrati" />
-                  </label>
-                  <label class="field">
-                    <span>Proteine manuali (g)</span>
-                    <input type="number" name="protein" min="0" step="1" placeholder="Lascia vuoto per usare i pasti registrati" />
                   </label>
                   <div class="field field-full progress-form-row">
                     <button class="primary-btn primary-btn-blue" type="submit">Salva</button>

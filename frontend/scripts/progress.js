@@ -408,8 +408,6 @@ function populateProgressForm(dateKey) {
   form.elements.date.value = dateKey;
   form.elements.weightKg.value = log?.weightKg ?? "";
   form.elements.waterGlasses.value = log?.waterGlasses ?? "";
-  form.elements.calories.value = log?.calories ?? "";
-  form.elements.protein.value = log?.protein ?? "";
 }
 
 function setupProgressSection() {
@@ -455,13 +453,11 @@ function setupProgressSection() {
       date,
       weightKg: normalizeNumber(form.elements.weightKg.value),
       waterGlasses: normalizeNumber(form.elements.waterGlasses.value),
-      calories: normalizeNumber(form.elements.calories.value),
-      protein: normalizeNumber(form.elements.protein.value),
+      calories: null,
+      protein: null,
     };
 
-    const hasAnyValue = [nextLog.weightKg, nextLog.waterGlasses, nextLog.calories, nextLog.protein].some(
-      (value) => value != null
-    );
+    const hasAnyValue = [nextLog.weightKg, nextLog.waterGlasses].some((value) => value != null);
 
     if (!hasAnyValue) {
       return;
