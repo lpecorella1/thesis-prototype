@@ -8,6 +8,8 @@ function upsertPantryItemFromGrocery(item) {
     barcode: item.barcode || "",
     source: item.source || "manual",
     nutriscoreGrade: item.nutriscoreGrade || "",
+    entryMode: item.entryMode || inferUserEntryModeFromSource(item),
+    entryMethod: item.entryMethod || resolveUserEntryMethod(item, "manual-grocery-completion"),
   };
   const existingIndex = appState.grocery.pantry.findIndex((entry) => entry.id === item.id);
 
@@ -45,6 +47,10 @@ const pantryImportRuntime = {
   lastFile: null,
   isLoading: false,
   draftItems: [],
+};
+
+const pantryListRuntime = {
+  isExpanded: false,
 };
 
 const groceryListGenerationRuntime = {
@@ -254,6 +260,8 @@ function normalizeGeneratedGroceryListItem(item) {
     source: "ai-generated",
     nutriscoreGrade: "",
     reason: String(item?.reason || "").trim(),
+    entryMode: "ai_assisted",
+    entryMethod: "ai-generated-list",
   };
 }
 
@@ -338,6 +346,8 @@ function addPantryImportDraftToPantry(items) {
       barcode: item.barcode,
       source: "ai-image",
       nutriscoreGrade: "",
+      entryMode: "ai_assisted",
+      entryMethod: "ai-image-import",
     });
   });
 
@@ -361,6 +371,8 @@ function addScannedGroceryLookupToPantry() {
     barcode: sanitizeBarcode(product.barcode),
     source: product.source || "openfoodfacts",
     nutriscoreGrade: product.nutriscoreGrade || "",
+    entryMode: "external_lookup",
+    entryMethod: "barcode-openfoodfacts",
   });
   appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
   openFoodFactsRuntime.groceryLookup = null;
@@ -472,12 +484,18 @@ function renderGroceryList() {
 
 function renderPantry() {
   const pantryList = document.querySelector("[data-pantry-list]");
+  const pantryItems = Array.isArray(appState.grocery.pantry) ? appState.grocery.pantry : [];
+  const visiblePantryLimit = 5;
+  const hasHiddenPantryItems = pantryItems.length > visiblePantryLimit;
+  const visiblePantryItems =
+    hasHiddenPantryItems && !pantryListRuntime.isExpanded ? pantryItems.slice(0, visiblePantryLimit) : pantryItems;
 
   if (!pantryList) {
     return;
   }
 
-  if (appState.grocery.pantry.length === 0) {
+  if (pantryItems.length === 0) {
+    pantryListRuntime.isExpanded = false;
     pantryList.innerHTML = `
       <article class="empty-pantry">
         <h3>Nessun alimento salvato in dispensa</h3>
@@ -494,7 +512,7 @@ function renderPantry() {
       <span>Categoria</span>
     </div>
     <div class="pantry-list-body">
-      ${appState.grocery.pantry
+      ${visiblePantryItems
         .map(
           (item) => `
             <article class="pantry-item">
@@ -509,6 +527,16 @@ function renderPantry() {
         )
         .join("")}
     </div>
+    ${
+      hasHiddenPantryItems
+        ? `
+          <button class="pantry-expand-btn${pantryListRuntime.isExpanded ? " is-expanded" : ""}" type="button" data-pantry-toggle-expanded aria-expanded="${pantryListRuntime.isExpanded}" aria-label="${pantryListRuntime.isExpanded ? "Comprimi la dispensa" : "Mostra tutta la dispensa"}">
+            <span>${pantryListRuntime.isExpanded ? "Mostra meno" : `Mostra altri ${pantryItems.length - visiblePantryLimit}`}</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" /></svg>
+          </button>
+        `
+        : ""
+    }
   `;
 }
 
@@ -791,6 +819,8 @@ function setupGrocerySection() {
       barcode: sanitizeBarcode(formData.get("barcode")),
       source: "manual",
       nutriscoreGrade: "",
+      entryMode: "manual",
+      entryMethod: "manual-pantry-form",
     };
 
     if (!item.name || !item.quantity || !item.category) {
@@ -806,6 +836,8 @@ function setupGrocerySection() {
       barcode: item.barcode,
       source: item.source,
       nutriscoreGrade: item.nutriscoreGrade,
+      entryMode: item.entryMode,
+      entryMethod: item.entryMethod,
     });
     appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
     saveState();
@@ -898,6 +930,14 @@ function setupGrocerySection() {
   });
 
   pantryList.addEventListener("click", (event) => {
+    const expandButton = event.target.closest("[data-pantry-toggle-expanded]");
+
+    if (expandButton) {
+      pantryListRuntime.isExpanded = !pantryListRuntime.isExpanded;
+      renderPantry();
+      return;
+    }
+
     const deleteButton = event.target.closest("[data-pantry-delete-id]");
 
     if (!deleteButton) {
@@ -905,6 +945,9 @@ function setupGrocerySection() {
     }
 
     appState.grocery.pantry = appState.grocery.pantry.filter((item) => item.id !== deleteButton.dataset.pantryDeleteId);
+    if (appState.grocery.pantry.length <= 5) {
+      pantryListRuntime.isExpanded = false;
+    }
     saveState();
     renderPantry();
   });

@@ -727,6 +727,8 @@ function getSuggestedMealTime(mealType) {
 }
 
 function createNutritionMealFromRecipe(recipe, mealType) {
+  const isAiGeneratedRecipe = recipe.mode === "ai-generated";
+
   return {
     id: globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `meal-${Date.now().toString(36)}`,
     name: recipe.title,
@@ -742,6 +744,8 @@ function createNutritionMealFromRecipe(recipe, mealType) {
     nutriscoreGrade: "",
     nutritionSource: "imported",
     nutritionSourceLabel: "Importato da Recipes",
+    entryMode: isAiGeneratedRecipe ? "ai_assisted" : "system_generated",
+    entryMethod: isAiGeneratedRecipe ? "ai-generated-recipe-application" : "recipe-application",
   };
 }
 

@@ -1,5 +1,5 @@
 let pgModule;
-let userProfilesColumnsPromise;
+const tableColumnsPromises = new Map();
 
 function cloneJson(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
@@ -95,25 +95,39 @@ function serializeJsonArrayText(value) {
   );
 }
 
-async function getUserProfilesColumns(client) {
-  if (!userProfilesColumnsPromise) {
-    userProfilesColumnsPromise = client
+async function getTableColumns(client, tableName) {
+  const normalizedTableName = String(tableName || "").trim();
+
+  if (!normalizedTableName) {
+    return new Set();
+  }
+
+  if (!tableColumnsPromises.has(normalizedTableName)) {
+    tableColumnsPromises.set(
+      normalizedTableName,
+      client
       .query(
         `
           SELECT column_name
           FROM information_schema.columns
           WHERE table_schema = 'public'
-            AND table_name = 'user_profiles'
-        `
+            AND table_name = $1
+        `,
+        [normalizedTableName]
       )
       .then((result) => new Set(result.rows.map((row) => String(row.column_name || "").trim()).filter(Boolean)))
       .catch((error) => {
-        userProfilesColumnsPromise = null;
+        tableColumnsPromises.delete(normalizedTableName);
         throw error;
-      });
+      })
+    );
   }
 
-  return userProfilesColumnsPromise;
+  return tableColumnsPromises.get(normalizedTableName);
+}
+
+async function getUserProfilesColumns(client) {
+  return getTableColumns(client, "user_profiles");
 }
 
 function resolveMealConsumedAt(meal = {}) {
@@ -143,6 +157,73 @@ function resolveRecipeSourceType(recipe = {}) {
   }
 
   return "manual";
+}
+
+function normalizeUserEntryMode(value) {
+  const normalizedValue = String(value || "").trim();
+  const supportedModes = new Set(["manual", "ai_assisted", "external_lookup", "imported", "system_generated"]);
+
+  return supportedModes.has(normalizedValue) ? normalizedValue : null;
+}
+
+function inferUserEntryMode(entry = {}) {
+  const explicitMode = normalizeUserEntryMode(entry.entryMode || entry.entry_mode || entry.inputMode);
+
+  if (explicitMode) {
+    return explicitMode;
+  }
+
+  const source = String(entry.source || entry.nutritionSource || entry.nutritionSourceLabel || "").toLowerCase();
+
+  if (source.includes("ai") || source.includes("analysis") || source.includes("meal-description") || source.includes("stima")) {
+    return "ai_assisted";
+  }
+
+  if (source.includes("openfoodfacts") || source.includes("barcode")) {
+    return "external_lookup";
+  }
+
+  if (source.includes("recipes")) {
+    return "system_generated";
+  }
+
+  if (source.includes("import")) {
+    return "imported";
+  }
+
+  return "manual";
+}
+
+function inferUserEntryMethod(entry = {}, fallback = "manual-form") {
+  const explicitMethod = normalizeString(entry.entryMethod || entry.entry_method || entry.inputMethod);
+
+  if (explicitMethod) {
+    return explicitMethod;
+  }
+
+  const source = String(entry.source || entry.nutritionSource || entry.nutritionSourceLabel || "").toLowerCase();
+
+  if (source.includes("openfoodfacts")) {
+    return "barcode-openfoodfacts";
+  }
+
+  if (source.includes("ai-image")) {
+    return "ai-image-import";
+  }
+
+  if (source.includes("ai-generated")) {
+    return "ai-generated-list";
+  }
+
+  if (source.includes("meal-description") || source.includes("analysis") || source.includes("stima")) {
+    return "ai-meal-description-analysis";
+  }
+
+  if (source.includes("recipes")) {
+    return "recipe-application";
+  }
+
+  return fallback;
 }
 
 function getPgModule() {
@@ -349,101 +430,111 @@ async function replaceUserProfile(client, userId, profileState = {}) {
 }
 
 async function replaceNutritionMeals(client, userId, meals = []) {
+  const availableColumns = await getTableColumns(client, "nutrition_meals");
   await client.query("DELETE FROM nutrition_meals WHERE user_id = $1", [userId]);
 
   for (const meal of Array.isArray(meals) ? meals : []) {
+    const mealEntries = [
+      ["user_id", userId],
+      ["meal_name", normalizeString(meal.name) || "Pasto"],
+      ["meal_type", normalizeString(meal.type)],
+      ["consumed_at", resolveMealConsumedAt(meal)],
+      ["calories", normalizeNumber(meal.calories) || 0],
+      ["protein_g", normalizeNumber(meal.protein) || 0],
+      ["carbs_g", normalizeNumber(meal.carbs) || 0],
+      ["fats_g", normalizeNumber(meal.fats) || 0],
+      ["nutrition_source", normalizeString(meal.nutritionSourceLabel || meal.nutritionSource)],
+      ["source_note", normalizeString(meal.sourceNote)],
+    ];
+
+    if (availableColumns.has("entry_mode")) {
+      mealEntries.push(["entry_mode", inferUserEntryMode(meal)]);
+    }
+
+    if (availableColumns.has("entry_method")) {
+      mealEntries.push(["entry_method", inferUserEntryMethod(meal, "manual-meal-form")]);
+    }
+
     await client.query(
       `
         INSERT INTO nutrition_meals (
-          user_id,
-          meal_name,
-          meal_type,
-          consumed_at,
-          calories,
-          protein_g,
-          carbs_g,
-          fats_g,
-          nutrition_source,
-          source_note
+          ${mealEntries.map(([columnName]) => columnName).join(",\n          ")}
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES (${mealEntries.map((_, index) => `$${index + 1}`).join(", ")})
       `,
-      [
-        userId,
-        normalizeString(meal.name) || "Pasto",
-        normalizeString(meal.type),
-        resolveMealConsumedAt(meal),
-        normalizeNumber(meal.calories) || 0,
-        normalizeNumber(meal.protein) || 0,
-        normalizeNumber(meal.carbs) || 0,
-        normalizeNumber(meal.fats) || 0,
-        normalizeString(meal.nutritionSourceLabel || meal.nutritionSource),
-        normalizeString(meal.sourceNote),
-      ]
+      mealEntries.map(([, value]) => value)
     );
   }
 }
 
 async function replaceGroceryItems(client, userId, items = []) {
+  const availableColumns = await getTableColumns(client, "grocery_items");
   await client.query("DELETE FROM grocery_items WHERE user_id = $1", [userId]);
 
   for (const item of Array.isArray(items) ? items : []) {
+    const itemEntries = [
+      ["user_id", userId],
+      ["item_name", normalizeString(item.name) || "Prodotto"],
+      ["quantity_label", normalizeString(item.quantity)],
+      ["category", normalizeString(item.category)],
+      ["is_completed", normalizeBoolean(item.completed)],
+      ["barcode", normalizeString(item.barcode)],
+      ["source", normalizeString(item.source)],
+      ["nutriscore_grade", normalizeString(item.nutriscoreGrade)],
+    ];
+
+    if (availableColumns.has("entry_mode")) {
+      itemEntries.push(["entry_mode", inferUserEntryMode(item)]);
+    }
+
+    if (availableColumns.has("entry_method")) {
+      itemEntries.push(["entry_method", inferUserEntryMethod(item, "manual-grocery-form")]);
+    }
+
     await client.query(
       `
         INSERT INTO grocery_items (
-          user_id,
-          item_name,
-          quantity_label,
-          category,
-          is_completed,
-          barcode,
-          source,
-          nutriscore_grade
+          ${itemEntries.map(([columnName]) => columnName).join(",\n          ")}
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES (${itemEntries.map((_, index) => `$${index + 1}`).join(", ")})
       `,
-      [
-        userId,
-        normalizeString(item.name) || "Prodotto",
-        normalizeString(item.quantity),
-        normalizeString(item.category),
-        normalizeBoolean(item.completed),
-        normalizeString(item.barcode),
-        normalizeString(item.source),
-        normalizeString(item.nutriscoreGrade),
-      ]
+      itemEntries.map(([, value]) => value)
     );
   }
 }
 
 async function replacePantryItems(client, userId, items = []) {
+  const availableColumns = await getTableColumns(client, "pantry_items");
   await client.query("DELETE FROM pantry_items WHERE user_id = $1", [userId]);
 
   for (const item of Array.isArray(items) ? items : []) {
+    const itemEntries = [
+      ["user_id", userId],
+      ["item_name", normalizeString(item.name) || "Prodotto"],
+      ["quantity_label", normalizeString(item.quantity)],
+      ["category", normalizeString(item.category)],
+      ["expires_on", normalizeDate(item.expiresOn || item.expiryDate)],
+      ["barcode", normalizeString(item.barcode)],
+      ["source", normalizeString(item.source)],
+      ["nutriscore_grade", normalizeString(item.nutriscoreGrade)],
+    ];
+
+    if (availableColumns.has("entry_mode")) {
+      itemEntries.push(["entry_mode", inferUserEntryMode(item)]);
+    }
+
+    if (availableColumns.has("entry_method")) {
+      itemEntries.push(["entry_method", inferUserEntryMethod(item, "manual-pantry-form")]);
+    }
+
     await client.query(
       `
         INSERT INTO pantry_items (
-          user_id,
-          item_name,
-          quantity_label,
-          category,
-          expires_on,
-          barcode,
-          source,
-          nutriscore_grade
+          ${itemEntries.map(([columnName]) => columnName).join(",\n          ")}
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES (${itemEntries.map((_, index) => `$${index + 1}`).join(", ")})
       `,
-      [
-        userId,
-        normalizeString(item.name) || "Prodotto",
-        normalizeString(item.quantity),
-        normalizeString(item.category),
-        normalizeDate(item.expiresOn || item.expiryDate),
-        normalizeString(item.barcode),
-        normalizeString(item.source),
-        normalizeString(item.nutriscoreGrade),
-      ]
+      itemEntries.map(([, value]) => value)
     );
   }
 }
@@ -756,6 +847,7 @@ async function readUserProfile(client, userId) {
 }
 
 async function readNutritionMeals(client, userId) {
+  const availableColumns = await getTableColumns(client, "nutrition_meals");
   const result = await client.query(
     `
       SELECT
@@ -768,7 +860,9 @@ async function readNutritionMeals(client, userId) {
         carbs_g,
         fats_g,
         nutrition_source,
-        source_note
+        source_note,
+        ${availableColumns.has("entry_mode") ? "entry_mode" : "NULL"} AS entry_mode,
+        ${availableColumns.has("entry_method") ? "entry_method" : "NULL"} AS entry_method
       FROM nutrition_meals
       WHERE user_id = $1
       ORDER BY consumed_at ASC, id ASC
@@ -799,11 +893,14 @@ async function readNutritionMeals(client, userId) {
       nutritionSource: row.nutrition_source || "",
       nutritionSourceLabel: row.nutrition_source || "",
       sourceNote: row.source_note || "",
+      entryMode: row.entry_mode || inferUserEntryMode({ nutritionSource: row.nutrition_source }),
+      entryMethod: row.entry_method || inferUserEntryMethod({ nutritionSource: row.nutrition_source }, "manual-meal-form"),
     })),
   };
 }
 
 async function readGroceryItems(client, userId) {
+  const availableColumns = await getTableColumns(client, "grocery_items");
   const result = await client.query(
     `
       SELECT
@@ -814,7 +911,9 @@ async function readGroceryItems(client, userId) {
         is_completed,
         barcode,
         source,
-        nutriscore_grade
+        nutriscore_grade,
+        ${availableColumns.has("entry_mode") ? "entry_mode" : "NULL"} AS entry_mode,
+        ${availableColumns.has("entry_method") ? "entry_method" : "NULL"} AS entry_method
       FROM grocery_items
       WHERE user_id = $1
       ORDER BY id ASC
@@ -832,10 +931,13 @@ async function readGroceryItems(client, userId) {
     barcode: row.barcode || "",
     source: row.source || "manual",
     nutriscoreGrade: row.nutriscore_grade || "",
+    entryMode: row.entry_mode || inferUserEntryMode({ source: row.source }),
+    entryMethod: row.entry_method || inferUserEntryMethod({ source: row.source }, "manual-grocery-form"),
   }));
 }
 
 async function readPantryItems(client, userId) {
+  const availableColumns = await getTableColumns(client, "pantry_items");
   const result = await client.query(
     `
       SELECT
@@ -846,7 +948,9 @@ async function readPantryItems(client, userId) {
         expires_on,
         barcode,
         source,
-        nutriscore_grade
+        nutriscore_grade,
+        ${availableColumns.has("entry_mode") ? "entry_mode" : "NULL"} AS entry_mode,
+        ${availableColumns.has("entry_method") ? "entry_method" : "NULL"} AS entry_method
       FROM pantry_items
       WHERE user_id = $1
       ORDER BY item_name ASC, id ASC
@@ -863,6 +967,8 @@ async function readPantryItems(client, userId) {
     barcode: row.barcode || "",
     source: row.source || "manual",
     nutriscoreGrade: row.nutriscore_grade || "",
+    entryMode: row.entry_mode || inferUserEntryMode({ source: row.source }),
+    entryMethod: row.entry_method || inferUserEntryMethod({ source: row.source }, "manual-pantry-form"),
   }));
 }
 

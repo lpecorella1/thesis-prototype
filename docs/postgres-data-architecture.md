@@ -46,6 +46,17 @@ Per i device non mi basta sapere se una sorgente è collegata. Voglio distinguer
 
 Il modello è ispirato al modo in cui HL7 FHIR separa `Device` e `Observation`: non sto implementando FHIR completo, ma mantengo la stessa attenzione a provenienza, timestamp e tracciabilità della misura.
 
+### Modalità di inserimento per i test
+
+Per interpretare i questionari sul carico mentale/fisico, le tabelle `nutrition_meals`, `grocery_items` e `pantry_items` distinguono il modo in cui l'utente ha inserito il dato:
+
+- `entry_mode`: categoria controllata (`manual`, `ai_assisted`, `external_lookup`, `imported`, `system_generated`);
+- `entry_method`: dettaglio operativo, ad esempio `manual-pantry-form`, `ai-image-import`, `ai-meal-photo`, `barcode-openfoodfacts`.
+
+Questa distinzione resta separata dalla fonte nutrizionale. Per esempio un pasto può avere macro importati da OpenFoodFacts, ma `entry_mode = external_lookup`; una descrizione generata da foto o analizzata dall'AI viene invece marcata come `ai_assisted`.
+
+La view `user_entry_mode_daily_summary` aggrega i conteggi per utente, giorno, area dell'app e modalità. È il punto più semplice da usare in Adminer per confrontare comportamenti d'uso e risultati NASA-TLX.
+
 ## Stato runtime attuale
 
 Oggi PostgreSQL è già la sorgente primaria per:

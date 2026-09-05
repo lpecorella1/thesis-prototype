@@ -45,6 +45,10 @@ const appState = loadNutriTrackStateFromLocalCache();
 const nutritrackCoreRuntime = {
   started: false,
 };
+const nutritionEntryRuntime = {
+  entryMode: "",
+  entryMethod: "",
+};
 
 // Core date and range helpers shared across modules.
 function formatShortDayLabel(value) {
@@ -229,6 +233,73 @@ function createNutritionSnapshot(values = {}) {
     carbs: roundMacroValue(normalizeNumber(values.carbs) || 0),
     fats: roundMacroValue(normalizeNumber(values.fats) || 0),
   };
+}
+
+function normalizeUserEntryMode(value) {
+  const normalizedValue = String(value || "").trim();
+  return ["manual", "ai_assisted", "external_lookup", "imported", "system_generated"].includes(normalizedValue)
+    ? normalizedValue
+    : "";
+}
+
+function inferUserEntryModeFromSource(entry = {}) {
+  const explicitMode = normalizeUserEntryMode(entry.entryMode || entry.entry_mode || entry.inputMode);
+
+  if (explicitMode) {
+    return explicitMode;
+  }
+
+  const source = String(entry.source || entry.nutritionSource || entry.nutritionSourceLabel || "").toLowerCase();
+
+  if (source.includes("ai") || source.includes("analysis") || source.includes("meal-description") || source.includes("stima")) {
+    return "ai_assisted";
+  }
+
+  if (source.includes("openfoodfacts") || source.includes("barcode")) {
+    return "external_lookup";
+  }
+
+  if (source.includes("recipes")) {
+    return "system_generated";
+  }
+
+  if (source.includes("import")) {
+    return "imported";
+  }
+
+  return "manual";
+}
+
+function resolveUserEntryMethod(entry = {}, fallback = "manual-form") {
+  const explicitMethod = String(entry.entryMethod || entry.entry_method || entry.inputMethod || "").trim();
+
+  if (explicitMethod) {
+    return explicitMethod;
+  }
+
+  const source = String(entry.source || entry.nutritionSource || entry.nutritionSourceLabel || "").toLowerCase();
+
+  if (source.includes("openfoodfacts")) {
+    return "barcode-openfoodfacts";
+  }
+
+  if (source.includes("ai-image")) {
+    return "ai-image-import";
+  }
+
+  if (source.includes("ai-generated")) {
+    return "ai-generated-list";
+  }
+
+  if (source.includes("meal-description") || source.includes("analysis") || source.includes("stima")) {
+    return "ai-meal-description-analysis";
+  }
+
+  if (source.includes("recipes")) {
+    return "recipe-application";
+  }
+
+  return fallback;
 }
 
 // Heuristic meal profiling used for quick nutrition estimates.
@@ -563,6 +634,8 @@ function buildMealAnalysisSourceNote(analysis) {
 function clearNutritionDraft() {
   openFoodFactsRuntime.nutritionLookup = null;
   openFoodFactsRuntime.nutritionDraft = null;
+  nutritionEntryRuntime.entryMode = "";
+  nutritionEntryRuntime.entryMethod = "";
 }
 
 function getNutritionTotalsForDate(dateKey) {
@@ -636,6 +709,8 @@ function captureTodayProgressSnapshot(options = {}) {
 
 // Shared state normalization for persisted frontend data.
 function normalizeNutritionMeal(meal) {
+  const normalizedEntryMode = normalizeUserEntryMode(meal?.entryMode || meal?.entry_mode || meal?.inputMode);
+
   return {
     ...meal,
     date: isValidDateKey(meal?.date) ? meal.date : getTodayDateKey(),
@@ -643,6 +718,8 @@ function normalizeNutritionMeal(meal) {
     protein: roundMacroValue(normalizeNumber(meal?.protein) || 0),
     carbs: roundMacroValue(normalizeNumber(meal?.carbs) || 0),
     fats: roundMacroValue(normalizeNumber(meal?.fats) || 0),
+    entryMode: normalizedEntryMode || inferUserEntryModeFromSource(meal),
+    entryMethod: resolveUserEntryMethod(meal, "manual-meal-form"),
   };
 }
 
@@ -767,11 +844,15 @@ function localizeSeedGroceryName(name) {
 }
 
 function normalizeGroceryItem(item) {
+  const normalizedEntryMode = normalizeUserEntryMode(item?.entryMode || item?.entry_mode || item?.inputMode);
+
   return {
     ...item,
     name: localizeSeedGroceryName(item.name),
     category: localizeGroceryCategory(item.category),
     expiryDate: String(item?.expiryDate || "").trim(),
+    entryMode: normalizedEntryMode || inferUserEntryModeFromSource(item),
+    entryMethod: resolveUserEntryMethod(item, "manual-pantry-form"),
   };
 }
 
@@ -1238,6 +1319,8 @@ function applyProductToNutritionLookup(product) {
 
   openFoodFactsRuntime.nutritionLookup = product;
   openFoodFactsRuntime.nutritionDraft = createImportedNutritionDraft(product, "Importato da OpenFoodFacts");
+  nutritionEntryRuntime.entryMode = "external_lookup";
+  nutritionEntryRuntime.entryMethod = "barcode-openfoodfacts";
   form.elements.name.value = product.name;
 
   renderLookupResult("[data-off-nutrition-result]", product);
@@ -1637,6 +1720,8 @@ async function createNutritionMealFromForm(form, dateKey = getSelectedNutritionD
   const linkedProduct = openFoodFactsRuntime.nutritionLookup;
   const description = String(formData.get("name") || "").trim();
   const resolvedDateKey = isValidDateKey(dateKey) ? dateKey : getTodayDateKey();
+  const pendingEntryMode = normalizeUserEntryMode(nutritionEntryRuntime.entryMode);
+  const pendingEntryMethod = String(nutritionEntryRuntime.entryMethod || "").trim();
 
   if (shouldAnalyzeMealDescription(description, linkedProduct)) {
     const analysis = await requestMealNutritionAnalysis(description).catch((error) => {
@@ -1661,6 +1746,8 @@ async function createNutritionMealFromForm(form, dateKey = getSelectedNutritionD
       nutritionSourceLabel: analysis.source === "local-fallback" ? "Stima locale" : "Analisi AI",
       sourceNote: buildMealAnalysisSourceNote(analysis),
       items: analysis.items,
+      entryMode: pendingEntryMode || "ai_assisted",
+      entryMethod: pendingEntryMethod || "ai-meal-description-analysis",
     };
   }
 
@@ -1686,6 +1773,8 @@ async function createNutritionMealFromForm(form, dateKey = getSelectedNutritionD
     nutritionSource: nutritionDraft.nutritionSource,
     nutritionSourceLabel: nutritionDraft.nutritionSourceLabel,
     sourceNote,
+    entryMode: pendingEntryMode || (linkedProduct ? "external_lookup" : "manual"),
+    entryMethod: pendingEntryMethod || (linkedProduct ? "barcode-openfoodfacts" : "manual-meal-form"),
   };
 }
 
@@ -1831,6 +1920,8 @@ function setupNutritionSection() {
       form.elements.name.value = result.description;
       form.elements.name.dispatchEvent(new Event("input", { bubbles: true }));
       clearNutritionDraft();
+      nutritionEntryRuntime.entryMode = "ai_assisted";
+      nutritionEntryRuntime.entryMethod = "ai-meal-photo";
       renderLookupResult("[data-off-nutrition-result]", null);
       setNutritionAnalysisStatus(result.reviewNote || "Descrizione generata dalla foto. Controllala prima di aggiungere.");
     } catch (error) {

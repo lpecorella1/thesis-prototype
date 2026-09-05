@@ -21,6 +21,22 @@ Ho portato su tabelle strutturate le aree principali dell'app:
 - modello target per i device: `device_providers`, `device_connections`, `device_connection_permissions`, `device_sync_runs`, `device_measurements`;
 - cache prodotti: `openfoodfacts_products_cache`.
 
+Per l'analisi dei test utente salvo anche la modalita di inserimento:
+
+- `nutrition_meals.entry_mode` / `entry_method`;
+- `grocery_items.entry_mode` / `entry_method`;
+- `pantry_items.entry_mode` / `entry_method`.
+
+`entry_mode` usa l'enum `user_entry_mode_t`:
+
+- `manual`: inserimento diretto dell'utente;
+- `ai_assisted`: supporto AI, per esempio foto convertita in testo, analisi pasto o lista generata;
+- `external_lookup`: supporto da banca dati/servizio esterno, per esempio barcode OpenFoodFacts;
+- `imported`: dato importato senza classificazione piu specifica;
+- `system_generated`: elemento creato dal sistema a partire da un'altra azione, per esempio applicazione di una ricetta non AI alla dieta.
+
+La view `user_entry_mode_daily_summary` aggrega questi dati per utente, giorno, dominio e modalita, cosi posso incrociarli con i risultati dei questionari NASA-TLX e degli altri test.
+
 La tabella `device_connections` usa `is_mock DEFAULT FALSE`: quando lavoro con un provider simulato lo marco esplicitamente, invece di farlo diventare il comportamento implicito del sistema.
 
 ## Principi che sto seguendo

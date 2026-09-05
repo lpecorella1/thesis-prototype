@@ -11,6 +11,7 @@ CREATE TYPE recipe_source_type_t AS ENUM ('manual', 'assistant', 'imported');
 CREATE TYPE connection_status_t AS ENUM ('configured', 'pending', 'connected', 'token_expired', 'error', 'revoked', 'disconnected');
 CREATE TYPE sync_status_t AS ENUM ('running', 'success', 'partial_success', 'failed');
 CREATE TYPE measurement_source_t AS ENUM ('manual', 'device', 'imported', 'derived');
+CREATE TYPE user_entry_mode_t AS ENUM ('manual', 'ai_assisted', 'external_lookup', 'imported', 'system_generated');
 
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
@@ -126,6 +127,8 @@ CREATE TABLE nutrition_meals (
     fats_g NUMERIC(8,2) NOT NULL DEFAULT 0,
     nutrition_source VARCHAR(100),
     source_note TEXT,
+    entry_mode user_entry_mode_t NOT NULL DEFAULT 'manual',
+    entry_method VARCHAR(100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT nutrition_meals_calories_chk CHECK (calories >= 0),
@@ -144,6 +147,8 @@ CREATE TABLE grocery_items (
     barcode VARCHAR(50),
     source VARCHAR(50),
     nutriscore_grade VARCHAR(5),
+    entry_mode user_entry_mode_t NOT NULL DEFAULT 'manual',
+    entry_method VARCHAR(100),
     linked_recipe_id BIGINT REFERENCES recipes(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -159,6 +164,8 @@ CREATE TABLE pantry_items (
     barcode VARCHAR(50),
     source VARCHAR(50),
     nutriscore_grade VARCHAR(5),
+    entry_mode user_entry_mode_t NOT NULL DEFAULT 'manual',
+    entry_method VARCHAR(100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -292,10 +299,13 @@ CREATE INDEX idx_recipes_diet_type ON recipes(diet_type);
 CREATE INDEX idx_nutrition_meals_user_id ON nutrition_meals(user_id);
 CREATE INDEX idx_nutrition_meals_recipe_id ON nutrition_meals(recipe_id);
 CREATE INDEX idx_nutrition_meals_consumed_at ON nutrition_meals(consumed_at);
+CREATE INDEX idx_nutrition_meals_entry_mode ON nutrition_meals(user_id, entry_mode, consumed_at DESC);
 CREATE INDEX idx_grocery_items_user_id ON grocery_items(user_id);
 CREATE INDEX idx_grocery_items_completed ON grocery_items(user_id, is_completed);
+CREATE INDEX idx_grocery_items_entry_mode ON grocery_items(user_id, entry_mode, created_at DESC);
 CREATE INDEX idx_pantry_items_user_id ON pantry_items(user_id);
 CREATE INDEX idx_pantry_items_expires_on ON pantry_items(user_id, expires_on);
+CREATE INDEX idx_pantry_items_entry_mode ON pantry_items(user_id, entry_mode, created_at DESC);
 CREATE INDEX idx_progress_logs_user_date ON progress_logs(user_id, log_date DESC);
 CREATE INDEX idx_saved_recipes_user_id ON saved_recipes(user_id);
 CREATE INDEX idx_saved_recipes_recipe_id ON saved_recipes(recipe_id);
@@ -307,5 +317,36 @@ CREATE INDEX idx_device_measurements_connection_time ON device_measurements(devi
 CREATE INDEX idx_device_measurements_payload_gin ON device_measurements USING GIN (source_payload);
 CREATE INDEX idx_openfoodfacts_products_cache_brand ON openfoodfacts_products_cache(brand);
 CREATE INDEX idx_openfoodfacts_products_cache_payload_gin ON openfoodfacts_products_cache USING GIN (source_payload);
+
+CREATE OR REPLACE VIEW user_entry_mode_daily_summary AS
+SELECT
+    user_id,
+    activity_date,
+    domain,
+    entry_mode,
+    COUNT(*) AS entry_count
+FROM (
+    SELECT
+        user_id,
+        consumed_at::date AS activity_date,
+        'nutrition_meal'::text AS domain,
+        entry_mode
+    FROM nutrition_meals
+    UNION ALL
+    SELECT
+        user_id,
+        created_at::date AS activity_date,
+        'grocery_item'::text AS domain,
+        entry_mode
+    FROM grocery_items
+    UNION ALL
+    SELECT
+        user_id,
+        created_at::date AS activity_date,
+        'pantry_item'::text AS domain,
+        entry_mode
+    FROM pantry_items
+) activity_entries
+GROUP BY user_id, activity_date, domain, entry_mode;
 
 COMMIT;

@@ -2501,6 +2501,39 @@ textarea {
   min-width: 0;
 }
 
+.pantry-expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  justify-self: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid #d6dee8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #23422f;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pantry-expand-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.pantry-expand-btn.is-expanded svg {
+  transform: rotate(180deg);
+}
+
+.pantry-expand-btn:hover {
+  border-color: #9fb2a8;
+  background: #f5faf6;
+}
+
 .pantry-item,
 .empty-pantry {
   padding: 14px 16px;
@@ -4323,6 +4356,13 @@ textarea {
 
   .pantry-list {
     gap: 4px;
+  }
+
+  .pantry-expand-btn {
+    width: 100%;
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 0.72rem;
   }
 
   /* Grocery mobile:
