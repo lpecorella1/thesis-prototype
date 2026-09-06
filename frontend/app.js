@@ -49,6 +49,8 @@ const nutritionEntryRuntime = {
   entryMode: "",
   entryMethod: "",
 };
+const WATER_GOAL_MIN = 1;
+const WATER_GOAL_MAX = 12;
 
 // Core date and range helpers shared across modules.
 function formatShortDayLabel(value) {
@@ -1567,6 +1569,135 @@ function renderNutritionSummary() {
   document.querySelectorAll("[data-meals-section-title]").forEach((element) => {
     element.textContent = formatMealsSectionTitle(selectedDateKey);
   });
+
+  renderNutritionWaterControl();
+}
+
+function renderNutritionWaterControl() {
+  const selectedDateKey = getSelectedNutritionDateKey();
+  const waterGlassesContainer = document.querySelector("[data-nutrition-water-glasses]");
+  const waterSummary = document.querySelector("[data-nutrition-water-summary]");
+  const waterStatus = document.querySelector("[data-nutrition-water-status]");
+  const waterGoalMenu = document.querySelector("[data-water-goal-menu]");
+  const log = getProgressLogByDate(selectedDateKey);
+  const waterGoal = getWaterGoal();
+  const waterGlasses = Math.min(waterGoal, Math.max(0, Math.round(normalizeNumber(log?.waterGlasses) || 0)));
+
+  if (waterSummary) {
+    waterSummary.textContent = `${waterGlasses}/${waterGoal}`;
+  }
+
+  if (waterGlassesContainer) {
+    waterGlassesContainer.innerHTML = Array.from({ length: waterGoal }, (_, index) => {
+      const glassValue = index + 1;
+      const isFilled = glassValue <= waterGlasses;
+
+      return `
+        <button
+          class="meal-water-glass${isFilled ? " is-filled" : ""}"
+          type="button"
+          data-water-glass-value="${glassValue}"
+          aria-label="Imposta acqua a ${glassValue} bicchieri"
+          aria-pressed="${isFilled}"
+        >
+          <span class="meal-water-fill"></span>
+        </button>
+      `;
+    }).join("");
+  }
+
+  renderWaterGoalMenu(waterGoalMenu, waterGoal);
+
+  if (waterStatus && waterStatus.dataset.dateKey !== selectedDateKey) {
+    waterStatus.textContent = "";
+    waterStatus.dataset.dateKey = selectedDateKey;
+  }
+}
+
+function getWaterGoal() {
+  const normalizedGoal = normalizeNumber(appState.profile?.goals?.water);
+
+  if (normalizedGoal == null) {
+    return 8;
+  }
+
+  return Math.min(WATER_GOAL_MAX, Math.max(WATER_GOAL_MIN, Math.round(normalizedGoal)));
+}
+
+function renderWaterGoalMenu(menu, selectedGoal = getWaterGoal()) {
+  if (!menu) {
+    return;
+  }
+
+  menu.innerHTML = Array.from({ length: WATER_GOAL_MAX - WATER_GOAL_MIN + 1 }, (_, index) => {
+    const value = WATER_GOAL_MIN + index;
+
+    return `
+      <button
+        class="meal-water-goal-option${value === selectedGoal ? " is-selected" : ""}"
+        type="button"
+        data-water-goal-value="${value}"
+        aria-label="Obiettivo ${value} bicchieri"
+        aria-pressed="${value === selectedGoal}"
+      >${value}</button>
+    `;
+  }).join("");
+}
+
+function setWaterGoalMenuOpen(isOpen) {
+  const toggle = document.querySelector("[data-water-goal-menu-toggle]");
+  const menu = document.querySelector("[data-water-goal-menu]");
+
+  if (!toggle || !menu) {
+    return;
+  }
+
+  toggle.setAttribute("aria-expanded", String(isOpen));
+  menu.hidden = !isOpen;
+}
+
+function persistWaterGoal(goalValue) {
+  const waterGoal = Math.min(WATER_GOAL_MAX, Math.max(WATER_GOAL_MIN, Math.round(normalizeNumber(goalValue) ?? 8)));
+  const profileWaterGoalInput = document.querySelector('[name="goalWater"]');
+
+  appState.profile = appState.profile && typeof appState.profile === "object" ? appState.profile : {};
+  appState.profile.goals = appState.profile.goals && typeof appState.profile.goals === "object" ? appState.profile.goals : {};
+  appState.profile.goals.water = waterGoal;
+
+  if (profileWaterGoalInput) {
+    profileWaterGoalInput.value = waterGoal;
+  }
+
+  saveState();
+  renderNutrition();
+  setNutritionWaterStatus(`Obiettivo impostato a ${waterGoal} bicchieri.`);
+}
+
+function setNutritionWaterStatus(message) {
+  const waterStatus = document.querySelector("[data-nutrition-water-status]");
+
+  if (waterStatus) {
+    waterStatus.textContent = message || "";
+    waterStatus.dataset.dateKey = getSelectedNutritionDateKey();
+  }
+}
+
+function persistNutritionWaterForDate(dateKey, rawValue) {
+  if (!isValidDateKey(dateKey)) {
+    return;
+  }
+
+  const normalizedWater = normalizeNumber(rawValue);
+  const waterGlasses = normalizedWater == null ? null : Math.max(0, Math.round(normalizedWater));
+
+  setProgressLogValuesForDate(dateKey, { waterGlasses });
+  saveState();
+  renderProgress();
+  renderNutritionWaterControl();
+
+  if (dateKey === getSelectedNutritionDateKey()) {
+    setNutritionWaterStatus(waterGlasses == null ? "Acqua rimossa." : "Salvato automaticamente.");
+  }
 }
 
 // Sync profile goals into the nutrition dashboard summary.
@@ -1868,8 +1999,14 @@ function setMealPhotoPendingState(button, isPending) {
     return;
   }
 
+  const label = button.querySelector(".action-label");
   button.disabled = isPending;
-  button.textContent = isPending ? "Riconosco..." : "Foto pasto";
+
+  if (label) {
+    label.textContent = isPending ? "Riconosco..." : "Foto pasto";
+  } else {
+    button.textContent = isPending ? "Riconosco..." : "Foto pasto";
+  }
 }
 
 // Nutrition section event binding and persistence flow.
@@ -1882,6 +2019,9 @@ function setupNutritionSection() {
   const mealPhotoInput = document.querySelector("[data-meal-photo-input]");
   const dateInput = document.querySelector("[data-nutrition-date-input]");
   const dateStepButtons = document.querySelectorAll("[data-nutrition-date-shift]");
+  const waterGlassesContainer = document.querySelector("[data-nutrition-water-glasses]");
+  const waterGoalMenuToggle = document.querySelector("[data-water-goal-menu-toggle]");
+  const waterGoalMenu = document.querySelector("[data-water-goal-menu]");
 
   if (!form || !mealsList || !editForm || !editCancelButton) {
     return;
@@ -1899,6 +2039,42 @@ function setupNutritionSection() {
 
   dateInput?.addEventListener("change", () => {
     setSelectedNutritionDate(dateInput.value);
+  });
+
+  waterGlassesContainer?.addEventListener("click", (event) => {
+    const glassButton = event.target.closest("[data-water-glass-value]");
+
+    if (!glassButton) {
+      return;
+    }
+
+    const selectedDateKey = getSelectedNutritionDateKey();
+    const currentWater = Math.round(normalizeNumber(getProgressLogByDate(selectedDateKey)?.waterGlasses) || 0);
+    const nextWater = Number(glassButton.dataset.waterGlassValue);
+
+    persistNutritionWaterForDate(selectedDateKey, currentWater === nextWater ? nextWater - 1 : nextWater);
+  });
+
+  waterGoalMenuToggle?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setWaterGoalMenuOpen(waterGoalMenuToggle.getAttribute("aria-expanded") !== "true");
+  });
+
+  waterGoalMenu?.addEventListener("click", (event) => {
+    const option = event.target.closest("[data-water-goal-value]");
+
+    if (!option) {
+      return;
+    }
+
+    persistWaterGoal(option.dataset.waterGoalValue);
+    setWaterGoalMenuOpen(false);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".meal-water-menu")) {
+      setWaterGoalMenuOpen(false);
+    }
   });
 
   mealPhotoButton?.addEventListener("click", () => {

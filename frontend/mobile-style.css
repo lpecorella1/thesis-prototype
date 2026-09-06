@@ -658,10 +658,13 @@ textarea {
   align-items: center;
   gap: 12px;
   padding: 18px 16px;
-  border: 1px solid rgba(18, 24, 38, 0.08);
+  border: 1px solid #ffd2c6;
   border-radius: 18px;
-  background: #dfe7f2;
-  color: #213047;
+  background:
+    linear-gradient(135deg, #fff3ec 0%, #ffe3dc 58%, #fff8e8 100%),
+    #fff0ea;
+  color: #4a3140;
+  box-shadow: 0 18px 42px rgba(224, 91, 76, 0.14);
 }
 
 .nutrition-day-total,
@@ -673,14 +676,14 @@ textarea {
 }
 
 .nutrition-day-total strong {
-  color: #ffffff;
+  color: #ff735c;
   font-size: 1.45rem;
   line-height: 1;
 }
 
 .nutrition-day-total span,
 .nutrition-kcal-ring span {
-  color: #4d5a70;
+  color: #70465a;
   font-size: 0.78rem;
   font-weight: 800;
 }
@@ -693,8 +696,8 @@ textarea {
   align-content: center;
   border-radius: 50%;
   background: conic-gradient(
-    #2f7cf6 var(--nutrition-calorie-progress, 0%),
-    rgba(255, 255, 255, 0.34) 0
+    #ff735c var(--nutrition-calorie-progress, 0%),
+    rgba(255, 255, 255, 0.5) 0
   );
   isolation: isolate;
   overflow: hidden;
@@ -705,12 +708,12 @@ textarea {
   position: absolute;
   inset: 12px;
   border-radius: 50%;
-  background: rgba(223, 231, 242, 0.92);
+  background: rgba(255, 240, 234, 0.94);
   z-index: -1;
 }
 
 .nutrition-kcal-ring strong {
-  color: #ffffff;
+  color: #ff735c;
   font-size: 1.7rem;
   line-height: 1;
 }
@@ -967,6 +970,17 @@ textarea {
   border-color: #c6ecd9;
 }
 
+.grocery-action-btn svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
 .grocery-icon-btn {
   width: 38px;
   min-width: 38px;
@@ -1001,6 +1015,16 @@ textarea {
   align-items: start;
 }
 
+[data-nutrition-form] {
+  margin-top: 12px;
+}
+
+.meals-history-column {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
 .section-note {
   color: var(--text-muted);
   font-weight: 700;
@@ -1013,6 +1037,175 @@ textarea {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.meal-water-panel {
+  display: grid;
+  gap: 16px;
+  overflow: visible;
+  background:
+    linear-gradient(135deg, rgba(232, 248, 240, 0.9), rgba(236, 247, 255, 0.96)),
+    #f7fbff;
+  border-color: #cceee5;
+}
+
+.meal-water-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.meal-water-head h3 {
+  margin: 0;
+}
+
+.meal-water-head p {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.meal-water-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.meal-water-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #bde5dd;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #14775a;
+}
+
+.meal-water-menu-btn span {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.meal-water-goal-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(4, 34px);
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #cae3ec;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 42px rgba(31, 45, 61, 0.16);
+}
+
+.meal-water-goal-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #d7e6ee;
+  border-radius: 10px;
+  background: #f8fbfd;
+  color: #304157;
+  font-weight: 800;
+}
+
+.meal-water-goal-option.is-selected {
+  border-color: #65c4e8;
+  background: #dbf4ff;
+  color: #09617f;
+}
+
+.meal-water-meter {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.meal-water-summary {
+  display: grid;
+  gap: 2px;
+  min-width: 74px;
+}
+
+.meal-water-summary strong {
+  color: #08789d;
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.meal-water-summary span {
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.meal-water-glasses {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, 24px);
+  gap: 8px;
+  justify-content: start;
+  min-width: 0;
+}
+
+.meal-water-glass {
+  position: relative;
+  display: block;
+  width: 24px;
+  min-width: 24px;
+  height: 46px;
+  border: 2px solid #9bd9e8;
+  border-top-width: 4px;
+  border-radius: 5px 5px 10px 10px;
+  background: rgba(255, 255, 255, 0.72);
+  clip-path: polygon(7% 0, 93% 0, 78% 100%, 22% 100%);
+  overflow: hidden;
+  box-shadow: inset 0 -10px 18px rgba(155, 217, 232, 0.14);
+}
+
+.meal-water-glass::before {
+  content: "";
+  position: absolute;
+  inset: 5px 6px auto;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  z-index: 1;
+}
+
+.meal-water-fill {
+  position: absolute;
+  inset: auto 0 0;
+  height: 0;
+  background: linear-gradient(180deg, #76d8ff 0%, #19a9d7 100%);
+  transition: height 0.18s ease;
+}
+
+.meal-water-glass.is-filled .meal-water-fill {
+  height: 72%;
+}
+
+.meal-water-status {
+  min-height: 18px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.meal-water-status:empty {
+  display: none;
 }
 
 .save-hint {
@@ -1580,6 +1773,23 @@ textarea {
   font-size: 0.98rem;
 }
 
+.recipe-clear-history-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #f1b8b3;
+  border-radius: 999px;
+  background: #fff0ef;
+  color: #df3029;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.recipe-clear-history-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .recipe-history-list,
 .recipe-saved-list {
   display: grid;
@@ -1935,6 +2145,38 @@ textarea {
   min-width: 0;
 }
 
+.lookup-head.nutrition-meal-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.grocery-action-btn.nutrition-meal-action-btn {
+  display: inline-flex;
+  align-items: center;
+  align-content: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  height: 100%;
+  padding-block: 8px;
+  white-space: normal;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.grocery-action-btn.nutrition-meal-action-btn .action-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  text-align: center;
+}
+
 [data-grocery-form] .field,
 [data-grocery-form] .field-full,
 [data-grocery-form] .grocery-form-row,
@@ -2002,15 +2244,37 @@ textarea {
   align-items: stretch;
 }
 
-.pantry-import-btn {
+.grocery-action-btn.pantry-import-btn {
+  display: inline-flex;
+  align-items: center;
+  align-content: center;
+  gap: 8px;
   width: 100%;
   min-width: 0;
   min-height: 44px;
   height: 100%;
+  padding-block: 8px;
   justify-content: center;
   white-space: normal;
   text-align: center;
   line-height: 1.15;
+}
+
+.grocery-action-btn.pantry-import-btn .action-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.grocery-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
 }
 
 .pantry-import-review,
@@ -4051,6 +4315,48 @@ textarea {
     gap: 10px;
   }
 
+  .meals-history-column {
+    gap: 10px;
+  }
+
+  .meal-water-panel {
+    gap: 12px;
+    padding: 14px 12px;
+  }
+
+  .meal-water-meter {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .meal-water-summary {
+    grid-template-columns: auto auto;
+    align-items: baseline;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .meal-water-summary strong {
+    font-size: 1.28rem;
+  }
+
+  .meal-water-glasses {
+    grid-template-columns: repeat(6, 23px);
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .meal-water-glass {
+    width: 23px;
+    min-width: 23px;
+    height: 40px;
+  }
+
+  .meal-water-head p,
+  .meal-water-status {
+    font-size: 0.74rem;
+  }
+
   .nutrition-day-dashboard {
     gap: 10px;
   }
@@ -4683,6 +4989,12 @@ textarea {
     font-size: 0.84rem;
   }
 
+  .recipe-clear-history-btn {
+    min-height: 32px;
+    padding-inline: 10px;
+    font-size: 0.68rem;
+  }
+
   .recipe-history-item,
   .recipe-saved-item {
     padding: 10px;
@@ -4734,7 +5046,7 @@ textarea {
   }
 
   [data-nutrition-form] {
-    margin-top: 8px;
+    margin-top: 12px;
   }
 
   [data-nutrition-form].form-grid {

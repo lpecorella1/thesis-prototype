@@ -2,6 +2,45 @@ function getProgressLogByDate(dateKey) {
   return appState.progress.dailyLogs.find((entry) => entry.date === dateKey) || null;
 }
 
+function hasProgressLogValues(log) {
+  if (!log || typeof log !== "object") {
+    return false;
+  }
+
+  return ["weightKg", "waterGlasses", "calories", "protein"].some((key) => log[key] != null);
+}
+
+function setProgressLogValuesForDate(dateKey, values = {}) {
+  if (!isValidDateKey(dateKey)) {
+    return null;
+  }
+
+  const existingLog = getProgressLogByDate(dateKey) || {};
+  const nextLog = {
+    ...existingLog,
+    date: dateKey,
+    ...values,
+  };
+
+  ["weightKg", "waterGlasses", "calories", "protein"].forEach((key) => {
+    if (key in nextLog) {
+      nextLog[key] = normalizeNumber(nextLog[key]);
+    }
+  });
+
+  if (!hasProgressLogValues(nextLog)) {
+    appState.progress.dailyLogs = appState.progress.dailyLogs.filter((entry) => entry.date !== dateKey);
+    return null;
+  }
+
+  appState.progress.dailyLogs = [
+    ...appState.progress.dailyLogs.filter((entry) => entry.date !== dateKey),
+    nextLog,
+  ].sort((firstEntry, secondEntry) => firstEntry.date.localeCompare(secondEntry.date));
+
+  return nextLog;
+}
+
 function getResolvedProgressEntry(dateKey) {
   const log = getProgressLogByDate(dateKey);
   const todayKey = getTodayDateKey();
@@ -407,7 +446,6 @@ function populateProgressForm(dateKey) {
 
   form.elements.date.value = dateKey;
   form.elements.weightKg.value = log?.weightKg ?? "";
-  form.elements.waterGlasses.value = log?.waterGlasses ?? "";
 }
 
 function setupProgressSection() {
@@ -450,23 +488,14 @@ function setupProgressSection() {
     }
 
     const nextLog = {
-      date,
       weightKg: normalizeNumber(form.elements.weightKg.value),
-      waterGlasses: normalizeNumber(form.elements.waterGlasses.value),
-      calories: null,
-      protein: null,
     };
 
-    const hasAnyValue = [nextLog.weightKg, nextLog.waterGlasses].some((value) => value != null);
-
-    if (!hasAnyValue) {
+    if (nextLog.weightKg == null) {
       return;
     }
 
-    appState.progress.dailyLogs = [
-      ...appState.progress.dailyLogs.filter((entry) => entry.date !== date),
-      nextLog,
-    ].sort((firstEntry, secondEntry) => firstEntry.date.localeCompare(secondEntry.date));
+    setProgressLogValuesForDate(date, nextLog);
 
     saveState();
     renderProgress();
@@ -481,13 +510,13 @@ function setupProgressSection() {
       return;
     }
 
-    const initialLength = appState.progress.dailyLogs.length;
-    appState.progress.dailyLogs = appState.progress.dailyLogs.filter((entry) => entry.date !== date);
+    const log = getProgressLogByDate(date);
 
-    if (initialLength === appState.progress.dailyLogs.length) {
+    if (!log || log.weightKg == null) {
       return;
     }
 
+    setProgressLogValuesForDate(date, { weightKg: null });
     saveState();
     renderProgress();
     populateProgressForm(date);

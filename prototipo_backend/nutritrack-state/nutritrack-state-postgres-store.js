@@ -590,11 +590,24 @@ async function replaceRecipesState(client, userId, recipesState = {}) {
       ? recipesState.generatedRecipesById
       : {};
   const savedRecipeIds = Array.isArray(recipesState.savedRecipeIds) ? recipesState.savedRecipeIds : [];
+  const hasExplicitRecipeHistory = Array.isArray(recipesState.history);
+  const historyRecipeIds = new Set(
+    hasExplicitRecipeHistory
+      ? recipesState.history.map((entry) => String(entry?.id || "").trim()).filter(Boolean)
+      : []
+  );
 
   for (const recipe of Object.values(generatedRecipesById)) {
     if (!recipe || typeof recipe !== "object" || !recipe.id) {
       continue;
     }
+
+    const recipePayload = {
+      ...(cloneJson(recipe) || {}),
+      _nutritrackHistoryVisible: hasExplicitRecipeHistory
+        ? historyRecipeIds.has(String(recipe.id).trim())
+        : recipe._nutritrackHistoryVisible !== false,
+    };
 
     const result = await client.query(
       `
@@ -664,7 +677,7 @@ async function replaceRecipesState(client, userId, recipesState = {}) {
         resolveRecipeSourceType(recipe),
         normalizeTimestamp(recipe.generatedAt),
         normalizeString(recipe.signature),
-        JSON.stringify(cloneJson(recipe) || {}),
+        JSON.stringify(recipePayload),
       ]
     );
 
@@ -1071,12 +1084,15 @@ async function readRecipesState(client, userId) {
   const generatedRecipesById = Object.fromEntries(generatedRecipes.map((recipe) => [recipe.id, recipe]));
 
   return {
-    history: generatedRecipes.slice(0, 6).map((recipe) => ({
-      id: recipe.id,
-      title: recipe.title,
-      generatedAt: recipe.generatedAt,
-      signature: recipe.signature || recipe.id,
-    })),
+    history: generatedRecipes
+      .filter((recipe) => recipe._nutritrackHistoryVisible !== false)
+      .slice(0, 6)
+      .map((recipe) => ({
+        id: recipe.id,
+        title: recipe.title,
+        generatedAt: recipe.generatedAt,
+        signature: recipe.signature || recipe.id,
+      })),
     savedRecipeIds: savedRecipesResult.rows
       .map((row) => String(row.app_recipe_id || "").trim())
       .filter(Boolean),

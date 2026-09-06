@@ -82,6 +82,7 @@ async function generateRecipeWithAi(filters) {
 
 function saveRecipeToHistory(recipe) {
   registerRecipe(recipe);
+  appState.recipes.generatedRecipesById[recipe.id]._nutritrackHistoryVisible = true;
   appState.recipes.history = [
     {
       id: recipe.id,
@@ -276,9 +277,20 @@ function renderRecipeGenerationError(error) {
 
 function renderRecipeHistory() {
   const container = document.querySelector("[data-recipe-history]");
+  const clearButton = document.querySelector("[data-clear-recipe-history]");
 
   if (!container) {
     return;
+  }
+
+  if (clearButton) {
+    clearButton.disabled = appState.recipes.history.length === 0;
+    clearButton.setAttribute(
+      "aria-label",
+      appState.recipes.history.length === 0
+        ? "Storico generazioni gia vuoto"
+        : "Svuota storico generazioni"
+    );
   }
 
   if (appState.recipes.history.length === 0) {
@@ -296,6 +308,51 @@ function renderRecipeHistory() {
       `
     )
     .join("");
+}
+
+function clearRecipeHistory() {
+  if (appState.recipes.history.length === 0) {
+    return;
+  }
+
+  const shouldClear = window.confirm(
+    "Vuoi eliminare le ricette presenti nello storico generazioni? Le ricette salvate resteranno disponibili."
+  );
+
+  if (!shouldClear) {
+    return;
+  }
+
+  const historyRecipeIds = new Set(
+    appState.recipes.history.map((entry) => entry.id).filter(Boolean)
+  );
+  const savedRecipeIds = new Set(appState.recipes.savedRecipeIds);
+
+  ensureGeneratedRecipeStore();
+  Object.keys(appState.recipes.generatedRecipesById).forEach((recipeId) => {
+    if (!historyRecipeIds.has(recipeId)) {
+      return;
+    }
+
+    if (savedRecipeIds.has(recipeId)) {
+      appState.recipes.generatedRecipesById[recipeId]._nutritrackHistoryVisible = false;
+      return;
+    }
+
+    delete appState.recipes.generatedRecipesById[recipeId];
+  });
+
+  if (appState.recipes.currentRecipe && historyRecipeIds.has(appState.recipes.currentRecipe.id)) {
+    if (savedRecipeIds.has(appState.recipes.currentRecipe.id)) {
+      appState.recipes.currentRecipe._nutritrackHistoryVisible = false;
+    } else {
+      appState.recipes.currentRecipe = null;
+    }
+  }
+
+  appState.recipes.history = [];
+  saveState();
+  renderRecipes();
 }
 
 function renderSavedRecipes() {
@@ -663,6 +720,10 @@ function setupRecipeHistoryActions(recipeHistory) {
   });
 }
 
+function setupRecipeHistoryClearAction(clearButton) {
+  clearButton?.addEventListener("click", clearRecipeHistory);
+}
+
 function setupSavedRecipeActions(savedRecipes) {
   savedRecipes.addEventListener("click", (event) => {
     const button = event.target.closest("[data-recipe-saved-id]");
@@ -733,6 +794,7 @@ function setupRecipesSection() {
   const generatorForm = document.querySelector("[data-recipe-generator-form]");
   const recipeResult = document.querySelector("[data-recipe-result]");
   const recipeHistory = document.querySelector("[data-recipe-history]");
+  const clearHistoryButton = document.querySelector("[data-clear-recipe-history]");
   const savedRecipes = document.querySelector("[data-saved-recipes]");
   const chatForm = document.querySelector("[data-recipe-chat-form]");
   const chatResetButton = document.querySelector("[data-recipe-chat-reset]");
@@ -744,6 +806,7 @@ function setupRecipesSection() {
   setupRecipeGeneratorForm(generatorForm);
   setupRecipeResultActions(recipeResult);
   setupRecipeHistoryActions(recipeHistory);
+  setupRecipeHistoryClearAction(clearHistoryButton);
   setupSavedRecipeActions(savedRecipes);
   setupRecipeChat(chatForm, chatResetButton);
   renderRecipes();

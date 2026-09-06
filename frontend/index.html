@@ -284,6 +284,7 @@
                 <div class="recipe-sidebar-section">
                   <div class="section-head recipe-sidebar-head">
                     <h2>Storico generazioni</h2>
+                    <button class="recipe-clear-history-btn" type="button" data-clear-recipe-history>Svuota</button>
                   </div>
                   <div class="recipe-history-list" data-recipe-history></div>
                 </div>
@@ -350,9 +351,33 @@
                   </div>
                 </div>
                 <div class="pantry-import-actions">
-                  <button class="grocery-action-btn pantry-import-btn" type="button" data-pantry-import-source="receipt">Scatta foto scontrino</button>
-                  <button class="grocery-action-btn pantry-import-btn" type="button" data-pantry-import-source="fridge-shopping">Scatta foto frigo/spesa</button>
-                  <button class="grocery-action-btn pantry-import-btn" type="button" data-open-barcode-scanner="grocery">Scansiona barcode</button>
+                  <button class="grocery-action-btn pantry-import-btn" type="button" data-pantry-import-source="receipt">
+                    <span class="grocery-action-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
+                        <path d="M14 8H8M16 12H8M13 16H8" />
+                      </svg>
+                    </span>
+                    <span class="action-label">Foto scontrino</span>
+                  </button>
+                  <button class="grocery-action-btn pantry-import-btn" type="button" data-pantry-import-source="fridge-shopping">
+                    <span class="grocery-action-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <circle cx="8" cy="21" r="1" />
+                        <circle cx="19" cy="21" r="1" />
+                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+                      </svg>
+                    </span>
+                    <span class="action-label">Foto spesa</span>
+                  </button>
+                  <button class="grocery-action-btn pantry-import-btn" type="button" data-open-barcode-scanner="grocery">
+                    <span class="grocery-action-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24">
+                        <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M8 7v10M12 7v10M17 7v10" />
+                      </svg>
+                    </span>
+                    <span class="action-label">Barcode</span>
+                  </button>
                 </div>
                 <input type="file" accept="image/*" capture="environment" data-pantry-import-input hidden />
                 <p class="pantry-import-status" data-pantry-import-status aria-live="polite">La proposta AI comparirà qui prima della conferma.</p>
@@ -590,9 +615,23 @@
                 <h3>Aggiungi pasto</h3>
                 <form class="form-grid nutrition-form-grid" data-nutrition-form novalidate>
                   <div class="field field-full lookup-block">
-                    <div class="lookup-head">
-                      <button class="grocery-action-btn" type="button" data-open-barcode-scanner="nutrition">Scansiona prodotto</button>
-                      <button class="grocery-action-btn" type="button" data-meal-photo-button>Foto pasto</button>
+                    <div class="lookup-head nutrition-meal-actions">
+                      <button class="grocery-action-btn nutrition-meal-action-btn" type="button" data-open-barcode-scanner="nutrition">
+                        <span class="grocery-action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24">
+                            <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M8 7v10M12 7v10M17 7v10" />
+                          </svg>
+                        </span>
+                        <span class="action-label">Scansiona prodotto</span>
+                      </button>
+                      <button class="grocery-action-btn nutrition-meal-action-btn" type="button" data-meal-photo-button>
+                        <span class="grocery-action-icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24">
+                            <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3ZM21 15v7" />
+                          </svg>
+                        </span>
+                        <span class="action-label">Foto pasto</span>
+                      </button>
                     </div>
                     <div class="lookup-result" data-off-nutrition-result></div>
                   </div>
@@ -612,7 +651,40 @@
                 </form>
               </article>
 
-              <div class="card-stack" data-meals-list></div>
+              <div class="meals-history-column">
+                <div class="card-stack" data-meals-list></div>
+
+                <article class="panel meal-water-panel">
+                  <div class="meal-water-head">
+                    <div>
+                      <h3>Acqua della giornata</h3>
+                      <p>Registrata automaticamente sulla giornata selezionata.</p>
+                    </div>
+                    <div class="meal-water-menu">
+                      <button
+                        class="meal-water-menu-btn"
+                        type="button"
+                        data-water-goal-menu-toggle
+                        aria-label="Imposta obiettivo acqua"
+                        aria-expanded="false"
+                      >
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </button>
+                      <div class="meal-water-goal-menu" data-water-goal-menu hidden></div>
+                    </div>
+                  </div>
+                  <div class="meal-water-meter">
+                    <div class="meal-water-summary">
+                      <strong data-nutrition-water-summary>0/8</strong>
+                      <span>bicchieri</span>
+                    </div>
+                    <div class="meal-water-glasses" data-nutrition-water-glasses></div>
+                  </div>
+                  <span class="meal-water-status" data-nutrition-water-status aria-live="polite"></span>
+                </article>
+              </div>
 
               <article class="panel" data-nutrition-edit-panel hidden>
                 <h3 data-nutrition-edit-title>Correggi valori nutrizionali</h3>
@@ -642,6 +714,29 @@
             </div>
           </section>
 
+          <section class="integrated-subsection weight-log-section">
+            <div class="progress-layout">
+              <article class="panel">
+                <h3>Peso corporeo</h3>
+                <p class="progress-panel-copy">Registra il peso per la giornata che vuoi aggiornare.</p>
+                <form class="form-grid progress-form-grid" data-progress-log-form novalidate>
+                  <label class="field">
+                    <span>Data</span>
+                    <input type="date" name="date" required />
+                  </label>
+                  <label class="field">
+                    <span>Peso (kg)</span>
+                    <input type="number" name="weightKg" min="20" max="300" step="0.1" placeholder="74.7" />
+                  </label>
+                  <div class="field field-full progress-form-row">
+                    <button class="primary-btn primary-btn-blue" type="submit">Salva</button>
+                    <button class="soft-btn progress-soft-btn" type="button" data-progress-delete-log>Reset</button>
+                  </div>
+                </form>
+              </article>
+            </div>
+          </section>
+
           <section class="integrated-subsection" data-progress-section>
             <div class="section-head">
               <h2>Andamento e monitoraggio</h2>
@@ -652,31 +747,6 @@
             </div>
 
             <div class="progress-stats" data-progress-stats></div>
-
-            <div class="progress-layout">
-              <article class="panel">
-                <h3>Peso e idratazione</h3>
-                <p class="progress-panel-copy">I pasti e le calorie arrivano dal diario alimentare. Qui registri solo le metriche giornaliere che non fanno parte della dieta.</p>
-                <form class="form-grid progress-form-grid" data-progress-log-form novalidate>
-                  <label class="field">
-                    <span>Data</span>
-                    <input type="date" name="date" required />
-                  </label>
-                  <label class="field">
-                    <span>Peso (kg)</span>
-                    <input type="number" name="weightKg" min="20" max="300" step="0.1" placeholder="74.7" />
-                  </label>
-                  <label class="field">
-                    <span>Acqua (bicchieri)</span>
-                    <input type="number" name="waterGlasses" min="0" step="1" placeholder="8" />
-                  </label>
-                  <div class="field field-full progress-form-row">
-                    <button class="primary-btn primary-btn-blue" type="submit">Salva</button>
-                    <button class="soft-btn progress-soft-btn" type="button" data-progress-delete-log>Reset</button>
-                  </div>
-                </form>
-              </article>
-            </div>
 
             <article class="panel chart-panel">
               <div class="chart-head"><h3>Andamento calorie</h3><span>kcal / giorno</span></div>
