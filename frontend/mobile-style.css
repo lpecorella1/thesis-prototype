@@ -207,39 +207,145 @@ textarea {
   background: #fff;
 }
 
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  border: 1px solid rgba(111, 139, 115, 0.14);
+  border-radius: 21px;
+  background: #fff;
+  box-shadow: 0 10px 22px rgba(87, 112, 94, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.brand-mark svg {
+  width: 42px;
+  height: 42px;
+  overflow: visible;
+}
+
+.brand-mark-ring,
+.brand-mark-accent,
+.brand-mark-chef,
+.brand-mark-detail,
+.brand-mark-progress,
+.brand-mark-node {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.brand-mark-ring,
+.brand-mark-chef,
+.brand-mark-detail {
+  stroke: #6f8b73;
+}
+
+.brand-mark-ring,
+.brand-mark-accent {
+  stroke-width: 5;
+}
+
+.brand-mark-chef {
+  stroke-width: 4;
+}
+
+.brand-mark-detail {
+  stroke-width: 2.8;
+}
+
+.brand-mark-accent,
+.brand-mark-progress,
+.brand-mark-node {
+  stroke: #ff735c;
+}
+
+.brand-mark-progress {
+  stroke-width: 4.2;
+}
+
+.brand-mark-node {
+  fill: #fbfbf3;
+  stroke-width: 4;
+}
+
+.brand-copy {
+  min-width: 0;
+}
+
 .hero-side-panels {
   display: grid;
   gap: 12px;
+  justify-items: end;
 }
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(1.52rem, 7vw, 2rem);
-  line-height: 1;
-  letter-spacing: -0.05em;
+  color: #172033;
+  font-size: clamp(1.72rem, 7vw, 2.18rem);
+  font-weight: 800;
+  line-height: 0.96;
+  letter-spacing: -0.035em;
 }
 
 .hero p {
-  margin: 4px 0 0;
-  font-size: clamp(0.92rem, 4.1vw, 1.08rem);
-  color: var(--text-soft);
+  display: inline-block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 7px 0 0;
+  padding: 4px 10px 5px;
+  border: 1px solid rgba(111, 139, 115, 0.12);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(111, 139, 115, 0.09), rgba(255, 115, 92, 0.08));
+  color: #53655a;
+  font-size: clamp(0.78rem, 3.4vw, 0.94rem);
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .session-panel {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
-  width: calc(100% + 16px);
-  margin-left: -8px;
-  margin-right: -8px;
-  padding: 10px 14px;
-  border: 1px solid rgba(40, 96, 235, 0.1);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(40, 96, 235, 0.06), rgba(40, 96, 235, 0.02));
+  width: min(100%, 405px);
+  margin-left: auto;
+  margin-right: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(40, 96, 235, 0.12);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(242, 246, 255, 0.92));
+  box-shadow: 0 14px 30px rgba(40, 66, 135, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.session-panel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(40, 96, 235, 0.12), rgba(22, 167, 160, 0.12));
+  color: var(--blue);
+}
+
+.session-panel-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .session-panel-copy {
+  flex: 1 1 auto;
   min-width: 0;
   display: grid;
   gap: 2px;
@@ -377,15 +483,38 @@ textarea {
 }
 
 .home-cloud {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
   display: grid;
   gap: 6px;
   min-height: 138px;
   padding: 13px 11px;
   text-align: left;
   color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 26px 28px 24px 30px / 24px 30px 22px 28px;
-  box-shadow: 0 12px 22px rgba(18, 24, 38, 0.09);
+  box-shadow: 0 14px 26px rgba(18, 24, 38, 0.11), inset 0 1px 0 rgba(255, 255, 255, 0.28);
   align-content: start;
+}
+
+.home-cloud::before {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+  z-index: 0;
+}
+
+.home-cloud::before {
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.1) 30%, rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 64%);
+}
+
+.home-cloud > * {
+  position: relative;
+  z-index: 1;
 }
 
 .home-cloud strong {
@@ -406,7 +535,8 @@ textarea {
   width: 32px;
   height: 32px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .home-cloud-icon svg {
@@ -416,18 +546,22 @@ textarea {
 
 .cloud-recipes {
   background: linear-gradient(135deg, #2c64ee 0%, #5e8cff 100%);
+  box-shadow: 0 16px 28px rgba(44, 100, 238, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .cloud-grocery {
   background: linear-gradient(135deg, #0cba67 0%, #42d392 100%);
+  box-shadow: 0 16px 28px rgba(12, 186, 103, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .cloud-nutrition {
   background: linear-gradient(135deg, #f38b18 0%, #ffbc3d 100%);
+  box-shadow: 0 16px 28px rgba(243, 139, 24, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .cloud-profile {
   background: linear-gradient(135deg, #16a7a0 0%, #56cbc5 100%);
+  box-shadow: 0 16px 28px rgba(22, 167, 160, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .section-mobile-nav {
@@ -3940,12 +4074,30 @@ textarea {
     padding-bottom: 10px;
   }
 
+  .brand-lockup {
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .brand-mark {
+    flex-basis: 52px;
+    width: 52px;
+    height: 52px;
+    border-radius: 19px;
+  }
+
+  .brand-mark svg {
+    width: 38px;
+    height: 38px;
+  }
+
   .hero h1 {
-    font-size: clamp(1.34rem, 6.3vw, 1.72rem);
+    font-size: clamp(1.42rem, 6.4vw, 1.78rem);
   }
 
   .hero p {
-    font-size: clamp(0.8rem, 3.6vw, 0.94rem);
+    padding: 3px 9px 4px;
+    font-size: clamp(0.74rem, 3.3vw, 0.88rem);
   }
 
   .tabs {
