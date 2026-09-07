@@ -57,7 +57,7 @@
     font-size: clamp(2.2rem, 2.9vw, 3.05rem);
   }
 
-  .hero p {
+  .brand-copy [data-brand-subtitle] {
     margin-top: 9px;
     font-size: clamp(0.92rem, 1.05vw, 1.05rem);
   }
