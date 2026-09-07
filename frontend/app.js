@@ -2107,6 +2107,15 @@ function setMealPhotoPendingState(button, isPending) {
   }
 }
 
+function setMealPhotoMenuOpen(menu, button, isOpen) {
+  if (!menu || !button) {
+    return;
+  }
+
+  menu.hidden = !isOpen;
+  button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+
 // Nutrition section event binding and persistence flow.
 function setupNutritionSection() {
   const form = document.querySelector("[data-nutrition-form]");
@@ -2114,7 +2123,10 @@ function setupNutritionSection() {
   const editForm = document.querySelector("[data-nutrition-edit-form]");
   const editCancelButton = document.querySelector("[data-nutrition-edit-cancel]");
   const mealPhotoButton = document.querySelector("[data-meal-photo-button]");
-  const mealPhotoInput = document.querySelector("[data-meal-photo-input]");
+  const mealPhotoMenu = document.querySelector("[data-meal-photo-menu]");
+  const mealPhotoCameraInput = document.querySelector("[data-meal-photo-camera-input]");
+  const mealPhotoGalleryInput = document.querySelector("[data-meal-photo-gallery-input]");
+  const mealPhotoInputs = [mealPhotoCameraInput, mealPhotoGalleryInput].filter(Boolean);
   const dateInput = document.querySelector("[data-nutrition-date-input]");
   const dateStepButtons = document.querySelectorAll("[data-nutrition-date-shift]");
   const waterGlassesContainer = document.querySelector("[data-nutrition-water-glasses]");
@@ -2175,36 +2187,65 @@ function setupNutritionSection() {
     }
   });
 
-  mealPhotoButton?.addEventListener("click", () => {
-    mealPhotoInput?.click();
-  });
+  mealPhotoButton?.addEventListener("click", (event) => {
+    event.stopPropagation();
 
-  mealPhotoInput?.addEventListener("change", async (event) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
+    if (mealPhotoButton.disabled) {
       return;
     }
 
-    setNutritionAnalysisStatus("Riconosco gli alimenti nella foto...");
-    setMealPhotoPendingState(mealPhotoButton, true);
+    setMealPhotoMenuOpen(mealPhotoMenu, mealPhotoButton, mealPhotoMenu?.hidden !== false);
+  });
 
-    try {
-      const result = await requestMealPhotoDescription(file);
-      form.elements.name.value = result.description;
-      form.elements.name.dispatchEvent(new Event("input", { bubbles: true }));
-      clearNutritionDraft();
-      nutritionEntryRuntime.entryMode = "ai_assisted";
-      nutritionEntryRuntime.entryMethod = "ai-meal-photo";
-      renderLookupResult("[data-off-nutrition-result]", null);
-      setNutritionAnalysisStatus(result.reviewNote || "Descrizione generata dalla foto. Controllala prima di aggiungere.");
-    } catch (error) {
-      console.error("Riconoscimento foto pasto non riuscito.", error);
-      setNutritionAnalysisStatus(error.message || "Riconoscimento foto non riuscito.");
-    } finally {
-      setMealPhotoPendingState(mealPhotoButton, false);
-      event.target.value = "";
+  mealPhotoMenu?.addEventListener("click", (event) => {
+    event.stopPropagation();
+
+    const sourceButton = event.target.closest("[data-meal-photo-source]");
+
+    if (!sourceButton) {
+      return;
     }
+
+    setMealPhotoMenuOpen(mealPhotoMenu, mealPhotoButton, false);
+
+    const input = sourceButton.dataset.mealPhotoSource === "camera" ? mealPhotoCameraInput : mealPhotoGalleryInput;
+    input?.click();
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("[data-meal-photo-choice]")) {
+      setMealPhotoMenuOpen(mealPhotoMenu, mealPhotoButton, false);
+    }
+  });
+
+  mealPhotoInputs.forEach((input) => {
+    input.addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+
+      if (!file) {
+        return;
+      }
+
+      setNutritionAnalysisStatus("Riconosco gli alimenti nella foto...");
+      setMealPhotoPendingState(mealPhotoButton, true);
+
+      try {
+        const result = await requestMealPhotoDescription(file);
+        form.elements.name.value = result.description;
+        form.elements.name.dispatchEvent(new Event("input", { bubbles: true }));
+        clearNutritionDraft();
+        nutritionEntryRuntime.entryMode = "ai_assisted";
+        nutritionEntryRuntime.entryMethod = "ai-meal-photo";
+        renderLookupResult("[data-off-nutrition-result]", null);
+        setNutritionAnalysisStatus(result.reviewNote || "Descrizione generata dalla foto. Controllala prima di aggiungere.");
+      } catch (error) {
+        console.error("Riconoscimento foto pasto non riuscito.", error);
+        setNutritionAnalysisStatus(error.message || "Riconoscimento foto non riuscito.");
+      } finally {
+        setMealPhotoPendingState(mealPhotoButton, false);
+        event.target.value = "";
+      }
+    });
   });
 
   form.addEventListener("submit", async (event) => {

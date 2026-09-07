@@ -4,6 +4,7 @@
    solo quando lo schermo supera i breakpoint. */
 
 @media (min-width: 841px) {
+  [data-meal-photo-choice],
   [data-meal-photo-button] {
     display: none;
   }

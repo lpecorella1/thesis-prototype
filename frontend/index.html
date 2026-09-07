@@ -644,18 +644,42 @@
                         </span>
                         <span class="action-label">Scansiona prodotto</span>
                       </button>
-                      <button class="grocery-action-btn nutrition-meal-action-btn" type="button" data-meal-photo-button>
-                        <span class="grocery-action-icon" aria-hidden="true">
-                          <svg viewBox="0 0 24 24">
-                            <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3ZM21 15v7" />
-                          </svg>
-                        </span>
-                        <span class="action-label">Foto pasto</span>
-                      </button>
+                      <div class="meal-photo-choice" data-meal-photo-choice>
+                        <button class="grocery-action-btn nutrition-meal-action-btn" type="button" data-meal-photo-button aria-haspopup="menu" aria-expanded="false">
+                          <span class="grocery-action-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24">
+                              <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3ZM21 15v7" />
+                            </svg>
+                          </span>
+                          <span class="action-label">Foto pasto</span>
+                        </button>
+                        <div class="meal-photo-menu" data-meal-photo-menu role="menu" hidden>
+                          <button type="button" data-meal-photo-source="camera" role="menuitem">
+                            <span class="grocery-action-icon" aria-hidden="true">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M14.5 4 13 2H8L6.5 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-5.5Z" />
+                                <circle cx="12" cy="12" r="3.5" />
+                              </svg>
+                            </span>
+                            <span>Fotocamera</span>
+                          </button>
+                          <button type="button" data-meal-photo-source="gallery" role="menuitem">
+                            <span class="grocery-action-icon" aria-hidden="true">
+                              <svg viewBox="0 0 24 24">
+                                <rect x="3" y="3" width="18" height="18" rx="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <path d="m21 15-4.5-4.5L5 21" />
+                              </svg>
+                            </span>
+                            <span>Galleria</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                     <div class="lookup-result" data-off-nutrition-result></div>
                   </div>
-                  <input type="file" accept="image/*" capture="environment" data-meal-photo-input hidden />
+                  <input type="file" accept="image/*" capture="environment" data-meal-photo-camera-input hidden />
+                  <input type="file" accept="image/*" data-meal-photo-gallery-input hidden />
                   <label class="field field-full">
                     <span>Descrizione pasto</span>
                     <textarea name="name" rows="3" placeholder="Es. 80g pasta con lenticchie, 1 banana e 200ml di succo d'arancia" required></textarea>

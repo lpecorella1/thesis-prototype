@@ -2311,6 +2311,48 @@ textarea {
   text-align: center;
 }
 
+.meal-photo-choice {
+  position: relative;
+  min-width: 0;
+}
+
+.meal-photo-choice > .nutrition-meal-action-btn {
+  width: 100%;
+}
+
+.meal-photo-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 6px;
+  width: min(210px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 16px 34px rgba(18, 24, 38, 0.14);
+}
+
+.meal-photo-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  color: var(--text);
+  background: transparent;
+  font-weight: 800;
+  text-align: left;
+}
+
+.meal-photo-menu button:hover,
+.meal-photo-menu button:focus-visible {
+  background: var(--surface-muted);
+}
+
 [data-grocery-form] .field,
 [data-grocery-form] .field-full,
 [data-grocery-form] .grocery-form-row,
