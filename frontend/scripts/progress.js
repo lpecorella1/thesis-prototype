@@ -7,7 +7,10 @@ function hasProgressLogValues(log) {
     return false;
   }
 
-  return ["weightKg", "waterGlasses", "calories", "protein"].some((key) => log[key] != null);
+  return (
+    ["weightKg", "waterGlasses", "calories", "protein", "burnedCalories"].some((key) => log[key] != null) ||
+    (Array.isArray(log.physicalActivities) && log.physicalActivities.length > 0)
+  );
 }
 
 function setProgressLogValuesForDate(dateKey, values = {}) {
@@ -22,11 +25,17 @@ function setProgressLogValuesForDate(dateKey, values = {}) {
     ...values,
   };
 
-  ["weightKg", "waterGlasses", "calories", "protein"].forEach((key) => {
+  ["weightKg", "waterGlasses", "calories", "protein", "burnedCalories"].forEach((key) => {
     if (key in nextLog) {
       nextLog[key] = normalizeNumber(nextLog[key]);
     }
   });
+
+  if ("physicalActivities" in nextLog) {
+    nextLog.physicalActivities = Array.isArray(nextLog.physicalActivities)
+      ? nextLog.physicalActivities.map(normalizePhysicalActivityEntry).filter(Boolean)
+      : [];
+  }
 
   if (!hasProgressLogValues(nextLog)) {
     appState.progress.dailyLogs = appState.progress.dailyLogs.filter((entry) => entry.date !== dateKey);
@@ -57,6 +66,7 @@ function getResolvedProgressEntry(dateKey) {
     protein: log?.protein ?? autoProtein,
     waterGlasses: log?.waterGlasses ?? null,
     weightKg: log?.weightKg ?? autoWeight,
+    burnedCalories: log?.burnedCalories ?? getBurnedCaloriesForDate(dateKey),
     hasManualLog: Boolean(log),
     nutritionMealCount: nutritionTotals.count,
     isAutoNutrition: (log?.calories == null || log?.protein == null) && (autoCalories != null || autoProtein != null),

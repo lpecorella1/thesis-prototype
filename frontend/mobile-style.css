@@ -1178,9 +1178,9 @@ textarea {
   gap: 16px;
   overflow: visible;
   background:
-    linear-gradient(135deg, rgba(232, 248, 240, 0.9), rgba(236, 247, 255, 0.96)),
-    #f7fbff;
-  border-color: #cceee5;
+    linear-gradient(135deg, rgba(238, 245, 255, 0.95), rgba(246, 255, 250, 0.98)),
+    #f8fbff;
+  border-color: #cfe0ff;
 }
 
 .meal-water-head {
@@ -1233,7 +1233,7 @@ textarea {
   right: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, 34px);
+  grid-template-columns: repeat(5, 34px);
   gap: 6px;
   padding: 10px;
   border: 1px solid #cae3ec;
@@ -1284,6 +1284,13 @@ textarea {
   color: var(--text-soft);
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+.meal-water-summary small {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.25;
 }
 
 .meal-water-glasses {
@@ -3165,6 +3172,232 @@ textarea {
   flex-wrap: wrap;
 }
 
+.physical-activity-panel {
+  display: grid;
+  gap: 18px;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(238, 245, 255, 0.95), rgba(246, 255, 250, 0.98)),
+    #f8fbff;
+  border-color: #cfe0ff;
+}
+
+.physical-activity-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.physical-activity-icon {
+  display: inline-grid;
+  place-items: center;
+  color: #2f6df6;
+  background: #e3edff;
+  border: 1px solid #c7d9ff;
+}
+
+.physical-activity-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+}
+
+.physical-activity-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.physical-activity-date {
+  grid-column: 1 / -1;
+  width: fit-content;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: #667085;
+  background: #f1f4f8;
+  border: 1px solid #d9e1ec;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.physical-activity-goal-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid #d8e6fb;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.physical-activity-goal-option span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.physical-activity-goal-option strong {
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.physical-activity-goal-option small {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.activity-goal-toggle {
+  min-width: 52px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #cfd7e3;
+  border-radius: 999px;
+  color: #4d5a70;
+  background: #eef2f7;
+  font-size: 0.72rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.activity-goal-toggle[data-toggle-state="on"] {
+  color: #fff;
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.physical-activity-form {
+  margin-top: 0;
+}
+
+.physical-activity-estimate {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid #d8e6fb;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.physical-activity-estimate-main,
+.physical-activity-estimate-empty {
+  display: grid;
+  gap: 5px;
+}
+
+.physical-activity-estimate-main strong {
+  color: #2f6df6;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.physical-activity-estimate-main span,
+.physical-activity-estimate-empty span,
+.physical-activity-estimate p,
+.physical-activity-item span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.activity-source-chip,
+.activity-suggestion-chip {
+  width: fit-content;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.activity-source-chip {
+  padding: 5px 8px;
+  color: #1c6b58;
+  background: #e7f8f1;
+}
+
+.activity-suggestion-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.activity-suggestion-chip {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #d7e2f2;
+  color: #4e5c70;
+  background: #fff;
+  cursor: pointer;
+}
+
+.physical-activity-list {
+  display: grid;
+  gap: 10px;
+}
+
+.physical-activity-empty {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 16px;
+  color: #4e5c70;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px dashed #cbd8ea;
+}
+
+.physical-activity-empty strong {
+  font-size: 0.92rem;
+}
+
+.physical-activity-empty span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.physical-activity-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid #d8e6fb;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.physical-activity-item > div {
+  min-width: 0;
+}
+
+.physical-activity-item h4 {
+  margin: 0 0 3px;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.physical-activity-item strong {
+  color: #1c8f78;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+[data-physical-activity-status][data-status-type="success"] {
+  color: #188267;
+}
+
+[data-physical-activity-status][data-status-type="error"] {
+  color: #d9534f;
+}
+
 .chart-head span {
   display: block;
   margin-top: 12px;
@@ -3400,6 +3633,14 @@ textarea {
     gap: 4px;
     margin-top: 6px;
     font-size: 0.68rem;
+  }
+
+  .physical-activity-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .physical-activity-item .delete-btn {
+    grid-column: 2;
   }
 }
 

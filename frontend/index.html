@@ -723,6 +723,7 @@
                     <div class="meal-water-summary">
                       <strong data-nutrition-water-summary>0/8</strong>
                       <span>bicchieri</span>
+                      <small data-nutrition-water-volume-summary>Totale: 0 ml</small>
                     </div>
                     <div class="meal-water-glasses" data-nutrition-water-glasses></div>
                   </div>
@@ -777,6 +778,54 @@
                     <button class="soft-btn progress-soft-btn" type="button" data-progress-delete-log>Reset</button>
                   </div>
                 </form>
+              </article>
+              <article class="panel physical-activity-panel">
+                <div class="physical-activity-head">
+                  <span class="physical-activity-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M6.5 6.5v11M17.5 6.5v11M4 9v6M20 9v6M6.5 12h11" />
+                    </svg>
+                  </span>
+                  <div>
+                    <h3>Attività fisica</h3>
+                    <p class="progress-panel-copy">Aggiungi kcal spese manualmente o stimale dal tipo di attività.</p>
+                  </div>
+                  <span class="physical-activity-date" data-physical-activity-date-label>Oggi · 0 kcal spese</span>
+                </div>
+                <div class="physical-activity-goal-option">
+                  <span>
+                    <strong>Includi kcal spese nell'obiettivo giornaliero</strong>
+                    <small data-physical-activity-goal-note>Le kcal spese non modificano le kcal rimaste.</small>
+                  </span>
+                  <button
+                    class="activity-goal-toggle"
+                    type="button"
+                    data-physical-activity-goal-toggle
+                    data-toggle-state="off"
+                    aria-pressed="false"
+                  >Off</button>
+                </div>
+                <form class="form-grid progress-form-grid physical-activity-form" data-physical-activity-form novalidate>
+                  <label class="field field-full">
+                    <span>Tipo di attività</span>
+                    <input type="text" name="activityName" list="physical-activity-suggestions" placeholder="Es. camminata veloce" required />
+                    <datalist id="physical-activity-suggestions" data-physical-activity-suggestions></datalist>
+                  </label>
+                  <label class="field">
+                    <span>Durata (min)</span>
+                    <input type="number" name="durationMinutes" min="1" max="600" step="1" placeholder="30" />
+                  </label>
+                  <label class="field">
+                    <span>Kcal spese</span>
+                    <input type="number" name="calories" min="1" max="4000" step="1" placeholder="Auto o manuale" />
+                  </label>
+                  <div class="field field-full physical-activity-estimate" data-physical-activity-estimate></div>
+                  <div class="field field-full progress-form-row">
+                    <button class="primary-btn primary-btn-blue" type="submit">Aggiungi attività</button>
+                  </div>
+                  <p class="save-hint field-full" data-physical-activity-status aria-live="polite"></p>
+                </form>
+                <div class="physical-activity-list" data-physical-activity-list></div>
               </article>
             </div>
           </section>

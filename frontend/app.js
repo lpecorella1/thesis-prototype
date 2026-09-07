@@ -20,6 +20,8 @@ const requiredBootstrapKeys = [
   "NUTRITRACK_SYNC_DEBOUNCE_MS",
   "defaultRecipeTimestamp",
   "RECIPE_NUTRITION_SOURCE_LABEL",
+  "PHYSICAL_ACTIVITY_DATASET_SOURCE",
+  "physicalActivityCatalog",
   "getRelativeDateKey",
   "getDefaultDevicesUiState",
   "getDefaultDevicesIntegrationsState",
@@ -50,7 +52,9 @@ const nutritionEntryRuntime = {
   entryMethod: "",
 };
 const WATER_GOAL_MIN = 1;
-const WATER_GOAL_MAX = 12;
+const WATER_GOAL_MAX = 15;
+const WATER_GLASS_ML = 200;
+const PHYSICAL_ACTIVITY_MATCH_LIMIT = 4;
 
 // Core date and range helpers shared across modules.
 function formatShortDayLabel(value) {
@@ -660,6 +664,160 @@ function getNutritionTotalsForDate(dateKey) {
   return totals;
 }
 
+function normalizePhysicalActivityText(value) {
+  return String(value || "")
+    .toLocaleLowerCase("it-IT")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9 ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getPhysicalActivitySearchText(activity) {
+  return normalizePhysicalActivityText([
+    activity?.label,
+    activity?.category,
+    activity?.description,
+    ...(Array.isArray(activity?.aliases) ? activity.aliases : []),
+  ].join(" "));
+}
+
+function findPhysicalActivityCatalogMatch(value) {
+  const normalizedValue = normalizePhysicalActivityText(value);
+
+  if (!normalizedValue) {
+    return null;
+  }
+
+  const exactMatch = physicalActivityCatalog.find((activity) => {
+    const labels = [activity.label, ...(Array.isArray(activity.aliases) ? activity.aliases : [])];
+    return labels.some((label) => normalizePhysicalActivityText(label) === normalizedValue);
+  });
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const tokens = normalizedValue.split(" ").filter(Boolean);
+
+  return physicalActivityCatalog.find((activity) => {
+    const searchText = getPhysicalActivitySearchText(activity);
+    return tokens.every((token) => searchText.includes(token));
+  }) || null;
+}
+
+function getPhysicalActivityMatches(value, limit = PHYSICAL_ACTIVITY_MATCH_LIMIT) {
+  const normalizedValue = normalizePhysicalActivityText(value);
+
+  if (!normalizedValue) {
+    return physicalActivityCatalog.slice(0, limit);
+  }
+
+  const tokens = normalizedValue.split(" ").filter(Boolean);
+
+  return physicalActivityCatalog
+    .map((activity) => {
+      const searchText = getPhysicalActivitySearchText(activity);
+      const score = tokens.reduce((result, token) => result + (searchText.includes(token) ? 1 : 0), 0);
+      const exactBoost = normalizePhysicalActivityText(activity.label) === normalizedValue ? 4 : 0;
+      return { activity, score: score + exactBoost };
+    })
+    .filter(({ score }) => score > 0)
+    .sort((first, second) => second.score - first.score || first.activity.label.localeCompare(second.activity.label))
+    .slice(0, limit)
+    .map(({ activity }) => activity);
+}
+
+function getActivityEstimationWeight(dateKey) {
+  const logWeight = normalizeNumber(getProgressLogByDate(dateKey)?.weightKg);
+  const profileWeight = normalizeNumber(appState.profile?.personal?.currentWeightKg);
+  return logWeight ?? profileWeight;
+}
+
+function estimatePhysicalActivityCalories(activity, durationMinutes, weightKg) {
+  const met = normalizeNumber(activity?.met);
+  const minutes = normalizeNumber(durationMinutes);
+  const weight = normalizeNumber(weightKg);
+
+  if (met == null || minutes == null || weight == null || met <= 0 || minutes <= 0 || weight <= 0) {
+    return null;
+  }
+
+  return Math.max(0, Math.round((met * 3.5 * weight * minutes) / 200));
+}
+
+function normalizePhysicalActivityEntry(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const name = String(entry.name || entry.activityName || "").trim();
+  const calories = Math.max(0, Math.round(normalizeNumber(entry.calories ?? entry.burnedCalories) || 0));
+
+  if (!name || calories <= 0) {
+    return null;
+  }
+
+  const durationMinutes = normalizeNumber(entry.durationMinutes ?? entry.minutes);
+  const met = normalizeNumber(entry.met);
+
+  return {
+    id: String(entry.id || crypto.randomUUID()),
+    name,
+    durationMinutes: durationMinutes == null ? null : Math.max(0, Math.round(durationMinutes)),
+    calories,
+    met,
+    compendiumCode: String(entry.compendiumCode || "").trim(),
+    category: String(entry.category || "").trim(),
+    intensity: String(entry.intensity || "").trim(),
+    source: String(entry.source || "manual").trim(),
+    datasetSource: String(entry.datasetSource || "").trim(),
+    createdAt: String(entry.createdAt || new Date().toISOString()),
+  };
+}
+
+function getPhysicalActivitiesForDate(dateKey) {
+  const log = getProgressLogByDate(dateKey);
+  return Array.isArray(log?.physicalActivities) ? log.physicalActivities.map(normalizePhysicalActivityEntry).filter(Boolean) : [];
+}
+
+function sumPhysicalActivityCalories(activities) {
+  return (Array.isArray(activities) ? activities : []).reduce(
+    (total, activity) => total + Math.max(0, Math.round(normalizeNumber(activity?.calories) || 0)),
+    0
+  );
+}
+
+function getBurnedCaloriesForDate(dateKey) {
+  const activities = getPhysicalActivitiesForDate(dateKey);
+
+  if (activities.length > 0) {
+    return sumPhysicalActivityCalories(activities);
+  }
+
+  return Math.max(0, Math.round(normalizeNumber(getProgressLogByDate(dateKey)?.burnedCalories) || 0));
+}
+
+function shouldIncludeBurnedCaloriesInGoal() {
+  return appState.profile?.goals?.includeBurnedCaloriesInGoal === true;
+}
+
+function setIncludeBurnedCaloriesInGoal(shouldInclude) {
+  appState.profile = appState.profile && typeof appState.profile === "object" ? appState.profile : {};
+  appState.profile.goals = appState.profile.goals && typeof appState.profile.goals === "object" ? appState.profile.goals : {};
+  appState.profile.goals.includeBurnedCaloriesInGoal = Boolean(shouldInclude);
+
+  saveState();
+  renderNutrition();
+  setPhysicalActivityStatus(
+    shouldInclude
+      ? "Le kcal spese aumentano l'obiettivo della giornata."
+      : "Le kcal spese restano registrate senza aumentare l'obiettivo.",
+    "success"
+  );
+}
+
 function getMealDateKey(meal) {
   return isValidDateKey(meal?.date) ? meal.date : getTodayDateKey();
 }
@@ -730,12 +888,19 @@ function normalizeProgressLog(entry) {
     return null;
   }
 
+  const physicalActivities = Array.isArray(entry.physicalActivities)
+    ? entry.physicalActivities.map(normalizePhysicalActivityEntry).filter(Boolean)
+    : [];
+  const burnedCalories = normalizeNumber(entry.burnedCalories);
+
   return {
     date: entry.date,
     weightKg: normalizeNumber(entry.weightKg),
     waterGlasses: normalizeNumber(entry.waterGlasses),
     calories: normalizeNumber(entry.calories),
     protein: normalizeNumber(entry.protein),
+    burnedCalories: burnedCalories ?? (physicalActivities.length > 0 ? sumPhysicalActivityCalories(physicalActivities) : null),
+    physicalActivities,
   };
 }
 
@@ -1631,9 +1796,12 @@ function renderNutritionSummary() {
   });
 
   const numericCalorieGoal = normalizeNumber(goals.calories);
-  const remainingCalories = numericCalorieGoal == null ? null : Math.max(0, roundMacroValue(numericCalorieGoal - totals.calories));
+  const burnedCalories = getBurnedCaloriesForDate(selectedDateKey);
+  const includedBurnedCalories = shouldIncludeBurnedCaloriesInGoal() ? burnedCalories : 0;
+  const adjustedCalorieGoal = numericCalorieGoal == null ? null : numericCalorieGoal + includedBurnedCalories;
+  const remainingCalories = adjustedCalorieGoal == null ? null : Math.max(0, roundMacroValue(adjustedCalorieGoal - totals.calories));
   const calorieProgress = numericCalorieGoal && numericCalorieGoal > 0
-    ? Math.min((totals.calories / numericCalorieGoal) * 100, 100)
+    ? Math.min((totals.calories / (adjustedCalorieGoal || numericCalorieGoal)) * 100, 100)
     : 0;
 
   document.querySelectorAll("[data-nutrition-remaining-calories]").forEach((element) => {
@@ -1645,7 +1813,7 @@ function renderNutritionSummary() {
   });
 
   document.querySelectorAll("[data-nutrition-burned-calories]").forEach((element) => {
-    element.textContent = "0";
+    element.textContent = String(burnedCalories);
   });
 
   document.querySelectorAll("[data-nutrition-selected-date-label]").forEach((element) => {
@@ -1669,12 +1837,14 @@ function renderNutritionSummary() {
   });
 
   renderNutritionWaterControl();
+  renderPhysicalActivityControl();
 }
 
 function renderNutritionWaterControl() {
   const selectedDateKey = getSelectedNutritionDateKey();
   const waterGlassesContainer = document.querySelector("[data-nutrition-water-glasses]");
   const waterSummary = document.querySelector("[data-nutrition-water-summary]");
+  const waterVolumeSummary = document.querySelector("[data-nutrition-water-volume-summary]");
   const waterStatus = document.querySelector("[data-nutrition-water-status]");
   const waterGoalMenu = document.querySelector("[data-water-goal-menu]");
   const log = getProgressLogByDate(selectedDateKey);
@@ -1683,6 +1853,10 @@ function renderNutritionWaterControl() {
 
   if (waterSummary) {
     waterSummary.textContent = `${waterGlasses}/${waterGoal}`;
+  }
+
+  if (waterVolumeSummary) {
+    waterVolumeSummary.textContent = `Totale: ${formatWaterVolume(waterGlasses * WATER_GLASS_ML)}`;
   }
 
   if (waterGlassesContainer) {
@@ -1710,6 +1884,17 @@ function renderNutritionWaterControl() {
     waterStatus.textContent = "";
     waterStatus.dataset.dateKey = selectedDateKey;
   }
+}
+
+function formatWaterVolume(valueMl) {
+  const milliliters = Math.max(0, Math.round(normalizeNumber(valueMl) || 0));
+
+  if (milliliters < 1000) {
+    return `${milliliters} ml`;
+  }
+
+  const liters = (milliliters / 1000).toFixed(1).replace(".", ",");
+  return `${liters} L`;
 }
 
 function getWaterGoal() {
@@ -1794,8 +1979,221 @@ function persistNutritionWaterForDate(dateKey, rawValue) {
   renderNutritionWaterControl();
 
   if (dateKey === getSelectedNutritionDateKey()) {
-    setNutritionWaterStatus(waterGlasses == null ? "Acqua rimossa." : "Salvato automaticamente.");
+    setNutritionWaterStatus(
+      waterGlasses == null
+        ? "Acqua rimossa."
+        : `Totale acqua: ${formatWaterVolume(waterGlasses * WATER_GLASS_ML)}.`
+    );
   }
+}
+
+function renderPhysicalActivityDatalist() {
+  const datalist = document.querySelector("[data-physical-activity-suggestions]");
+
+  if (!datalist) {
+    return;
+  }
+
+  datalist.innerHTML = physicalActivityCatalog
+    .map((activity) => `<option value="${escapeHtml(activity.label)}">${escapeHtml(activity.intensity)} · Compendium 2024</option>`)
+    .join("");
+}
+
+function getPhysicalActivityEstimateContext(form) {
+  const activityName = String(form?.elements.activityName?.value || "").trim();
+  const durationMinutes = normalizeNumber(form?.elements.durationMinutes?.value);
+  const match = findPhysicalActivityCatalogMatch(activityName);
+  const weightKg = getActivityEstimationWeight(getSelectedNutritionDateKey());
+  const estimatedCalories = estimatePhysicalActivityCalories(match, durationMinutes, weightKg);
+
+  return {
+    activityName,
+    durationMinutes,
+    match,
+    weightKg,
+    estimatedCalories,
+  };
+}
+
+function renderPhysicalActivitySuggestionButton(activity) {
+  return `
+    <button class="activity-suggestion-chip" type="button" data-physical-activity-suggestion="${escapeHtml(activity.id)}">
+      ${escapeHtml(activity.label)}
+    </button>
+  `;
+}
+
+function renderPhysicalActivityEstimate(form = document.querySelector("[data-physical-activity-form]")) {
+  const estimateBox = document.querySelector("[data-physical-activity-estimate]");
+
+  if (!form || !estimateBox) {
+    return;
+  }
+
+  const { activityName, durationMinutes, match, weightKg, estimatedCalories } = getPhysicalActivityEstimateContext(form);
+  const matches = getPhysicalActivityMatches(activityName);
+
+  if (!activityName && !durationMinutes) {
+    estimateBox.innerHTML = `
+      <div class="physical-activity-estimate-empty">
+        <strong>Stima kcal da attività fisica</strong>
+        <span>Scrivi un'attività e la durata, oppure inserisci direttamente le kcal spese.</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (!match) {
+    estimateBox.innerHTML = `
+      <div class="physical-activity-estimate-empty">
+        <strong>Attività non ancora nel catalogo</strong>
+        <span>Puoi salvarla inserendo manualmente le kcal spese.</span>
+      </div>
+      ${matches.length > 0 ? `<div class="activity-suggestion-row">${matches.map(renderPhysicalActivitySuggestionButton).join("")}</div>` : ""}
+    `;
+    return;
+  }
+
+  estimateBox.innerHTML = `
+    <div class="physical-activity-estimate-main">
+      <span class="activity-source-chip">Compendium 2024</span>
+      <strong>${estimatedCalories == null ? "--" : estimatedCalories} kcal</strong>
+      <span>${escapeHtml(match.label)} · attività ${escapeHtml(match.intensity)}${weightKg ? ` · ${escapeHtml(weightKg)} kg` : ""}</span>
+    </div>
+    ${
+      estimatedCalories == null
+        ? `<p>Inserisci durata e peso corporeo per ottenere una stima automatica.</p>`
+        : `<p>Stima basata su intensità media, durata e peso corporeo.</p>`
+    }
+    <div class="activity-suggestion-row">${matches.map(renderPhysicalActivitySuggestionButton).join("")}</div>
+  `;
+}
+
+function renderPhysicalActivityControl() {
+  const list = document.querySelector("[data-physical-activity-list]");
+  const dateLabel = document.querySelector("[data-physical-activity-date-label]");
+  const selectedDateKey = getSelectedNutritionDateKey();
+  const activities = getPhysicalActivitiesForDate(selectedDateKey);
+  const burnedCalories = getBurnedCaloriesForDate(selectedDateKey);
+
+  if (dateLabel) {
+    dateLabel.textContent = `${formatNutritionDateLabel(selectedDateKey)} · ${burnedCalories} kcal spese`;
+  }
+
+  document.querySelectorAll("[data-physical-activity-goal-toggle]").forEach((button) => {
+    const isIncluded = shouldIncludeBurnedCaloriesInGoal();
+    button.setAttribute("aria-pressed", String(isIncluded));
+    button.dataset.toggleState = isIncluded ? "on" : "off";
+    button.textContent = isIncluded ? "On" : "Off";
+  });
+
+  document.querySelectorAll("[data-physical-activity-goal-note]").forEach((element) => {
+    element.textContent = shouldIncludeBurnedCaloriesInGoal()
+      ? "Le kcal spese aumentano le kcal rimaste."
+      : "Le kcal spese non modificano le kcal rimaste.";
+  });
+
+  renderPhysicalActivityEstimate();
+
+  if (!list) {
+    return;
+  }
+
+  if (activities.length === 0) {
+    list.innerHTML = `
+      <div class="physical-activity-empty">
+        <strong>Nessuna attività registrata</strong>
+        <span>Le kcal spese appariranno nel riepilogo della Dieta.</span>
+      </div>
+    `;
+    return;
+  }
+
+  list.innerHTML = activities
+    .slice()
+    .sort((first, second) => String(second.createdAt).localeCompare(String(first.createdAt)))
+    .map(
+      (activity) => `
+        <article class="physical-activity-item">
+          <div>
+            <h4>${escapeHtml(activity.name)}</h4>
+            <span>${activity.durationMinutes ? `${escapeHtml(activity.durationMinutes)} min · ` : ""}${escapeHtml(activity.source === "met_estimate" ? `stima ${activity.intensity || "Compendium"}` : "inserimento manuale")}</span>
+          </div>
+          <strong>${escapeHtml(activity.calories)} kcal</strong>
+          <button class="delete-btn" type="button" aria-label="Rimuovi attività" data-delete-physical-activity-id="${escapeHtml(activity.id)}">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" />
+            </svg>
+          </button>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function setPhysicalActivityStatus(message, type = "") {
+  const status = document.querySelector("[data-physical-activity-status]");
+
+  if (!status) {
+    return;
+  }
+
+  status.textContent = message || "";
+  status.dataset.statusType = type;
+}
+
+function buildPhysicalActivityFromForm(form, dateKey) {
+  const { activityName, durationMinutes, match, weightKg, estimatedCalories } = getPhysicalActivityEstimateContext(form);
+  const manualCalories = normalizeNumber(form.elements.calories.value);
+  const calories = manualCalories ?? estimatedCalories;
+
+  if (!activityName) {
+    throw new Error("Inserisci il tipo di attività.");
+  }
+
+  if (calories == null || calories <= 0) {
+    throw new Error("Inserisci le kcal spese oppure durata e peso per stimarle.");
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    name: match?.label || activityName,
+    durationMinutes: durationMinutes == null ? null : Math.max(0, Math.round(durationMinutes)),
+    calories: Math.max(0, Math.round(calories)),
+    met: match?.met ?? null,
+    compendiumCode: match?.compendiumCode || "",
+    category: match?.category || "",
+    intensity: match?.intensity || "",
+    source: manualCalories == null ? "met_estimate" : "manual",
+    datasetSource: match ? PHYSICAL_ACTIVITY_DATASET_SOURCE.officialDatasetPage : "",
+    createdAt: new Date().toISOString(),
+    date: dateKey,
+    estimationWeightKg: weightKg,
+  };
+}
+
+function persistPhysicalActivitiesForDate(dateKey, activities) {
+  const normalizedActivities = (Array.isArray(activities) ? activities : [])
+    .map(normalizePhysicalActivityEntry)
+    .filter(Boolean);
+
+  setProgressLogValuesForDate(dateKey, {
+    physicalActivities: normalizedActivities,
+    burnedCalories: normalizedActivities.length > 0 ? sumPhysicalActivityCalories(normalizedActivities) : null,
+  });
+  saveState();
+  renderNutrition();
+}
+
+function addPhysicalActivityForDate(dateKey, activity) {
+  persistPhysicalActivitiesForDate(dateKey, [...getPhysicalActivitiesForDate(dateKey), activity]);
+}
+
+function removePhysicalActivityForDate(dateKey, activityId) {
+  persistPhysicalActivitiesForDate(
+    dateKey,
+    getPhysicalActivitiesForDate(dateKey).filter((activity) => activity.id !== activityId)
+  );
 }
 
 // Sync profile goals into the nutrition dashboard summary.
@@ -2132,6 +2530,8 @@ function setupNutritionSection() {
   const waterGlassesContainer = document.querySelector("[data-nutrition-water-glasses]");
   const waterGoalMenuToggle = document.querySelector("[data-water-goal-menu-toggle]");
   const waterGoalMenu = document.querySelector("[data-water-goal-menu]");
+  const physicalActivityForm = document.querySelector("[data-physical-activity-form]");
+  const physicalActivityList = document.querySelector("[data-physical-activity-list]");
 
   if (!form || !mealsList || !editForm || !editCancelButton) {
     return;
@@ -2139,6 +2539,11 @@ function setupNutritionSection() {
 
   bindFormValidationFeedback(form);
   bindFormValidationFeedback(editForm);
+  renderPhysicalActivityDatalist();
+
+  if (physicalActivityForm) {
+    bindFormValidationFeedback(physicalActivityForm);
+  }
 
   dateStepButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -2179,6 +2584,67 @@ function setupNutritionSection() {
 
     persistWaterGoal(option.dataset.waterGoalValue);
     setWaterGoalMenuOpen(false);
+  });
+
+  physicalActivityForm?.addEventListener("input", (event) => {
+    if (["activityName", "durationMinutes", "calories"].includes(event.target.name)) {
+      renderPhysicalActivityEstimate(physicalActivityForm);
+    }
+  });
+
+  physicalActivityForm?.addEventListener("click", (event) => {
+    const suggestionButton = event.target.closest("[data-physical-activity-suggestion]");
+
+    if (!suggestionButton) {
+      return;
+    }
+
+    const activity = physicalActivityCatalog.find((item) => item.id === suggestionButton.dataset.physicalActivitySuggestion);
+
+    if (!activity) {
+      return;
+    }
+
+    physicalActivityForm.elements.activityName.value = activity.label;
+    renderPhysicalActivityEstimate(physicalActivityForm);
+  });
+
+  physicalActivityForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    markFormValidationAttempt(physicalActivityForm);
+
+    if (!physicalActivityForm.checkValidity()) {
+      return;
+    }
+
+    try {
+      const selectedDateKey = getSelectedNutritionDateKey();
+      const activity = buildPhysicalActivityFromForm(physicalActivityForm, selectedDateKey);
+      addPhysicalActivityForDate(selectedDateKey, activity);
+      physicalActivityForm.reset();
+      resetFormValidationState(physicalActivityForm);
+      renderPhysicalActivityEstimate(physicalActivityForm);
+      setPhysicalActivityStatus("Attività aggiunta alla giornata.", "success");
+    } catch (error) {
+      setPhysicalActivityStatus(error.message || "Non sono riuscito ad aggiungere l'attività.", "error");
+    }
+  });
+
+  physicalActivityList?.addEventListener("click", (event) => {
+    const deleteButton = event.target.closest("[data-delete-physical-activity-id]");
+
+    if (!deleteButton) {
+      return;
+    }
+
+    removePhysicalActivityForDate(getSelectedNutritionDateKey(), deleteButton.dataset.deletePhysicalActivityId);
+    setPhysicalActivityStatus("Attività rimossa.", "success");
+  });
+
+  document.querySelectorAll("[data-physical-activity-goal-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setIncludeBurnedCaloriesInGoal(!shouldIncludeBurnedCaloriesInGoal());
+    });
   });
 
   document.addEventListener("click", (event) => {

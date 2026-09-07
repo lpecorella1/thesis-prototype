@@ -127,6 +127,8 @@ window.NutriTrackBootstrap = Object.freeze({
   buildNutriTrackApiPath,
   defaultRecipeTimestamp,
   RECIPE_NUTRITION_SOURCE_LABEL,
+  PHYSICAL_ACTIVITY_DATASET_SOURCE,
+  physicalActivityCatalog,
   groceryArStartIcon,
   groceryArStopIcon,
   setGroceryArToggleButtonState,

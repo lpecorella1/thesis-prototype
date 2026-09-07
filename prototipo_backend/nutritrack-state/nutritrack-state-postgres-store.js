@@ -407,6 +407,7 @@ async function replaceUserProfile(client, userId, profileState = {}) {
     ["daily_carbs_goal", normalizeNumber(goals.carbs)],
     ["daily_fats_goal", normalizeNumber(goals.fats)],
     ["daily_water_goal", normalizeNumber(goals.water)],
+    ["include_burned_calories_in_goal", goals.includeBurnedCaloriesInGoal === true],
   ].filter(([columnName]) => availableColumns.has(columnName));
 
   const insertColumns = ["user_id", ...profileEntries.map(([columnName]) => columnName)];
@@ -541,6 +542,7 @@ async function replacePantryItems(client, userId, items = []) {
 
 async function replaceProgressLogs(client, userId, dailyLogs = []) {
   await client.query("DELETE FROM progress_logs WHERE user_id = $1", [userId]);
+  const availableColumns = await getTableColumns(client, "progress_logs");
 
   for (const log of Array.isArray(dailyLogs) ? dailyLogs : []) {
     const logDate = normalizeDate(log.date);
@@ -549,34 +551,31 @@ async function replaceProgressLogs(client, userId, dailyLogs = []) {
       continue;
     }
 
+    const entries = [
+      ["user_id", userId],
+      ["log_date", logDate],
+      ["weight_kg", normalizeNumber(log.weightKg)],
+      ["water_glasses", normalizeNumber(log.waterGlasses)],
+      ["intake_calories", normalizeNumber(log.calories)],
+      ["protein_g", normalizeNumber(log.protein)],
+      ["steps", normalizeNumber(log.steps)],
+      ["burned_calories", normalizeNumber(log.burnedCalories)],
+      ["note", normalizeString(log.note)],
+      ["source_type", "manual"],
+    ];
+
+    if (availableColumns.has("physical_activities")) {
+      entries.splice(entries.length - 2, 0, ["physical_activities", JSON.stringify(normalizeJsonArray(log.physicalActivities))]);
+    }
+
     await client.query(
       `
         INSERT INTO progress_logs (
-          user_id,
-          log_date,
-          weight_kg,
-          water_glasses,
-          intake_calories,
-          protein_g,
-          steps,
-          burned_calories,
-          note,
-          source_type
+          ${entries.map(([columnName]) => columnName).join(",\n          ")}
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES (${entries.map((_, index) => `$${index + 1}`).join(", ")})
       `,
-      [
-        userId,
-        logDate,
-        normalizeNumber(log.weightKg),
-        normalizeNumber(log.waterGlasses),
-        normalizeNumber(log.calories),
-        normalizeNumber(log.protein),
-        normalizeNumber(log.steps),
-        normalizeNumber(log.burnedCalories),
-        normalizeString(log.note),
-        "manual",
-      ]
+      entries.map(([, value]) => value)
     );
   }
 }
@@ -807,6 +806,7 @@ async function readUserProfile(client, userId) {
     "daily_carbs_goal",
     "daily_fats_goal",
     "daily_water_goal",
+    "include_burned_calories_in_goal",
   ]
     .filter((columnName) => availableColumns.has(columnName))
     .map((columnName) => `COALESCE(${columnName}, NULL) AS ${columnName}`);
@@ -855,6 +855,7 @@ async function readUserProfile(client, userId) {
       carbs: normalizeDbNumber(row.daily_carbs_goal),
       fats: normalizeDbNumber(row.daily_fats_goal),
       water: normalizeDbNumber(row.daily_water_goal),
+      includeBurnedCaloriesInGoal: row.include_burned_calories_in_goal === true,
     },
   };
 }
@@ -986,6 +987,7 @@ async function readPantryItems(client, userId) {
 }
 
 async function readProgressLogs(client, userId) {
+  const availableColumns = await getTableColumns(client, "progress_logs");
   const result = await client.query(
     `
       SELECT
@@ -993,7 +995,9 @@ async function readProgressLogs(client, userId) {
         weight_kg,
         water_glasses,
         intake_calories,
-        protein_g
+        protein_g,
+        burned_calories,
+        ${availableColumns.has("physical_activities") ? "physical_activities" : "'[]'::jsonb"} AS physical_activities
       FROM progress_logs
       WHERE user_id = $1
       ORDER BY log_date ASC
@@ -1008,6 +1012,8 @@ async function readProgressLogs(client, userId) {
       waterGlasses: normalizeDbNumber(row.water_glasses),
       calories: normalizeDbNumber(row.intake_calories),
       protein: normalizeDbNumber(row.protein_g),
+      burnedCalories: normalizeDbNumber(row.burned_calories),
+      physicalActivities: normalizeJsonArray(row.physical_activities),
     })),
   };
 }
