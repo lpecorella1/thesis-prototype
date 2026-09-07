@@ -1076,6 +1076,27 @@ function scaleFoodDataCentralNutrients(reference, rawText) {
   };
 }
 
+function buildFoodDataCentralNutritionReference(reference) {
+  if (!reference?.nutrientsPer100g) {
+    return null;
+  }
+
+  return {
+    source: "fooddata-central",
+    provider: reference.provider || "FoodData Central",
+    query: reference.query || "",
+    fdcId: reference.fdcId || null,
+    description: reference.description || "",
+    dataType: reference.dataType || "",
+    brandOwner: reference.brandOwner || "",
+    servingSize: reference.servingSize ?? null,
+    servingSizeUnit: reference.servingSizeUnit || "",
+    basisQuantity: 100,
+    basisUnit: "g",
+    nutrientsPer100g: reference.nutrientsPer100g,
+  };
+}
+
 function estimateMealComponentFromFoodDataCentral(rawText, references = []) {
   const reference = findFoodDataCentralReferenceForComponent(rawText, references);
   const scaledNutrients = scaleFoodDataCentralNutrients(reference, rawText);
@@ -1094,6 +1115,7 @@ function estimateMealComponentFromFoodDataCentral(rawText, references = []) {
     fats: scaledNutrients.fats,
     confidence: 0.72,
     source: "fooddata-central",
+    nutritionReference: buildFoodDataCentralNutritionReference(reference),
   };
 }
 
@@ -1260,23 +1282,37 @@ function normalizeMealPhotoDescriptionPayload(payload) {
   };
 }
 
-function normalizeMealAnalysisItem(item) {
+function normalizeMealAnalysisItem(item, foodDataCentralReferences = []) {
+  const rawText = String(item?.rawText || item?.name || "").trim();
+  const quantity = String(item?.quantity || "1 porzione").trim();
+  const referenceEstimate = estimateMealComponentFromFoodDataCentral(`${quantity} ${rawText}`, foodDataCentralReferences);
+
+  if (referenceEstimate) {
+    return {
+      ...referenceEstimate,
+      rawText,
+      name: String(item?.name || referenceEstimate.name || rawText || "Alimento").trim(),
+      confidence: Math.max(referenceEstimate.confidence, normalizePantryImportConfidence(item?.confidence) ?? 0.45),
+    };
+  }
+
   return {
     rawText: String(item?.rawText || item?.name || "").trim(),
     name: String(item?.name || item?.rawText || "Alimento").trim(),
-    quantity: String(item?.quantity || "1 porzione").trim(),
+    quantity,
     calories: roundMacroValue(item?.calories),
     protein: roundMacroValue(item?.protein),
     carbs: roundMacroValue(item?.carbs),
     fats: roundMacroValue(item?.fats),
     confidence: normalizePantryImportConfidence(item?.confidence) ?? 0.45,
     source: String(item?.source || "ai-estimate").trim(),
+    nutritionReference: item?.nutritionReference && typeof item.nutritionReference === "object" ? item.nutritionReference : null,
   };
 }
 
 function normalizeMealAnalysisPayload(payload, description, foodDataCentralReferences = []) {
   const items = Array.isArray(payload?.items)
-    ? payload.items.map(normalizeMealAnalysisItem).filter((item) => item.name)
+    ? payload.items.map((item) => normalizeMealAnalysisItem(item, foodDataCentralReferences)).filter((item) => item.name)
     : [];
 
   if (items.length === 0) {

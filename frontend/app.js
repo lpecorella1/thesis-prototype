@@ -601,6 +601,7 @@ function normalizeMealAnalysisItem(item) {
     fats: roundMacroValue(normalizeNumber(item?.fats) || 0),
     confidence: Math.max(0, Math.min(1, normalizeNumber(item?.confidence) ?? 0.45)),
     source: String(item?.source || "ai-estimate").trim(),
+    nutritionReference: item?.nutritionReference && typeof item.nutritionReference === "object" ? item.nutritionReference : null,
   };
 }
 
@@ -2226,6 +2227,7 @@ function calculateBmi(heightCm, weightKg) {
 
 const nutritionEditorRuntime = {
   mealId: "",
+  itemBaselines: [],
 };
 
 // Nutrition core rendering and setup remain here because they coordinate shared state.
@@ -2716,6 +2718,8 @@ function renderMeals() {
     return;
   }
 
+  placeNutritionEditPanelNearMeal(null);
+
   if (selectedMeals.length === 0) {
     list.innerHTML = `
       <article class="panel empty-state">
@@ -2731,7 +2735,7 @@ function renderMeals() {
     .sort((firstMeal, secondMeal) => firstMeal.time.localeCompare(secondMeal.time))
     .map(
       (meal) => `
-        <article class="meal-card">
+        <article class="meal-card" data-meal-card-id="${escapeHtml(meal.id)}">
           <div class="meal-copy">
             <h3>${escapeHtml(meal.name)}</h3>
             ${
@@ -2796,12 +2800,275 @@ function renderMealItemsBreakdown(meal) {
 }
 
 // Inline nutrition editor state and rendering helpers.
+function normalizeEditableMealItem(item) {
+  return {
+    rawText: String(item?.rawText || item?.name || "").trim(),
+    name: String(item?.name || item?.rawText || "Alimento").trim(),
+    quantity: String(item?.quantity || "").trim(),
+    calories: roundMacroValue(normalizeNumber(item?.calories) || 0),
+    protein: roundMacroValue(normalizeNumber(item?.protein) || 0),
+    carbs: roundMacroValue(normalizeNumber(item?.carbs) || 0),
+    fats: roundMacroValue(normalizeNumber(item?.fats) || 0),
+    confidence: Math.max(0, Math.min(1, normalizeNumber(item?.confidence) ?? 0.45)),
+    source: String(item?.source || "ai-estimate").trim(),
+    nutritionReference: item?.nutritionReference && typeof item.nutritionReference === "object" ? item.nutritionReference : null,
+  };
+}
+
+function parseEditableQuantityLabel(value) {
+  const metricQuantity = parseMetricQuantityLabel(value);
+
+  if (metricQuantity) {
+    return metricQuantity;
+  }
+
+  const match = String(value || "").match(/(\d+(?:[.,]\d+)?)/);
+  const amount = normalizeNumber(match?.[1]);
+
+  if (amount === null || amount <= 0) {
+    return null;
+  }
+
+  return {
+    value: amount,
+    unit: "count",
+  };
+}
+
+function getMealItemQuantityFactor(baseQuantity, nextQuantity) {
+  const base = parseEditableQuantityLabel(baseQuantity);
+  const next = parseEditableQuantityLabel(nextQuantity);
+
+  if (!base || !next || base.unit !== next.unit || base.value <= 0 || next.value <= 0) {
+    return null;
+  }
+
+  return next.value / base.value;
+}
+
+function createMealItemEditBaseline(item) {
+  const normalizedItem = normalizeEditableMealItem(item);
+
+  return {
+    ...normalizedItem,
+    baseQuantity: normalizedItem.quantity,
+    baseNutrition: createNutritionSnapshot(normalizedItem),
+  };
+}
+
+function scaleNutritionReferenceForQuantity(reference, quantityLabel) {
+  const quantity = parseEditableQuantityLabel(quantityLabel);
+  const nutrients = reference?.nutrientsPer100g;
+
+  if (!quantity || !["g", "ml"].includes(quantity.unit) || !nutrients) {
+    return null;
+  }
+
+  return createNutritionSnapshot({
+    calories: (normalizeNumber(nutrients.calories) || 0) * (quantity.value / 100),
+    protein: (normalizeNumber(nutrients.protein) || 0) * (quantity.value / 100),
+    carbs: (normalizeNumber(nutrients.carbs) || 0) * (quantity.value / 100),
+    fats: (normalizeNumber(nutrients.fats) || 0) * (quantity.value / 100),
+  });
+}
+
+function recalculateMealItemFromInputs(baseline, values = {}, options = {}) {
+  const quantity = String(values.quantity ?? baseline.quantity ?? "").trim();
+  const quantityFactor = getMealItemQuantityFactor(baseline.baseQuantity, quantity);
+  const referencedNutrition = scaleNutritionReferenceForQuantity(baseline.nutritionReference, quantity);
+  const nutrition = referencedNutrition || (quantityFactor === null
+    ? createNutritionSnapshot(baseline.baseNutrition)
+    : scaleNutritionValues(baseline.baseNutrition, quantityFactor));
+  const manualCalories = normalizeNumber(values.calories);
+
+  if (options.useManualCalories !== false && manualCalories !== null) {
+    nutrition.calories = roundMacroValue(manualCalories);
+  }
+
+  return {
+    rawText: baseline.rawText,
+    name: baseline.name,
+    quantity: quantity || baseline.quantity || "1 porzione",
+    calories: nutrition.calories,
+    protein: nutrition.protein,
+    carbs: nutrition.carbs,
+    fats: nutrition.fats,
+    confidence: baseline.confidence,
+    source: baseline.source,
+    nutritionReference: baseline.nutritionReference || null,
+  };
+}
+
+function calculateMealTotalsFromItems(items = []) {
+  return items.reduce(
+    (result, item) => {
+      result.calories += roundMacroValue(normalizeNumber(item?.calories) || 0);
+      result.protein += roundMacroValue(normalizeNumber(item?.protein) || 0);
+      result.carbs += roundMacroValue(normalizeNumber(item?.carbs) || 0);
+      result.fats += roundMacroValue(normalizeNumber(item?.fats) || 0);
+      return result;
+    },
+    { calories: 0, protein: 0, carbs: 0, fats: 0 }
+  );
+}
+
+function normalizeMealTitleText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function replaceMealTitleQuantity(title, previousQuantity, nextQuantity) {
+  const normalizedTitle = normalizeMealTitleText(title);
+  const normalizedPreviousQuantity = normalizeMealTitleText(previousQuantity);
+  const normalizedNextQuantity = normalizeMealTitleText(nextQuantity);
+
+  if (!normalizedTitle || !normalizedPreviousQuantity || !normalizedNextQuantity || normalizedPreviousQuantity === normalizedNextQuantity) {
+    return normalizedTitle;
+  }
+
+  const escapedQuantity = normalizedPreviousQuantity.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s*");
+  const quantityPattern = new RegExp(escapedQuantity, "i");
+
+  return normalizedTitle.replace(quantityPattern, normalizedNextQuantity);
+}
+
+function formatMealItemTitleFragment(item) {
+  const quantity = normalizeMealTitleText(item?.quantity);
+  const name = normalizeMealTitleText(item?.name).toLowerCase();
+
+  return normalizeMealTitleText(`${quantity} ${name}`) || name || quantity;
+}
+
+function buildMealNameFromEditedItems(meal, items = [], baselines = []) {
+  const originalName = normalizeMealTitleText(meal?.name);
+  const updatedName = items.reduce((title, item, index) => {
+    const baseline = baselines[index];
+
+    return replaceMealTitleQuantity(title, baseline?.baseQuantity || baseline?.quantity, item.quantity);
+  }, originalName);
+
+  if (updatedName && updatedName !== originalName) {
+    return updatedName;
+  }
+
+  const generatedName = items.map(formatMealItemTitleFragment).filter(Boolean).join(" e ");
+  return generatedName || originalName;
+}
+
+function placeNutritionEditPanelNearMeal(meal) {
+  const panel = document.querySelector("[data-nutrition-edit-panel]");
+  const mealCard = meal?.id ? document.querySelector(`[data-meal-card-id="${CSS.escape(meal.id)}"]`) : null;
+  const nutritionLayout = document.querySelector(".nutrition-layout");
+
+  if (!panel) {
+    return;
+  }
+
+  if (mealCard) {
+    mealCard.insertAdjacentElement("afterend", panel);
+    return;
+  }
+
+  nutritionLayout?.append(panel);
+}
+
+function renderNutritionEditItems(meal) {
+  const container = document.querySelector("[data-nutrition-edit-items]");
+  const items = Array.isArray(meal?.items) ? meal.items.map(normalizeEditableMealItem).filter((item) => item.name) : [];
+
+  if (!container) {
+    return;
+  }
+
+  nutritionEditorRuntime.itemBaselines = items.map(createMealItemEditBaseline);
+
+  if (nutritionEditorRuntime.itemBaselines.length === 0) {
+    container.hidden = true;
+    container.innerHTML = "";
+    return;
+  }
+
+  container.hidden = false;
+  container.innerHTML = `
+    <div class="meal-item-editor-head">
+      <span>Alimenti riconosciuti</span>
+      <small>Le modifiche aggiornano il totale del pasto.</small>
+    </div>
+    <div class="meal-item-editor-list">
+      ${nutritionEditorRuntime.itemBaselines
+        .map(
+          (item, index) => `
+            <article class="meal-item-editor-row" data-meal-item-row="${index}">
+              <strong>${escapeHtml(item.name)}</strong>
+              <label>
+                <span>Quantità</span>
+                <input type="text" value="${escapeHtml(item.quantity || "1 porzione")}" data-meal-item-quantity />
+              </label>
+              <label>
+                <span>Kcal</span>
+                <input type="number" min="0" step="1" value="${escapeHtml(item.calories)}" data-meal-item-calories />
+              </label>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function readNutritionEditItemsFromForm(form, options = {}) {
+  const baselines = nutritionEditorRuntime.itemBaselines;
+
+  if (!form || baselines.length === 0) {
+    return [];
+  }
+
+  return baselines.map((baseline, index) => {
+    const row = form.querySelector(`[data-meal-item-row="${index}"]`);
+    const quantityInput = row?.querySelector("[data-meal-item-quantity]");
+    const isEditedQuantity = options.changedElement && options.changedElement === quantityInput;
+
+    return recalculateMealItemFromInputs(baseline, {
+      quantity: quantityInput?.value,
+      calories: row?.querySelector("[data-meal-item-calories]")?.value,
+    }, {
+      useManualCalories: !isEditedQuantity,
+    });
+  });
+}
+
+function syncNutritionEditTotalsFromItems(form, changedElement = null) {
+  const items = readNutritionEditItemsFromForm(form, { changedElement });
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  const totals = calculateMealTotalsFromItems(items);
+
+  form.elements.calories.value = totals.calories;
+  form.elements.protein.value = totals.protein;
+  form.elements.carbs.value = totals.carbs;
+  form.elements.fats.value = totals.fats;
+
+  items.forEach((item, index) => {
+    const row = form.querySelector(`[data-meal-item-row="${index}"]`);
+    const caloriesInput = row?.querySelector("[data-meal-item-calories]");
+
+    if (caloriesInput && document.activeElement !== caloriesInput) {
+      caloriesInput.value = item.calories;
+    }
+  });
+
+  return { items, totals };
+}
+
 function getActiveNutritionEditMeal() {
   return appState.nutrition.meals.find((meal) => meal.id === nutritionEditorRuntime.mealId) || null;
 }
 
 function closeNutritionEditForm() {
   nutritionEditorRuntime.mealId = "";
+  nutritionEditorRuntime.itemBaselines = [];
   renderNutritionEditForm();
 }
 
@@ -2828,15 +3095,20 @@ function renderNutritionEditForm() {
     panel.hidden = true;
     form.reset();
     resetFormValidationState(form);
+    nutritionEditorRuntime.itemBaselines = [];
+    renderNutritionEditItems(null);
+    placeNutritionEditPanelNearMeal(null);
     return;
   }
 
+  placeNutritionEditPanelNearMeal(meal);
   panel.hidden = false;
   title.textContent = `Correggi ${meal.name}`;
   form.elements.calories.value = meal.calories;
   form.elements.protein.value = meal.protein;
   form.elements.carbs.value = meal.carbs;
   form.elements.fats.value = meal.fats;
+  renderNutritionEditItems(meal);
 }
 
 // Shared nutrition meal creation and mutation helpers used by the section wiring.
@@ -3266,6 +3538,14 @@ function setupNutritionSection() {
     removeNutritionMeal(button.dataset.deleteMealId);
   });
 
+  editForm.addEventListener("input", (event) => {
+    if (!event.target.closest("[data-meal-item-row]")) {
+      return;
+    }
+
+    syncNutritionEditTotalsFromItems(editForm, event.target);
+  });
+
   editForm.addEventListener("submit", (event) => {
     event.preventDefault();
     markFormValidationAttempt(editForm);
@@ -3277,6 +3557,7 @@ function setupNutritionSection() {
       return;
     }
 
+    const itemResult = syncNutritionEditTotalsFromItems(editForm);
     const rawValues = {
       calories: normalizeNumber(editForm.elements.calories.value),
       protein: normalizeNumber(editForm.elements.protein.value),
@@ -3294,6 +3575,12 @@ function setupNutritionSection() {
 
     if (hasInvalidNumber) {
       return;
+    }
+
+    if (itemResult) {
+      updatedValues.items = itemResult.items;
+      updatedValues.sourceNote = buildMealAnalysisSourceNote({ items: itemResult.items });
+      updatedValues.name = buildMealNameFromEditedItems(meal, itemResult.items, nutritionEditorRuntime.itemBaselines);
     }
 
     applyManualNutritionCorrection(meal, updatedValues);

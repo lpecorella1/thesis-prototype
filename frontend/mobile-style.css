@@ -1392,6 +1392,87 @@ textarea {
   line-height: 1.35;
 }
 
+.meal-item-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.meal-item-editor[hidden] {
+  display: none;
+}
+
+.meal-item-editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  color: var(--text-main);
+  font-weight: 800;
+}
+
+.meal-item-editor-head small {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.meal-item-editor-list {
+  display: grid;
+  gap: 8px;
+}
+
+.meal-item-editor-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(92px, 0.7fr) minmax(78px, 0.55fr);
+  align-items: end;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.meal-item-editor-row strong {
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+
+.meal-item-editor-row label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+}
+
+.meal-item-editor-row label span {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.meal-item-editor-row input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid #d8e2ee;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.meal-item-editor-row input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+  outline: none;
+}
+
 .lookup-block {
   display: grid;
   gap: 12px;
@@ -1770,6 +1851,15 @@ textarea {
 
 .panel {
   padding: 20px;
+}
+
+[data-nutrition-edit-panel] {
+  border-color: #93c5fd;
+  box-shadow: 0 16px 34px rgba(59, 130, 246, 0.14);
+}
+
+[data-nutrition-edit-panel][hidden] {
+  display: none;
 }
 
 .recipe-results-grid {
@@ -5558,6 +5648,14 @@ textarea {
    Serve per telefoni piccoli: riduciamo ulteriormente font, spaziature, input,
    card e controlli per evitare elementi "desktop rimpiccioliti". */
 @media (max-width: 560px) {
+  .meal-item-editor-row {
+    grid-template-columns: 1fr 96px;
+  }
+
+  .meal-item-editor-row strong {
+    grid-column: 1 / -1;
+  }
+
   /* Shared extra-compact type scale */
   .summary-count strong,
   .calorie-badge strong {
