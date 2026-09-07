@@ -1856,7 +1856,7 @@ function renderNutritionWaterControl() {
   }
 
   if (waterVolumeSummary) {
-    waterVolumeSummary.textContent = `Totale: ${formatWaterVolume(waterGlasses * WATER_GLASS_ML)}`;
+    waterVolumeSummary.textContent = formatWaterDrunkSummary(waterGlasses);
   }
 
   if (waterGlassesContainer) {
@@ -1869,7 +1869,7 @@ function renderNutritionWaterControl() {
           class="meal-water-glass${isFilled ? " is-filled" : ""}"
           type="button"
           data-water-glass-value="${glassValue}"
-          aria-label="Imposta acqua a ${glassValue} bicchieri"
+          aria-label="Imposta acqua a ${formatWaterGlassCount(glassValue)}, ${formatWaterVolume(glassValue * WATER_GLASS_ML)}"
           aria-pressed="${isFilled}"
         >
           <span class="meal-water-fill"></span>
@@ -1880,10 +1880,15 @@ function renderNutritionWaterControl() {
 
   renderWaterGoalMenu(waterGoalMenu, waterGoal);
 
-  if (waterStatus && waterStatus.dataset.dateKey !== selectedDateKey) {
-    waterStatus.textContent = "";
+  if (waterStatus) {
+    waterStatus.textContent = formatWaterGoalSummary(waterGoal);
     waterStatus.dataset.dateKey = selectedDateKey;
   }
+}
+
+function formatWaterGlassCount(value) {
+  const glasses = Math.max(0, Math.round(normalizeNumber(value) || 0));
+  return glasses === 1 ? "1 bicchiere" : `${glasses} bicchieri`;
 }
 
 function formatWaterVolume(valueMl) {
@@ -1894,7 +1899,15 @@ function formatWaterVolume(valueMl) {
   }
 
   const liters = (milliliters / 1000).toFixed(1).replace(".", ",");
-  return `${liters} L`;
+  return `${liters} l`;
+}
+
+function formatWaterDrunkSummary(waterGlasses) {
+  return `Totale bevuti: ${formatWaterGlassCount(waterGlasses)} = ${formatWaterVolume(waterGlasses * WATER_GLASS_ML)}`;
+}
+
+function formatWaterGoalSummary(waterGoal) {
+  return `Totale acqua: ${formatWaterGlassCount(waterGoal)} = ${formatWaterVolume(waterGoal * WATER_GLASS_ML)}`;
 }
 
 function getWaterGoal() {
@@ -1953,7 +1966,7 @@ function persistWaterGoal(goalValue) {
 
   saveState();
   renderNutrition();
-  setNutritionWaterStatus(`Obiettivo impostato a ${waterGoal} bicchieri.`);
+  setNutritionWaterStatus(formatWaterGoalSummary(waterGoal));
 }
 
 function setNutritionWaterStatus(message) {
@@ -1979,11 +1992,7 @@ function persistNutritionWaterForDate(dateKey, rawValue) {
   renderNutritionWaterControl();
 
   if (dateKey === getSelectedNutritionDateKey()) {
-    setNutritionWaterStatus(
-      waterGlasses == null
-        ? "Acqua rimossa."
-        : `Totale acqua: ${formatWaterVolume(waterGlasses * WATER_GLASS_ML)}.`
-    );
+    setNutritionWaterStatus(formatWaterGoalSummary(getWaterGoal()));
   }
 }
 
