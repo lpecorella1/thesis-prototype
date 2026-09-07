@@ -656,6 +656,9 @@ function stopGroceryArCamera() {
     groceryArRuntime.detectionLoopId = null;
   }
 
+  stopZxingScanner(groceryArRuntime);
+  groceryArRuntime.detector = null;
+
   if (groceryArRuntime.stream) {
     groceryArRuntime.stream.getTracks().forEach((track) => track.stop());
     groceryArRuntime.stream = null;
@@ -675,6 +678,41 @@ function stopGroceryArCamera() {
   }
 }
 
+async function handleGroceryScannedBarcode(rawBarcode) {
+  const firstCode = sanitizeBarcode(rawBarcode);
+
+  if (!firstCode || appState.grocery.ar.lastDetectedBarcode === firstCode) {
+    return;
+  }
+
+  let matchedProduct = getCachedOpenFoodFactsProduct(firstCode);
+
+  if (!matchedProduct) {
+    appState.grocery.ar.lastDetectedBarcode = firstCode;
+
+    try {
+      matchedProduct = await fetchOpenFoodFactsProduct(firstCode);
+    } catch (error) {
+      matchedProduct = null;
+    }
+  }
+
+  if (!matchedProduct) {
+    return;
+  }
+
+  ensureGroceryArState();
+
+  appState.grocery.ar.lastDetectedBarcode = firstCode;
+  const pinResult = pinGroceryComparisonProduct(getComparableProductKey(matchedProduct));
+
+  if (pinResult.added) {
+    saveState();
+    renderGroceryArOverlay();
+    renderGroceryArComparison();
+  }
+}
+
 function scheduleGroceryBarcodeDetection() {
   const video = document.querySelector("[data-grocery-ar-video]");
 
@@ -690,36 +728,7 @@ function scheduleGroceryBarcodeDetection() {
     if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
       try {
         const barcodes = await groceryArRuntime.detector.detect(video);
-        const firstCode = barcodes[0]?.rawValue;
-
-        if (firstCode && appState.grocery.ar.lastDetectedBarcode === firstCode) {
-          groceryArRuntime.detectionLoopId = requestAnimationFrame(detectFrame);
-          return;
-        }
-
-        let matchedProduct = firstCode ? getCachedOpenFoodFactsProduct(firstCode) : null;
-
-        if (!matchedProduct && firstCode) {
-          appState.grocery.ar.lastDetectedBarcode = firstCode;
-          try {
-            matchedProduct = await fetchOpenFoodFactsProduct(firstCode);
-          } catch (error) {
-            matchedProduct = null;
-          }
-        }
-
-        if (matchedProduct) {
-          ensureGroceryArState();
-
-          appState.grocery.ar.lastDetectedBarcode = firstCode;
-          const pinResult = pinGroceryComparisonProduct(getComparableProductKey(matchedProduct));
-
-          if (pinResult.added) {
-            saveState();
-            renderGroceryArOverlay();
-            renderGroceryArComparison();
-          }
-        }
+        await handleGroceryScannedBarcode(barcodes[0]?.rawValue);
       } catch (error) {
       }
     }
@@ -771,6 +780,12 @@ async function startGroceryArCamera() {
       scheduleGroceryBarcodeDetection();
     } else {
       groceryArRuntime.detector = null;
+      await startZxingVideoBarcodeDetection({
+        video,
+        runtime: groceryArRuntime,
+        includeQrCode: true,
+        onDetected: handleGroceryScannedBarcode,
+      });
     }
   } catch (error) {
     stopGroceryArCamera();

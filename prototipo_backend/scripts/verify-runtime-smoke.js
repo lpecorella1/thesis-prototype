@@ -85,6 +85,10 @@ async function main() {
       NUTRITRACK_ENABLE_DEVELOPMENT_SEED: "0",
       NUTRITRACK_BASE_PATH: DEFAULT_BASE_PATH,
       NUTRITRACK_DATA_DIR: tempDataDir,
+      AZURE_OPENAI_ENDPOINT: "",
+      AZURE_OPENAI_API_KEY: "",
+      AZURE_OPENAI_DEPLOYMENT: "",
+      FOODDATA_CENTRAL_API_KEY: "",
     },
     stdio: "ignore",
   });
@@ -97,6 +101,15 @@ async function main() {
     const bootstrapScript = await fetchText(buildAppUrl(baseUrl, "/scripts/bootstrap.js"));
     const statePayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutritrack/state"));
     const devicesPayload = await fetchJson(buildApiUrl(baseUrl, "/api/devices/state"));
+    const mealAnalysisPayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutrition/analyze-meal"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        description: "80 g pasta e 1 banana",
+      }),
+    });
     const clientScalePayload = await fetchJson(buildApiUrl(baseUrl, "/api/scale/client-measurement"), {
       method: "POST",
       headers: {
@@ -158,6 +171,11 @@ async function main() {
     );
     assert(statePayload.runtime?.summary === "single_user_local", "Unexpected runtime summary on state read.");
     assert(devicesPayload.runtime?.usesImplicitLocalUser === true, "Devices payload should expose local-user runtime.");
+    assert(mealAnalysisPayload.analysis?.totals?.calories > 0, "Meal analysis fallback did not produce calories.");
+    assert(
+      ["fallback-standard-portions", "fooddata-central-fallback"].includes(mealAnalysisPayload.analysis?.source),
+      "Meal analysis fallback returned an unexpected source."
+    );
     assert(clientScalePayload.scale?.providerMode === "standard_ble", "Client scale measurement did not use BLE mode.");
     assert(clientScalePayload.scale?.latestData?.weightKg === 72.4, "Client scale measurement did not persist weight.");
     assert(writePayload.ok === true, "State write did not succeed.");

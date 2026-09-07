@@ -66,6 +66,8 @@ const nutritrackSyncRuntime = {
 const groceryArRuntime = {
   stream: null,
   detector: null,
+  zxingControls: null,
+  zxingReader: null,
   detectionLoopId: null,
   isStarting: false,
 };
@@ -79,6 +81,8 @@ const openFoodFactsRuntime = {
 const barcodeScannerRuntime = {
   stream: null,
   detector: null,
+  zxingControls: null,
+  zxingReader: null,
   detectionLoopId: null,
   isStarting: false,
   isResolving: false,

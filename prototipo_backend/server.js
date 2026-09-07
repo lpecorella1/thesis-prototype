@@ -7,6 +7,12 @@ const os = require("os");
 const path = require("path");
 const zlib = require("zlib");
 const { createAzureChatCompletion } = require("./azure-openai");
+const {
+  buildFoodDataCentralReferences,
+  isFoodDataCentralConfigured,
+  normalizeFoodDataCentralQuery,
+  searchFoodDataCentralFoods,
+} = require("./fooddata-central");
 const { fetchOpenFoodFactsProduct, sanitizeBarcode } = require("./openfoodfacts");
 const {
   getNutriTrackDatabaseStatus,
@@ -610,8 +616,16 @@ function normalizeQuantityUnit(unit) {
     return "";
   }
 
+  if (["gr", "g", "grammo", "grammi"].includes(unit)) {
+    return "g";
+  }
+
   if (unit === "kg") {
     return "g";
+  }
+
+  if (["ml", "millilitro", "millilitri"].includes(unit)) {
+    return "ml";
   }
 
   if (unit === "l") {
@@ -809,6 +823,9 @@ function buildRecipeGenerationMessages(filters, context = {}) {
   const recentRecipes = Array.isArray(context.recentRecipes) ? context.recentRecipes.slice(0, 6) : [];
   const recentMeals = Array.isArray(context.recentMeals) ? context.recentMeals.slice(0, 8) : [];
   const groceryItems = Array.isArray(context.groceryItems) ? context.groceryItems.slice(0, 16) : [];
+  const foodDataCentralReferences = Array.isArray(context.foodDataCentralReferences)
+    ? context.foodDataCentralReferences.slice(0, 10)
+    : [];
   const goalSummary = String(context.profile?.goalSummary || "").trim();
   const contextMessage = [
     stringifyContextBlock("Pantry prioritizzata", pantry),
@@ -816,6 +833,7 @@ function buildRecipeGenerationMessages(filters, context = {}) {
     stringifyContextBlock("Obiettivi nutrizionali", context.profile),
     stringifyContextBlock("Meal log recenti", recentMeals),
     stringifyContextBlock("Ricette recenti da non ripetere", recentRecipes),
+    stringifyContextBlock("Riferimenti nutrizionali FoodData Central", foodDataCentralReferences),
     stringifyContextBlock("Filtri utente", filters),
   ]
     .filter(Boolean)
@@ -851,6 +869,9 @@ function buildRecipeGenerationMessages(filters, context = {}) {
           .filter(Boolean)
           .join("; ")}.`
       : "",
+    foodDataCentralReferences.length > 0
+      ? "Usa i riferimenti FoodData Central come supporto fattuale per rendere calorie e macronutrienti piu plausibili; non inventare valori nutrizionali quando il riferimento e' incompleto."
+      : "",
     "Devi massimizzare la varieta durante la stessa sessione utente: se ci sono ricette recenti nel contesto, evita ripetizioni, quasi-duplicati e micro-variazioni della stessa proposta.",
     "Restituisci solo JSON valido, senza markdown o testo extra, con questa forma esatta:",
     JSON.stringify(
@@ -882,7 +903,7 @@ function buildRecipeGenerationMessages(filters, context = {}) {
     {
       role: "system",
       content:
-        "Sei un motore di generazione ricette per un'app di meal planning e puoi anche generare liste della spesa sulla base delle abitudini di acquisto dell'utente e sulla base dei dati profilo inseriti. Devi creare una singola ricetta completa, concreta e fattibile usando soprattutto gli ingredienti reali della dispensa quando presenti. Devi trattare il contesto applicativo come fonte attendibile dei dati utente salvati a database. Allergie, condizioni mediche, preferenze alimentari, obiettivi nutrizionali e vincoli personali sono vincoli reali e devono essere rispettati nella ricetta proposta. Gli obiettivi di profilo, incluso l'obiettivo principale e l'eventuale focus salute, devono orientare davvero la scelta degli ingredienti, la struttura del piatto e il profilo nutrizionale della ricetta. I prompt dell'utente sono vincoli prioritari. Se alcuni ingredienti in dispensa hanno scadenza ravvicinata, privilegiali in modo esplicito. Le macro e le calorie possono essere stimate ma devono essere plausibili. Non usare testo fuori dal JSON richiesto."
+        "Sei un motore di generazione ricette per un'app di meal planning e puoi anche generare liste della spesa sulla base delle abitudini di acquisto dell'utente e sulla base dei dati profilo inseriti. Devi creare una singola ricetta completa, concreta e fattibile usando soprattutto gli ingredienti reali della dispensa quando presenti. Devi trattare il contesto applicativo come fonte attendibile dei dati utente salvati a database. Allergie, condizioni mediche, preferenze alimentari, obiettivi nutrizionali e vincoli personali sono vincoli reali e devono essere rispettati nella ricetta proposta. Gli obiettivi di profilo, incluso l'obiettivo principale e l'eventuale focus salute, devono orientare davvero la scelta degli ingredienti, la struttura del piatto e il profilo nutrizionale della ricetta. I prompt dell'utente sono vincoli prioritari. Se alcuni ingredienti in dispensa hanno scadenza ravvicinata, privilegiali in modo esplicito. Se il contesto contiene riferimenti FoodData Central, usali come ancoraggio per calorie e macronutrienti plausibili. Le macro e le calorie restano stime applicative, ma devono essere coerenti con i riferimenti disponibili. Non usare testo fuori dal JSON richiesto."
     },
     ...(contextMessage
       ? [
@@ -1025,7 +1046,63 @@ function splitMealDescriptionIntoComponents(description) {
     .slice(0, 12);
 }
 
-function estimateMealComponentFromText(rawText) {
+function findFoodDataCentralReferenceForComponent(rawText, references = []) {
+  const normalizedQuery = normalizeFoodDataCentralQuery(rawText);
+
+  if (!normalizedQuery) {
+    return null;
+  }
+
+  return references.find((reference) => reference.query === normalizedQuery) || null;
+}
+
+function scaleFoodDataCentralNutrients(reference, rawText) {
+  if (!reference?.nutrientsPer100g) {
+    return null;
+  }
+
+  const quantity = parseQuantityLabel(rawText);
+  const baseQuantity = quantity ? convertQuantityToBaseUnit(quantity.value, quantity.unit) : null;
+  const canScaleByWeight = baseQuantity && ["g", "ml"].includes(baseQuantity.unit);
+  const scale = canScaleByWeight ? baseQuantity.value / 100 : 1;
+
+  return {
+    quantity: canScaleByWeight ? `${formatQuantityValue(baseQuantity.value)} ${baseQuantity.unit}` : "100 g di riferimento",
+    calories: roundMacroValue((reference.nutrientsPer100g.calories ?? 0) * scale),
+    protein: roundMacroValue((reference.nutrientsPer100g.protein ?? 0) * scale),
+    carbs: roundMacroValue((reference.nutrientsPer100g.carbs ?? 0) * scale),
+    fats: roundMacroValue((reference.nutrientsPer100g.fats ?? 0) * scale),
+  };
+}
+
+function estimateMealComponentFromFoodDataCentral(rawText, references = []) {
+  const reference = findFoodDataCentralReferenceForComponent(rawText, references);
+  const scaledNutrients = scaleFoodDataCentralNutrients(reference, rawText);
+
+  if (!reference || !scaledNutrients) {
+    return null;
+  }
+
+  return {
+    rawText,
+    name: reference.description || String(rawText || "Alimento").trim(),
+    quantity: scaledNutrients.quantity,
+    calories: scaledNutrients.calories,
+    protein: scaledNutrients.protein,
+    carbs: scaledNutrients.carbs,
+    fats: scaledNutrients.fats,
+    confidence: 0.72,
+    source: "fooddata-central",
+  };
+}
+
+function estimateMealComponentFromText(rawText, foodDataCentralReferences = []) {
+  const foodDataCentralEstimate = estimateMealComponentFromFoodDataCentral(rawText, foodDataCentralReferences);
+
+  if (foodDataCentralEstimate) {
+    return foodDataCentralEstimate;
+  }
+
   const normalized = normalizeRetrievalText(rawText);
   const matchedEstimate = MEAL_COMPONENT_ESTIMATES.find((estimate) =>
     estimate.keywords.every((keyword) => normalized.includes(normalizeRetrievalText(keyword)))
@@ -1052,8 +1129,10 @@ function estimateMealComponentFromText(rawText) {
   };
 }
 
-function buildFallbackMealAnalysis(description) {
-  const items = splitMealDescriptionIntoComponents(description).map(estimateMealComponentFromText);
+function buildFallbackMealAnalysis(description, foodDataCentralReferences = []) {
+  const items = splitMealDescriptionIntoComponents(description).map((component) =>
+    estimateMealComponentFromText(component, foodDataCentralReferences)
+  );
 
   if (items.length === 0) {
     throw new Error("Descrizione pasto obbligatoria.");
@@ -1075,8 +1154,11 @@ function buildFallbackMealAnalysis(description) {
     items,
     totals,
     confidence: Math.min(...items.map((item) => item.confidence ?? 0.35)),
-    source: "fallback-standard-portions",
-    reviewNote: "Stima basata su porzioni standard: da far confermare o correggere all'utente.",
+    source: foodDataCentralReferences.length > 0 ? "fooddata-central-fallback" : "fallback-standard-portions",
+    reviewNote:
+      foodDataCentralReferences.length > 0
+        ? "Analisi AI basata sulle porzioni dichiarate quando leggibili: da confermare o correggere."
+        : "Stima basata su porzioni standard: da far confermare o correggere all'utente.",
   };
 }
 
@@ -1091,6 +1173,19 @@ function buildMealAnalysisMessages(description, context = {}) {
         source: record.source,
       }))
     : [];
+  const foodDataCentralReferences = Array.isArray(context.foodDataCentralReferences)
+    ? context.foodDataCentralReferences.slice(0, 12).map((reference) => ({
+        query: reference.query,
+        fdcId: reference.fdcId,
+        description: reference.description,
+        dataType: reference.dataType,
+        brandOwner: reference.brandOwner,
+        servingSize: reference.servingSize,
+        servingSizeUnit: reference.servingSizeUnit,
+        nutrientsPer100g: reference.nutrientsPer100g,
+        source: reference.source,
+      }))
+    : [];
 
   const standardPortions = MEAL_COMPONENT_ESTIMATES.map((estimate) => estimate.item);
 
@@ -1098,16 +1193,17 @@ function buildMealAnalysisMessages(description, context = {}) {
     {
       role: "system",
       content:
-        "Sei un motore di analisi per diario alimentare. Devi convertire una descrizione libera di un intero pasto in dati nutrizionali strutturati. Usa i riferimenti OpenFoodFacts forniti solo quando pertinenti; altrimenti usa porzioni standard prudenti e dichiara confidence piu bassa. Non fornire consigli medici. Rispondi solo con JSON valido.",
+        "Sei un motore di analisi per diario alimentare. Devi convertire una descrizione libera di un intero pasto in dati nutrizionali strutturati. Usa i riferimenti FoodData Central e OpenFoodFacts forniti solo quando pertinenti; altrimenti usa porzioni standard prudenti e dichiara confidence piu bassa. Non citare il nome dei dataset nella reviewNote destinata all'utente. Non fornire consigli medici. Rispondi solo con JSON valido.",
     },
     {
       role: "user",
       content: [
         `Descrizione pasto: ${description}`,
         "I separatori +, virgola, punto e virgola, nuova riga e le congiunzioni italiane e/ed indicano componenti diversi del pasto quando presenti. Se una quantita e' scritta vicino a un alimento, assegnala a quell'item specifico.",
+        `Riferimenti FoodData Central disponibili: ${JSON.stringify(foodDataCentralReferences)}`,
         `Riferimenti OpenFoodFacts disponibili: ${JSON.stringify(references)}`,
         `Porzioni standard fallback: ${JSON.stringify(standardPortions)}`,
-        "Restituisci JSON nel formato esatto {\"name\":\"\",\"items\":[{\"rawText\":\"\",\"name\":\"\",\"quantity\":\"\",\"calories\":0,\"protein\":0,\"carbs\":0,\"fats\":0,\"confidence\":0.0,\"source\":\"openfoodfacts|standard-portion|ai-estimate\"}],\"totals\":{\"calories\":0,\"protein\":0,\"carbs\":0,\"fats\":0},\"confidence\":0.0,\"reviewNote\":\"\"}. I totals devono essere la somma degli items.",
+        "Restituisci JSON nel formato esatto {\"name\":\"\",\"items\":[{\"rawText\":\"\",\"name\":\"\",\"quantity\":\"\",\"calories\":0,\"protein\":0,\"carbs\":0,\"fats\":0,\"confidence\":0.0,\"source\":\"fooddata-central|openfoodfacts|standard-portion|ai-estimate\"}],\"totals\":{\"calories\":0,\"protein\":0,\"carbs\":0,\"fats\":0},\"confidence\":0.0,\"reviewNote\":\"\"}. I totals devono essere la somma degli items.",
       ].join("\n"),
     },
   ];
@@ -1177,13 +1273,13 @@ function normalizeMealAnalysisItem(item) {
   };
 }
 
-function normalizeMealAnalysisPayload(payload, description) {
+function normalizeMealAnalysisPayload(payload, description, foodDataCentralReferences = []) {
   const items = Array.isArray(payload?.items)
     ? payload.items.map(normalizeMealAnalysisItem).filter((item) => item.name)
     : [];
 
   if (items.length === 0) {
-    return buildFallbackMealAnalysis(description);
+    return buildFallbackMealAnalysis(description, foodDataCentralReferences);
   }
 
   const totals = items.reduce(
@@ -1205,6 +1301,28 @@ function normalizeMealAnalysisPayload(payload, description) {
     source: "ai-meal-analysis",
     reviewNote: String(payload?.reviewNote || "Rivedi le porzioni prima di salvare.").trim(),
   };
+}
+
+function buildRecipeFoodDataCentralQueries(filters, context = {}) {
+  const pantryQueries = Array.isArray(context.pantry)
+    ? sortPantryForRecipeGeneration(context.pantry)
+        .slice(0, 6)
+        .map((item) => item.name)
+    : [];
+  const promptQueries = splitMealDescriptionIntoComponents(filters.prompt).slice(0, 4);
+
+  return [
+    ...pantryQueries,
+    ...promptQueries,
+  ].filter(Boolean);
+}
+
+async function loadFoodDataCentralReferencesForQueries(queries, options = {}) {
+  if (!isFoodDataCentralConfigured()) {
+    return [];
+  }
+
+  return buildFoodDataCentralReferences(queries, options);
 }
 
 async function handleMealPhotoDescription(request, response) {
@@ -1285,6 +1403,13 @@ async function handleMealNutritionAnalysis(request, response) {
       state: stateForContext,
     });
 
+    errorPhase = "fooddata-central";
+    const foodDataCentralReferences = await loadFoodDataCentralReferencesForQueries(splitMealDescriptionIntoComponents(description), {
+      maxQueries: 8,
+      limitPerQuery: 3,
+    });
+    context.foodDataCentralReferences = foodDataCentralReferences;
+
     errorPhase = "azure-completion";
     const messages = buildMealAnalysisMessages(description, context);
     let completion;
@@ -1315,7 +1440,7 @@ async function handleMealNutritionAnalysis(request, response) {
     errorPhase = "parse-json";
     const parsedPayload = parseJsonObjectFromCompletion(rawContent);
     errorPhase = "normalize-analysis";
-    const analysis = normalizeMealAnalysisPayload(parsedPayload, description);
+    const analysis = normalizeMealAnalysisPayload(parsedPayload, description, foodDataCentralReferences);
 
     sendJson(response, 200, {
       analysis,
@@ -1330,7 +1455,13 @@ async function handleMealNutritionAnalysis(request, response) {
 
     try {
       sendJson(response, 200, {
-        analysis: buildFallbackMealAnalysis(fallbackDescription),
+        analysis: buildFallbackMealAnalysis(
+          fallbackDescription,
+          await loadFoodDataCentralReferencesForQueries(splitMealDescriptionIntoComponents(fallbackDescription), {
+            maxQueries: 8,
+            limitPerQuery: 3,
+          })
+        ),
         usage: null,
         fallback: true,
       });
@@ -2221,6 +2352,13 @@ async function handleApiRecipeGenerate(request, response) {
         currentRecipe: body.currentRecipe && typeof body.currentRecipe === "object" ? body.currentRecipe : undefined,
       },
     });
+    context.foodDataCentralReferences = await loadFoodDataCentralReferencesForQueries(
+      buildRecipeFoodDataCentralQueries(filters, context),
+      {
+        maxQueries: 8,
+        limitPerQuery: 3,
+      }
+    );
 
     errorPhase = "azure-completion";
     const generationMessages = buildRecipeGenerationMessages(filters, context);
@@ -2374,6 +2512,38 @@ async function handleOpenFoodFactsProduct(urlPath, response) {
     const statusCode = message === "Prodotto non trovato in OpenFoodFacts." ? 404 : 502;
     console.error("[Server] Errore nella route OpenFoodFacts.", message);
     sendJson(response, statusCode, { error: message });
+  }
+}
+
+async function handleFoodDataCentralSearch(request, response) {
+  try {
+    if (!isFoodDataCentralConfigured()) {
+      sendJson(response, 503, {
+        error: "FoodData Central non configurato: imposta FOODDATA_CENTRAL_API_KEY.",
+      });
+      return;
+    }
+
+    const requestUrl = new URL(request.url, "http://localhost");
+    const query = String(requestUrl.searchParams.get("query") || "").trim();
+
+    if (!query) {
+      sendJson(response, 400, { error: "Parametro query obbligatorio." });
+      return;
+    }
+
+    const foods = await searchFoodDataCentralFoods(query, { limit: 10 });
+    sendJson(response, 200, {
+      query,
+      normalizedQuery: normalizeFoodDataCentralQuery(query),
+      source: "fooddata-central",
+      foods,
+    });
+  } catch (error) {
+    console.error("[Server] Errore nella route FoodData Central.", error.message);
+    sendJson(response, error.statusCode || 502, {
+      error: error.message || "Errore durante il recupero da FoodData Central.",
+    });
   }
 }
 
@@ -2798,6 +2968,11 @@ const requestHandler = async (request, response) => {
 
   if (request.method === "GET" && requestPath.startsWith("/api/openfoodfacts/product/")) {
     await handleOpenFoodFactsProduct(requestPath, response);
+    return;
+  }
+
+  if (request.method === "GET" && requestPath === "/api/fooddata/search") {
+    await handleFoodDataCentralSearch(request, response);
     return;
   }
 

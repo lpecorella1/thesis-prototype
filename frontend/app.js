@@ -862,6 +862,90 @@ function sanitizeBarcode(value) {
   return String(value || "").replaceAll(/\D/g, "");
 }
 
+const ZXING_BROWSER_SCRIPT_SRC = "https://unpkg.com/@zxing/browser@0.2.1/umd/zxing-browser.min.js";
+const ZXING_BARCODE_FORMATS = ["EAN_13", "EAN_8", "UPC_A", "UPC_E"];
+
+function stopZxingScanner(runtime) {
+  if (runtime?.zxingControls?.stop) {
+    runtime.zxingControls.stop();
+  }
+
+  if (runtime?.zxingReader?.reset) {
+    runtime.zxingReader.reset();
+  }
+
+  if (runtime) {
+    runtime.zxingControls = null;
+    runtime.zxingReader = null;
+  }
+}
+
+function loadZxingBrowserLibrary() {
+  if (window.ZXingBrowser?.BrowserMultiFormatReader) {
+    return Promise.resolve(window.ZXingBrowser);
+  }
+
+  if (window.NutriTrackZXingBrowserPromise) {
+    return window.NutriTrackZXingBrowserPromise;
+  }
+
+  window.NutriTrackZXingBrowserPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = ZXING_BROWSER_SCRIPT_SRC;
+    script.async = true;
+    script.onload = () => {
+      if (window.ZXingBrowser?.BrowserMultiFormatReader) {
+        resolve(window.ZXingBrowser);
+      } else {
+        reject(new Error("Decoder barcode non disponibile."));
+      }
+    };
+    script.onerror = () => reject(new Error("Impossibile caricare il decoder barcode per Safari."));
+    document.head.append(script);
+  });
+
+  return window.NutriTrackZXingBrowserPromise;
+}
+
+function configureZxingBarcodeFormats(reader, includeQrCode) {
+  const barcodeFormat = window.ZXingBrowser?.BarcodeFormat;
+
+  if (!barcodeFormat || !("possibleFormats" in reader)) {
+    return;
+  }
+
+  const formatNames = includeQrCode ? [...ZXING_BARCODE_FORMATS, "QR_CODE"] : ZXING_BARCODE_FORMATS;
+  const formats = formatNames
+    .map((formatName) => barcodeFormat[formatName])
+    .filter((format) => format !== undefined);
+
+  if (formats.length > 0) {
+    reader.possibleFormats = formats;
+  }
+}
+
+async function startZxingVideoBarcodeDetection({ video, runtime, includeQrCode = false, onDetected }) {
+  const zxingBrowser = await loadZxingBrowserLibrary();
+  const reader = new zxingBrowser.BrowserMultiFormatReader(undefined, {
+    delayBetweenScanAttempts: 450,
+    delayBetweenScanSuccess: 900,
+  });
+
+  configureZxingBarcodeFormats(reader, includeQrCode);
+  runtime.zxingReader = reader;
+
+  const controls = await reader.decodeFromVideoElement(video, (result) => {
+    const rawValue = typeof result?.getText === "function" ? result.getText() : result?.text;
+    const detectedBarcode = sanitizeBarcode(rawValue);
+
+    if (detectedBarcode) {
+      Promise.resolve(onDetected(detectedBarcode)).catch(() => {});
+    }
+  });
+
+  runtime.zxingControls = controls;
+}
+
 function formatExpiryDate(value) {
   const raw = String(value || "").trim();
 
@@ -1288,6 +1372,8 @@ function closeBarcodeScannerModal() {
     barcodeScannerRuntime.detectionLoopId = null;
   }
 
+  stopZxingScanner(barcodeScannerRuntime);
+
   if (barcodeScannerRuntime.stream) {
     barcodeScannerRuntime.stream.getTracks().forEach((track) => track.stop());
     barcodeScannerRuntime.stream = null;
@@ -1423,12 +1509,6 @@ async function startBarcodeScanner(target) {
     return;
   }
 
-  if (!("BarcodeDetector" in window)) {
-    setBarcodeScannerStatus("Questo browser non supporta BarcodeDetector. Per la scansione usa Chrome o Edge recenti.");
-    barcodeScannerRuntime.isStarting = false;
-    return;
-  }
-
   setBarcodeScannerStatus("Richiesta accesso alla camera...");
 
   try {
@@ -1442,14 +1522,32 @@ async function startBarcodeScanner(target) {
     });
 
     barcodeScannerRuntime.stream = stream;
-    barcodeScannerRuntime.detector = new window.BarcodeDetector({
-      formats: ["ean_13", "ean_8", "upc_a", "upc_e"],
-    });
     video.srcObject = stream;
     await video.play();
-    setBarcodeScannerStatus("Centra il bar-code nel riquadro.");
-    scheduleBarcodeScannerDetection();
+
+    if ("BarcodeDetector" in window) {
+      barcodeScannerRuntime.detector = new window.BarcodeDetector({
+        formats: ["ean_13", "ean_8", "upc_a", "upc_e"],
+      });
+      setBarcodeScannerStatus("Centra il bar-code nel riquadro.");
+      scheduleBarcodeScannerDetection();
+    } else {
+      barcodeScannerRuntime.detector = null;
+      setBarcodeScannerStatus("Camera attiva. Carico decoder compatibile con Safari...");
+      await startZxingVideoBarcodeDetection({
+        video,
+        runtime: barcodeScannerRuntime,
+        onDetected: async (detectedBarcode) => {
+          if (detectedBarcode !== barcodeScannerRuntime.lastDetectedBarcode) {
+            await resolveScannedBarcode(detectedBarcode);
+          }
+        },
+      });
+      setBarcodeScannerStatus("Centra il bar-code nel riquadro.");
+    }
   } catch (error) {
+    stopZxingScanner(barcodeScannerRuntime);
+
     if (barcodeScannerRuntime.stream) {
       barcodeScannerRuntime.stream.getTracks().forEach((track) => track.stop());
       barcodeScannerRuntime.stream = null;

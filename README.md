@@ -18,6 +18,7 @@ Il nome `prototipo_backend` è ancora storico: per ora lo mantengo per non rompe
 - generazione ricette e chat assistant con contesto costruito dal backend;
 - applicazione di una ricetta alla dieta con aggiornamento dello stato;
 - ricerca prodotto tramite OpenFoodFacts;
+- riferimenti nutrizionali FoodData Central per alimenti generici e ingredienti di ricette;
 - modalità locale single-user e modalità autenticata con sessioni;
 - provider bilancia `scale` con stato backend e misurazioni lato client;
 - persistenza su file per sviluppo rapido oppure PostgreSQL come sorgente primaria strutturata.
@@ -109,6 +110,7 @@ Le più importanti sono:
 - `NUTRITRACK_LOCAL_USER_EMAIL=app-local@nutritrack.local`
 - `NUTRITRACK_SMTP_HOST`, `NUTRITRACK_SMTP_PORT`, `NUTRITRACK_SMTP_USER`, `NUTRITRACK_SMTP_PASS`
 - `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`
+- `FOODDATA_CENTRAL_API_KEY`
 - `SCALE_PROVIDER=mock`
 
 Uso `authenticated-user` come modalità predefinita per Mercurio/Docker e per i test locali con credenziali, così registro login, cookie di sessione e persistenza per utente su PostgreSQL. `single-user-local` resta disponibile solo come opzione esplicita per controlli locali rapidi senza login.
@@ -138,11 +140,14 @@ La sezione Recipes mantiene il frontend leggero: l'interfaccia raccoglie input, 
 
 Il contesto usato dall'assistente include profilo e obiettivi, preferenze alimentari, dispensa e alimenti in scadenza, lista della spesa, pasti recenti, progressi, ricetta corrente e record OpenFoodFacts disponibili nello stato.
 
+Quando `FOODDATA_CENTRAL_API_KEY` è configurata, il backend recupera anche riferimenti USDA FoodData Central per alimenti generici e ingredienti non legati a un barcode. Questi riferimenti vengono usati come supporto fattuale per l'analisi dei pasti inseriti liberamente e per rendere più plausibili calorie e macronutrienti nelle ricette generate.
+
 Le route principali sono:
 
 - `POST /nutritrack/api/recipes/generate`: genera una ricetta usando filtri e contesto backend;
 - `POST /nutritrack/api/recipes/assistant/chat`: gestisce la chat Recipes con classificazione minima dell'intento;
 - `POST /nutritrack/api/recipes/apply-to-diet`: applica una ricetta alla giornata alimentare e aggiorna lo stato.
+- `GET /nutritrack/api/fooddata/search?query=...`: cerca alimenti su FoodData Central e restituisce macro normalizzate per 100 g.
 
 La chat riconosce già intenti come applicare la ricetta corrente alla dieta, chiedere una lista della spesa, generare o modificare una ricetta, usare ingredienti disponibili e proseguire una conversazione generica. Per ora solo l'applicazione della ricetta corrente produce un'azione strutturata immediata; gli altri intenti passano ancora dalla risposta conversazionale di Azure OpenAI.
 
