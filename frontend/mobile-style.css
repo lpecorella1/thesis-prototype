@@ -4324,6 +4324,33 @@ textarea {
    Le sezioni diventano prevalentemente monocolonna, i blocchi flex si impilano
    e alcuni elementi dashboard restano in griglia 2x2 per non allungarsi troppo. */
 @media (max-width: 840px) {
+  .home-cloud::before {
+    display: none;
+  }
+
+  .cloud-recipes,
+  .cloud-grocery,
+  .cloud-nutrition,
+  .cloud-profile {
+    box-shadow: 0 10px 18px rgba(18, 24, 38, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+
+  .cloud-recipes {
+    background: #4f7df5;
+  }
+
+  .cloud-grocery {
+    background: #2fc878;
+  }
+
+  .cloud-nutrition {
+    background: #ffad35;
+  }
+
+  .cloud-profile {
+    background: #43bdb8;
+  }
+
   .meal-macros,
   .two-col-copy,
   .form-grid,
