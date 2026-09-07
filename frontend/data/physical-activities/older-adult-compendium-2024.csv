@@ -1,0 +1,100 @@
+major_heading,activity_code,met_value,activity_description,source_page,source_document,population,met_basis,resting_vo2_ml_kg_min
+Bicycling,0101060,5.3,"Bicycling, stationary, general, moderate effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Bicycling,0101160,4.3,"Bicycling, stationary, 30-50 watts, moderate effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Bicycling,0101260,6.3,"Bicycling, stationary, 90-100 watts, vigorous effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Bicycling,0101360,7.8,"Bicycling, stationary, 101-160 watts, vigorous effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Bicycling,0101760,4.5,"Bicycling, stationary, 51-89 watts, moderate-to-vigorous effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0202260,3.5,"Calisthenics (e.g., push ups, sit ups, pull-ups, lunges), moderate effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0203560,4.5,"Circuit training, Parcour-type, moderate effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0204760,3.0,"Elliptical trainer, light effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0205160,3.0,"Resistance (weight) training, squats , light effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0205360,2.3,"Resistance Training, general, light effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0205460,4.3,"Resistance (weight) training, multiple exercises, 8-15 repetitions at varied resistance",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0206260,5.0,"Health club exercise, conditioning classes",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0206360,3.8,"Health club exercise, conditioning classes, chair-based",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0207260,6.5,"Rowing, stationary, 50 to 99 watts, moderate-to-vigorous effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0207360,9.0,"Rowing, stationary, 100 to 149 watts, vigorous effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0211360,3.5,"Therapeutic exercise ball, Fitball exercise, chair exercise",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0219060,2.5,"Yoga, general",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0219160,2.8,"Yoga, chair, general",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0221060,3.8,"Tai Chi, general",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Conditioning Activities,0221160,2.8,"Tai Chi, chair, general",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Dancing,0303060,6.0,"Ballroom Dance (tango, slow waltz, foxtrot)",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Dancing,0303160,6.3,"Dance class, General",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Dancing,0303260,7.3,"Smooth Dance (Mazurka, Viennese Walk, Polka)",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0501060,4.3,"Cleaning, sweeping carpet or floors, general",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0502160,4.3,"Cleaning, mopping, standing, Moderate effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0502260,3.5,"Cleaning windows, washing windows, general",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0502360,3.0,"Cleaning, mopping, standing, light effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0503260,4.0,"Dusting or polishing furniture, general",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0504060,4.5,"Cleaning, carrying out trash",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0504160,2.5,"Wash dishes, standing or in general (not broken into stand/walk components)",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0504360,4.3,"Cleaning, vacuuming, general, moderate effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0505160,2.8,"Cooking, serving food, setting table, implied walking or standing",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0505560,3.0,"Putting away groceries/dishes (e.g. carrying groceries, storing dishes in cabinet),",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0506060,3.8,"Food shopping with or without a grocery cart, standing or walking",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0507060,2.8,Ironing,1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0509060,2.0,"Laundry, fold or hang clothes, put clothes in washer or dryer, packing suitcase, washing clothes by hand, implied standing, light effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0509260,3.5,"Laundry, hanging wash, washing clothes by hand, moderate effort",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0510060,4.0,"Making bed, changing linens",1,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Activities,0512060,5.0,"Moving furniture, household items, carrying boxes",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Home Repair,0612760,4.0,"Home repair, general, moderate effort",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Inactivity,0701060,1.3,Lying quietly and watching television,2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Inactivity,0701160,1.3,"Lying quietly, doing nothing, lying in bed awake,",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Inactivity,0702060,1.3,Sitting quietly and watching television,2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Inactivity,0702160,1.3,"Sitting quietly, general",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Inactivity,0704060,1.5,"Standing quietly, standing in a line",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0805060,4.8,"Digging, spading, filling garden, compositing, moderate effort",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0805260,7.3,"Digging, spading, filling garden, composting, vigorous effort",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0806160,4.8,"Gardening, building garden bed",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0806560,3.0,"Gardening, mixing soil",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0809160,3.5,Laying mulch,2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0809560,6.8,"Mowing lawn, general",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0813560,3.3,"Planting, potting, transplanting seedlings or plants, light-moderate effort",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0816060,4.0,"Raking lawn or leaves, moderate effort",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0821060,3.3,"Trimming shrubs or trees, manual cutter",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0821560,3.8,"Trimming shrubs or trees, power cutter, using leaf blower, edge, moderate effort",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0822060,5.3,"Walking, applying fertilizer",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0823060,3.3,"Watering lawn or garden, standing or walking",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0823960,4.8,"Weeding, cultivating garden, light-to-moderate effort",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0824660,3.5,"Picking fruit off trees, picking fruits/vegetables, moderate effort",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0826160,5.0,"Yard work, general, moderate effort",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Lawn and Garden,0826560,3.8,"Gardening, general, moderate effort",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Miscellaneous,0901060,1.5,"Card playing, sitting",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Occupation,1101060,1.5,"Typing, electric, manual or computer",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Running,1202860,8.5,"Running, 3.6 mph (17 min/mile)",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Running,1207060,15.8,"Running, 7 mph (8.5 min/mile)",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Self Care,1302060,3.0,"Dressing, undressing, standing or sitting",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Self Care,1304060,2.8,"Grooming, washing hands, shaving, brushing teeth, putting on make-up, sitting or standing",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Sports,1528560,4.3,"Golf, walking, pulling clubs",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Sports,1540060,2.8,"Horseback riding, simulated",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Sports,1552560,5.3,"Pickleball, competitive",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Transportation,1606060,4.3,"Walking for transportation, 2.8-3.2 mph, level, moderate pace, firm surface",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1713360,4.0,"Stair climbing, slow pace",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1713460,6.5,"Stair climbing, fast pace",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1713560,2.0,"Ascending stairs, using cane",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1713660,3.0,"Ascending stairs, using standard walker",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1713760,3.3,"Ascending stairs, using wheeled walker",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1715160,3.0,"Walking, less than 1.0 mph, level, strolling, very slow",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1715260,4.0,"Walking, 1.0 to 1.9 mph, level, slow pace, firm surface",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1715360,3.8,"Walking, 2.0 mph, level, slow pace, firm surface",2,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1717060,4.5,"Walking, 2.2 to 2.7 mph, level, firm surface",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1719060,5.3,"Walking, 2.8 to 3.2 mph, level, moderate pace, firm surface",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1720060,6.0,"Walking, 3.3 to 3.7 mph, level, brisk, firm surface, walking for exercise",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1720160,5.5,"Walking, brisk pace, general",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1720960,5.0,"Walking, 1.5 to 2.0 mph, 2.5 to 5% grade",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1722060,7.3,"Walking, 4.0 to 4.2 mph, level, firm surface, very brisk pace",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1723060,9.0,"Walking, 4.5 mph, level, firm surface, very, very brisk",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1726260,4.0,"Walking, leasurly, self-selected pace, general",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1731060,7.0,"Walking, for exercise, with ski poles, Nordic walking,",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1733060,3.5,"Walking, with a cane",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1734060,3.5,"Walking, with standard walker",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Walking,1735060,3.5,"Walking, with wheeled Walker",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Winter Activities,1916060,5.3,"Skiing, downhill, alpine or snowboarding, moderate effort, general, active time only",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Winter Activities,1917060,6.8,"Skiing, downhill, alpine or snowboarding, vigorous effort, general, active time only",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Winter Activities,1925460,8.0,"Snow shoveling, by hand, vigorous effort",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Video Games,2210060,1.8,"Seated, video game, handheld controller (inactive)",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Video Games,2220060,2.8,"Video game, light effort (Wii Fit, yoga, bowling, etc)",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Video Games,2230060,3.5,"Active video game, motion sensing game/using upper body (light to moderate effort)",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Video Games,2240060,5.5,"Active video game, motion sensing game/using total body (moderate effort)",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7
+Video Games,2250060,7.8,"Active video game, motion sensing game/using total body (moderate to vigorous effort)",3,2_2024-older-adult-compendium_1_2024.pdf,older_adult,met60_plus,2.7

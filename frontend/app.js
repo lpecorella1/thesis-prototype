@@ -55,6 +55,76 @@ const WATER_GOAL_MIN = 1;
 const WATER_GOAL_MAX = 15;
 const WATER_GLASS_ML = 200;
 const PHYSICAL_ACTIVITY_MATCH_LIMIT = 4;
+const PHYSICAL_ACTIVITY_COMMON_LABELS = [
+  "Camminata",
+  "Camminata lenta",
+  "Camminata veloce",
+  "Corsa",
+  "Jogging",
+  "Bicicletta",
+  "Cyclette",
+  "Allenamento forza",
+  "Corpo libero",
+  "Circuit training",
+  "Palestra",
+  "Ellittica",
+  "Vogatore",
+  "Kettlebell",
+  "Yoga",
+  "Yoga su sedia",
+  "Tai Chi",
+  "Tai Chi su sedia",
+  "Pilates",
+  "Nuoto",
+  "Danza",
+  "Attività domestica",
+  "Giardinaggio",
+  "Scale",
+  "Calcio",
+  "Basket",
+  "Pickleball",
+];
+const PHYSICAL_ACTIVITY_SEARCH_TRANSLATIONS = {
+  allenamento: ["training"],
+  ballo: ["dancing"],
+  bici: ["bicycling"],
+  bicicletta: ["bicycling"],
+  calcetto: ["soccer"],
+  calcio: ["soccer"],
+  camminare: ["walking"],
+  camminata: ["walking"],
+  casa: ["home"],
+  ciclismo: ["bicycling"],
+  corsa: ["running"],
+  correre: ["running"],
+  danza: ["dancing"],
+  faccende: ["cleaning"],
+  forza: ["resistance"],
+  leggera: ["light"],
+  lento: ["slow"],
+  lenta: ["slow"],
+  moderata: ["moderate"],
+  moderato: ["moderate"],
+  nuotare: ["swimming"],
+  nuoto: ["swimming"],
+  palestra: ["exercise"],
+  passeggiata: ["walking"],
+  pesi: ["resistance"],
+  pilates: ["pilates"],
+  piscina: ["swimming"],
+  pulire: ["cleaning"],
+  pulizie: ["cleaning"],
+  veloce: ["brisk"],
+  vigorosa: ["vigorous"],
+  vigoroso: ["vigorous"],
+  yoga: ["yoga"],
+};
+const physicalActivityCatalogRuntime = {
+  activeKey: "",
+  loadPromise: null,
+  isLoading: false,
+  errorMessage: "",
+};
 
 // Core date and range helpers shared across modules.
 function formatShortDayLabel(value) {
@@ -677,10 +747,373 @@ function normalizePhysicalActivityText(value) {
 function getPhysicalActivitySearchText(activity) {
   return normalizePhysicalActivityText([
     activity?.label,
+    activity?.displayLabel,
     activity?.category,
     activity?.description,
     ...(Array.isArray(activity?.aliases) ? activity.aliases : []),
   ].join(" "));
+}
+
+function getPhysicalActivityQueryTokens(value) {
+  return normalizePhysicalActivityText(value)
+    .split(" ")
+    .filter(Boolean)
+    .flatMap((token) => PHYSICAL_ACTIVITY_SEARCH_TRANSLATIONS[token] || [token]);
+}
+
+function getPhysicalActivityIntensityFromMet(met) {
+  if (met < 3) {
+    return "leggera";
+  }
+
+  if (met < 6) {
+    return "moderata";
+  }
+
+  return "vigorosa";
+}
+
+function buildPhysicalActivityDisplayLabel(description, category) {
+  const text = normalizePhysicalActivityText(description);
+  const normalizedCategory = normalizePhysicalActivityText(category);
+
+  if (text.includes("resistance") || text.includes("weight training") || text.includes("weight lifting")) {
+    return "Allenamento forza";
+  }
+
+  if (text.includes("calisthenics")) {
+    return "Corpo libero";
+  }
+
+  if (text.includes("circuit training")) {
+    return "Circuit training";
+  }
+
+  if (text.includes("elliptical")) {
+    return "Ellittica";
+  }
+
+  if (text.includes("rowing") || text.includes("rower")) {
+    return "Vogatore";
+  }
+
+  if (text.includes("kettle bell") || text.includes("kettlebell")) {
+    return "Kettlebell";
+  }
+
+  if (text.includes("health club")) {
+    return "Palestra";
+  }
+
+  if (text.includes("yoga")) {
+    return text.includes("chair") ? "Yoga su sedia" : "Yoga";
+  }
+
+  if (text.includes("tai chi")) {
+    return text.includes("chair") ? "Tai Chi su sedia" : "Tai Chi";
+  }
+
+  if (text.includes("pilates")) {
+    return "Pilates";
+  }
+
+  if (normalizedCategory.includes("walking") || text.includes("walking")) {
+    if (text.includes("stair") || text.includes("stairs")) {
+      return "Scale";
+    }
+
+    if (text.includes("brisk") || text.includes("very brisk")) {
+      return "Camminata veloce";
+    }
+
+    if (text.includes("slow") || text.includes("strolling")) {
+      return "Camminata lenta";
+    }
+
+    return "Camminata";
+  }
+
+  if (normalizedCategory.includes("running") || text.includes("running") || text.includes("jogging")) {
+    return text.includes("jogging") ? "Jogging" : "Corsa";
+  }
+
+  if (normalizedCategory.includes("bicycling") || text.includes("bicycling") || text.includes("e bike")) {
+    return text.includes("stationary") ? "Cyclette" : "Bicicletta";
+  }
+
+  if (normalizedCategory.includes("water") || text.includes("swimming")) {
+    return "Nuoto";
+  }
+
+  if (normalizedCategory.includes("dancing") || text.includes("dance")) {
+    return "Danza";
+  }
+
+  if (normalizedCategory.includes("home") || text.includes("cleaning")) {
+    return "Attività domestica";
+  }
+
+  if (normalizedCategory.includes("lawn") || text.includes("gardening") || text.includes("garden")) {
+    return "Giardinaggio";
+  }
+
+  if (text.includes("soccer") || text.includes("futsal")) {
+    return "Calcio";
+  }
+
+  if (text.includes("basketball")) {
+    return "Basket";
+  }
+
+  if (text.includes("pickleball")) {
+    return "Pickleball";
+  }
+
+  return String(description || "").split(",")[0].trim() || String(category || "Attività fisica").trim();
+}
+
+function getPhysicalActivityDisplayLabel(activity) {
+  return activity?.displayLabel || activity?.label || "Attività fisica";
+}
+
+function getPhysicalActivityPreferenceScore(activity) {
+  const text = getPhysicalActivitySearchText(activity);
+  let score = 0;
+
+  if (text.includes("general")) score += 4;
+  if (text.includes("multiple exercises")) score += 4;
+  if (text.includes("self selected") || text.includes("self-selected")) score += 3;
+  if (text.includes("moderate")) score += 2;
+  if (text.includes("light")) score += 1;
+  if (text.includes("vigorous")) score -= 2;
+  if (text.includes("competitive")) score -= 3;
+  if (text.includes("racing")) score -= 3;
+  if (text.includes("power lifting") || text.includes("body building")) score -= 4;
+
+  return score;
+}
+
+function parseCsvRows(csvText) {
+  const rows = [];
+  const current = [];
+  let field = "";
+  let isQuoted = false;
+
+  for (let index = 0; index < csvText.length; index += 1) {
+    const char = csvText[index];
+    const nextChar = csvText[index + 1];
+
+    if (char === '"') {
+      if (isQuoted && nextChar === '"') {
+        field += '"';
+        index += 1;
+      } else {
+        isQuoted = !isQuoted;
+      }
+      continue;
+    }
+
+    if (char === "," && !isQuoted) {
+      current.push(field);
+      field = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !isQuoted) {
+      if (char === "\r" && nextChar === "\n") {
+        index += 1;
+      }
+
+      current.push(field);
+      field = "";
+
+      if (current.some((value) => value.trim())) {
+        rows.push(current.splice(0));
+      } else {
+        current.length = 0;
+      }
+      continue;
+    }
+
+    field += char;
+  }
+
+  if (field || current.length > 0) {
+    current.push(field);
+
+    if (current.some((value) => value.trim())) {
+      rows.push(current);
+    }
+  }
+
+  if (rows.length < 2) {
+    return [];
+  }
+
+  const headers = rows[0].map((header) => header.trim());
+  return rows.slice(1).map((row) =>
+    Object.fromEntries(headers.map((header, index) => [header, String(row[index] || "").trim()]))
+  );
+}
+
+function getPhysicalActivityProfileAge() {
+  return normalizeNumber(appState.profile?.personal?.age);
+}
+
+function shouldUseOlderAdultActivityDataset() {
+  const age = getPhysicalActivityProfileAge();
+  const threshold = normalizeNumber(PHYSICAL_ACTIVITY_DATASET_SOURCE.olderAdultAgeThreshold) ?? 60;
+  return age != null && age >= threshold;
+}
+
+function getPhysicalActivityDatasetConfig() {
+  const isOlderAdult = shouldUseOlderAdultActivityDataset();
+
+  if (isOlderAdult) {
+    return {
+      key: "older_adult",
+      label: "Compendium 60+ 2024",
+      csvPath: PHYSICAL_ACTIVITY_DATASET_SOURCE.olderAdultCsvPath,
+      sourceDocument: PHYSICAL_ACTIVITY_DATASET_SOURCE.olderAdultLocalSourceDocument,
+      sourcePage: PHYSICAL_ACTIVITY_DATASET_SOURCE.olderAdultDatasetPage,
+      citation: PHYSICAL_ACTIVITY_DATASET_SOURCE.olderAdultCitation,
+      restingVo2MlKgMin: 2.7,
+    };
+  }
+
+  return {
+    key: "adult",
+    label: "Compendium 2024",
+    csvPath: PHYSICAL_ACTIVITY_DATASET_SOURCE.csvPath,
+    sourceDocument: PHYSICAL_ACTIVITY_DATASET_SOURCE.localSourceDocument,
+    sourcePage: PHYSICAL_ACTIVITY_DATASET_SOURCE.officialDatasetPage,
+    citation: PHYSICAL_ACTIVITY_DATASET_SOURCE.citation,
+    restingVo2MlKgMin: 3.5,
+  };
+}
+
+function buildPhysicalActivityCatalogFromRows(rows, datasetConfig = getPhysicalActivityDatasetConfig()) {
+  return rows
+    .map((row) => {
+      const code = String(row.activity_code || "").trim();
+      const description = String(row.activity_description || "").trim();
+      const met = normalizeNumber(row.met_value);
+      const restingVo2 = normalizeNumber(row.resting_vo2_ml_kg_min) ?? datasetConfig.restingVo2MlKgMin;
+
+      if (!code || !description || met == null || met <= 0) {
+        return null;
+      }
+
+      return {
+        id: `${datasetConfig.key}-${code}`,
+        label: description,
+        displayLabel: buildPhysicalActivityDisplayLabel(description, row.major_heading),
+        aliases: [row.major_heading, description].filter(Boolean),
+        category: String(row.major_heading || "").trim(),
+        compendiumCode: code,
+        met,
+        restingVo2MlKgMin: restingVo2,
+        intensity: getPhysicalActivityIntensityFromMet(met),
+        description,
+        sourcePage: String(row.source_page || "").trim(),
+        sourceDocument: String(row.source_document || datasetConfig.sourceDocument || "").trim(),
+        datasetKey: String(row.population || datasetConfig.key || "").trim(),
+        datasetLabel: datasetConfig.label,
+        datasetSourcePage: datasetConfig.sourcePage,
+        metBasis: String(row.met_basis || "").trim(),
+      };
+    })
+    .filter(Boolean);
+}
+
+function setPhysicalActivityCatalogEntries(entries) {
+  physicalActivityCatalog.splice(0, physicalActivityCatalog.length, ...entries);
+}
+
+function getPhysicalActivityDatasetUrl(datasetConfig = getPhysicalActivityDatasetConfig()) {
+  const csvPath = datasetConfig.csvPath;
+
+  if (!csvPath) {
+    return "";
+  }
+
+  return new URL(csvPath, document.baseURI).toString();
+}
+
+function loadPhysicalActivityCatalog() {
+  const datasetConfig = getPhysicalActivityDatasetConfig();
+
+  if (physicalActivityCatalogRuntime.activeKey === datasetConfig.key && physicalActivityCatalogRuntime.loadPromise) {
+    return physicalActivityCatalogRuntime.loadPromise;
+  }
+
+  const datasetUrl = getPhysicalActivityDatasetUrl(datasetConfig);
+  physicalActivityCatalogRuntime.activeKey = datasetConfig.key;
+  physicalActivityCatalogRuntime.errorMessage = "";
+  physicalActivityCatalogRuntime.isLoading = true;
+
+  if (!datasetUrl || typeof fetch !== "function") {
+    setPhysicalActivityCatalogEntries([]);
+    physicalActivityCatalogRuntime.isLoading = false;
+    physicalActivityCatalogRuntime.errorMessage = "Dataset attività non disponibile.";
+    physicalActivityCatalogRuntime.loadPromise = Promise.resolve(physicalActivityCatalog);
+    return physicalActivityCatalogRuntime.loadPromise;
+  }
+
+  physicalActivityCatalogRuntime.loadPromise = fetch(datasetUrl, { cache: "no-store" })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Dataset attivita fisica non disponibile: ${response.status}`);
+      }
+
+      return response.text();
+    })
+    .then((csvText) => {
+      const catalog = buildPhysicalActivityCatalogFromRows(parseCsvRows(csvText), datasetConfig);
+
+      if (catalog.length === 0) {
+        throw new Error("Dataset attivita fisica vuoto o non valido.");
+      }
+
+      if (physicalActivityCatalogRuntime.activeKey !== datasetConfig.key) {
+        return physicalActivityCatalog;
+      }
+
+      setPhysicalActivityCatalogEntries(catalog);
+      physicalActivityCatalogRuntime.isLoading = false;
+      return physicalActivityCatalog;
+    })
+    .catch((error) => {
+      console.warn("Dataset attivita fisica CSV non disponibile.", error);
+
+      if (physicalActivityCatalogRuntime.activeKey !== datasetConfig.key) {
+        return physicalActivityCatalog;
+      }
+
+      setPhysicalActivityCatalogEntries([]);
+      physicalActivityCatalogRuntime.isLoading = false;
+      physicalActivityCatalogRuntime.errorMessage =
+        "Dataset attività non disponibile. Avvia il prototipo dal server locale per usare le stime automatiche.";
+
+      return physicalActivityCatalog;
+    });
+
+  return physicalActivityCatalogRuntime.loadPromise;
+}
+
+function refreshPhysicalActivityCatalogUi() {
+  renderPhysicalActivityDatalist();
+  renderPhysicalActivityControl();
+}
+
+function ensurePhysicalActivityCatalogForCurrentProfile() {
+  const datasetConfig = getPhysicalActivityDatasetConfig();
+
+  if (physicalActivityCatalogRuntime.activeKey === datasetConfig.key) {
+    return;
+  }
+
+  loadPhysicalActivityCatalog().then(refreshPhysicalActivityCatalogUi);
 }
 
 function findPhysicalActivityCatalogMatch(value) {
@@ -690,21 +1123,18 @@ function findPhysicalActivityCatalogMatch(value) {
     return null;
   }
 
-  const exactMatch = physicalActivityCatalog.find((activity) => {
-    const labels = [activity.label, ...(Array.isArray(activity.aliases) ? activity.aliases : [])];
-    return labels.some((label) => normalizePhysicalActivityText(label) === normalizedValue);
-  });
+  const exactMatch = physicalActivityCatalog
+    .filter((activity) => {
+      const labels = [activity.label, activity.displayLabel, ...(Array.isArray(activity.aliases) ? activity.aliases : [])];
+      return labels.some((label) => normalizePhysicalActivityText(label) === normalizedValue);
+    })
+    .sort((first, second) => getPhysicalActivityPreferenceScore(second) - getPhysicalActivityPreferenceScore(first))[0];
 
   if (exactMatch) {
     return exactMatch;
   }
 
-  const tokens = normalizedValue.split(" ").filter(Boolean);
-
-  return physicalActivityCatalog.find((activity) => {
-    const searchText = getPhysicalActivitySearchText(activity);
-    return tokens.every((token) => searchText.includes(token));
-  }) || null;
+  return getPhysicalActivityMatches(value, 1)[0] || null;
 }
 
 function getPhysicalActivityMatches(value, limit = PHYSICAL_ACTIVITY_MATCH_LIMIT) {
@@ -714,17 +1144,30 @@ function getPhysicalActivityMatches(value, limit = PHYSICAL_ACTIVITY_MATCH_LIMIT
     return physicalActivityCatalog.slice(0, limit);
   }
 
-  const tokens = normalizedValue.split(" ").filter(Boolean);
+  const tokens = getPhysicalActivityQueryTokens(value);
 
   return physicalActivityCatalog
     .map((activity) => {
       const searchText = getPhysicalActivitySearchText(activity);
       const score = tokens.reduce((result, token) => result + (searchText.includes(token) ? 1 : 0), 0);
-      const exactBoost = normalizePhysicalActivityText(activity.label) === normalizedValue ? 4 : 0;
-      return { activity, score: score + exactBoost };
+      const exactBoost = [activity.label, activity.displayLabel].some(
+        (label) => normalizePhysicalActivityText(label) === normalizedValue
+      )
+        ? 4
+        : 0;
+      return { activity, score: score + exactBoost, preferenceScore: getPhysicalActivityPreferenceScore(activity) };
     })
     .filter(({ score }) => score > 0)
-    .sort((first, second) => second.score - first.score || first.activity.label.localeCompare(second.activity.label))
+    .sort(
+      (first, second) =>
+        second.score - first.score ||
+        second.preferenceScore - first.preferenceScore ||
+        getPhysicalActivityDisplayLabel(first.activity).localeCompare(getPhysicalActivityDisplayLabel(second.activity))
+    )
+    .filter(({ activity }, index, entries) => {
+      const label = getPhysicalActivityDisplayLabel(activity);
+      return entries.findIndex((entry) => getPhysicalActivityDisplayLabel(entry.activity) === label) === index;
+    })
     .slice(0, limit)
     .map(({ activity }) => activity);
 }
@@ -737,14 +1180,23 @@ function getActivityEstimationWeight(dateKey) {
 
 function estimatePhysicalActivityCalories(activity, durationMinutes, weightKg) {
   const met = normalizeNumber(activity?.met);
+  const restingVo2 = normalizeNumber(activity?.restingVo2MlKgMin) ?? 3.5;
   const minutes = normalizeNumber(durationMinutes);
   const weight = normalizeNumber(weightKg);
 
-  if (met == null || minutes == null || weight == null || met <= 0 || minutes <= 0 || weight <= 0) {
+  if (
+    met == null ||
+    minutes == null ||
+    weight == null ||
+    met <= 0 ||
+    restingVo2 <= 0 ||
+    minutes <= 0 ||
+    weight <= 0
+  ) {
     return null;
   }
 
-  return Math.max(0, Math.round((met * 3.5 * weight * minutes) / 200));
+  return Math.max(0, Math.round((met * restingVo2 * weight * minutes) / 200));
 }
 
 function normalizePhysicalActivityEntry(entry) {
@@ -761,6 +1213,7 @@ function normalizePhysicalActivityEntry(entry) {
 
   const durationMinutes = normalizeNumber(entry.durationMinutes ?? entry.minutes);
   const met = normalizeNumber(entry.met);
+  const restingVo2 = normalizeNumber(entry.restingVo2MlKgMin);
 
   return {
     id: String(entry.id || crypto.randomUUID()),
@@ -773,6 +1226,12 @@ function normalizePhysicalActivityEntry(entry) {
     intensity: String(entry.intensity || "").trim(),
     source: String(entry.source || "manual").trim(),
     datasetSource: String(entry.datasetSource || "").trim(),
+    datasetKey: String(entry.datasetKey || "").trim(),
+    datasetLabel: String(entry.datasetLabel || "").trim(),
+    sourceDocument: String(entry.sourceDocument || "").trim(),
+    sourcePage: String(entry.sourcePage || "").trim(),
+    metBasis: String(entry.metBasis || "").trim(),
+    restingVo2MlKgMin: restingVo2,
     createdAt: String(entry.createdAt || new Date().toISOString()),
   };
 }
@@ -2003,8 +2462,11 @@ function renderPhysicalActivityDatalist() {
     return;
   }
 
-  datalist.innerHTML = physicalActivityCatalog
-    .map((activity) => `<option value="${escapeHtml(activity.label)}">${escapeHtml(activity.intensity)} · Compendium 2024</option>`)
+  const availableLabels = new Set(physicalActivityCatalog.map(getPhysicalActivityDisplayLabel));
+  const commonOptions = PHYSICAL_ACTIVITY_COMMON_LABELS.filter((label) => availableLabels.has(label));
+  const options = commonOptions.length > 0 ? commonOptions : [...availableLabels];
+  datalist.innerHTML = options
+    .map((label) => `<option value="${escapeHtml(label)}"></option>`)
     .join("");
 }
 
@@ -2027,7 +2489,7 @@ function getPhysicalActivityEstimateContext(form) {
 function renderPhysicalActivitySuggestionButton(activity) {
   return `
     <button class="activity-suggestion-chip" type="button" data-physical-activity-suggestion="${escapeHtml(activity.id)}">
-      ${escapeHtml(activity.label)}
+      ${escapeHtml(getPhysicalActivityDisplayLabel(activity))}
     </button>
   `;
 }
@@ -2042,6 +2504,26 @@ function renderPhysicalActivityEstimate(form = document.querySelector("[data-phy
   const { activityName, durationMinutes, match, weightKg, estimatedCalories } = getPhysicalActivityEstimateContext(form);
   const matches = getPhysicalActivityMatches(activityName);
 
+  if (physicalActivityCatalogRuntime.isLoading && physicalActivityCatalog.length === 0) {
+    estimateBox.innerHTML = `
+      <div class="physical-activity-estimate-empty">
+        <strong>Carico il catalogo attività</strong>
+        <span>Le stime automatiche saranno disponibili tra poco.</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (physicalActivityCatalogRuntime.errorMessage && physicalActivityCatalog.length === 0) {
+    estimateBox.innerHTML = `
+      <div class="physical-activity-estimate-empty">
+        <strong>Catalogo attività non disponibile</strong>
+        <span>${escapeHtml(physicalActivityCatalogRuntime.errorMessage)}</span>
+      </div>
+    `;
+    return;
+  }
+
   if (!activityName && !durationMinutes) {
     estimateBox.innerHTML = `
       <div class="physical-activity-estimate-empty">
@@ -2055,7 +2537,7 @@ function renderPhysicalActivityEstimate(form = document.querySelector("[data-phy
   if (!match) {
     estimateBox.innerHTML = `
       <div class="physical-activity-estimate-empty">
-        <strong>Attività non ancora nel catalogo</strong>
+        <strong>Attività non trovata nel catalogo</strong>
         <span>Puoi salvarla inserendo manualmente le kcal spese.</span>
       </div>
       ${matches.length > 0 ? `<div class="activity-suggestion-row">${matches.map(renderPhysicalActivitySuggestionButton).join("")}</div>` : ""}
@@ -2065,9 +2547,9 @@ function renderPhysicalActivityEstimate(form = document.querySelector("[data-phy
 
   estimateBox.innerHTML = `
     <div class="physical-activity-estimate-main">
-      <span class="activity-source-chip">Compendium 2024</span>
+      <span class="activity-source-chip">Stima automatica</span>
       <strong>${estimatedCalories == null ? "--" : estimatedCalories} kcal</strong>
-      <span>${escapeHtml(match.label)} · attività ${escapeHtml(match.intensity)}${weightKg ? ` · ${escapeHtml(weightKg)} kg` : ""}</span>
+      <span>${escapeHtml(getPhysicalActivityDisplayLabel(match))} · attività ${escapeHtml(match.intensity)}${weightKg ? ` · ${escapeHtml(weightKg)} kg` : ""}</span>
     </div>
     ${
       estimatedCalories == null
@@ -2126,7 +2608,7 @@ function renderPhysicalActivityControl() {
         <article class="physical-activity-item">
           <div>
             <h4>${escapeHtml(activity.name)}</h4>
-            <span>${activity.durationMinutes ? `${escapeHtml(activity.durationMinutes)} min · ` : ""}${escapeHtml(activity.source === "met_estimate" ? `stima ${activity.intensity || "Compendium"}` : "inserimento manuale")}</span>
+            <span>${activity.durationMinutes ? `${escapeHtml(activity.durationMinutes)} min · ` : ""}${escapeHtml(activity.source === "met_estimate" ? "stima automatica" : "inserimento manuale")}</span>
           </div>
           <strong>${escapeHtml(activity.calories)} kcal</strong>
           <button class="delete-btn" type="button" aria-label="Rimuovi attività" data-delete-physical-activity-id="${escapeHtml(activity.id)}">
@@ -2166,7 +2648,7 @@ function buildPhysicalActivityFromForm(form, dateKey) {
 
   return {
     id: crypto.randomUUID(),
-    name: match?.label || activityName,
+    name: match ? getPhysicalActivityDisplayLabel(match) : activityName,
     durationMinutes: durationMinutes == null ? null : Math.max(0, Math.round(durationMinutes)),
     calories: Math.max(0, Math.round(calories)),
     met: match?.met ?? null,
@@ -2174,7 +2656,13 @@ function buildPhysicalActivityFromForm(form, dateKey) {
     category: match?.category || "",
     intensity: match?.intensity || "",
     source: manualCalories == null ? "met_estimate" : "manual",
-    datasetSource: match ? PHYSICAL_ACTIVITY_DATASET_SOURCE.officialDatasetPage : "",
+    datasetSource: match?.datasetSourcePage || "",
+    datasetKey: match?.datasetKey || "",
+    datasetLabel: match?.datasetLabel || "",
+    sourceDocument: match?.sourceDocument || "",
+    sourcePage: match?.sourcePage || "",
+    metBasis: match?.metBasis || "",
+    restingVo2MlKgMin: match?.restingVo2MlKgMin ?? null,
     createdAt: new Date().toISOString(),
     date: dateKey,
     estimationWeightKg: weightKg,
@@ -2281,6 +2769,7 @@ function renderMeals() {
 }
 
 function renderNutrition() {
+  ensurePhysicalActivityCatalogForCurrentProfile();
   renderNutritionSummary();
   renderMeals();
   renderNutritionEditForm();
@@ -2614,7 +3103,7 @@ function setupNutritionSection() {
       return;
     }
 
-    physicalActivityForm.elements.activityName.value = activity.label;
+    physicalActivityForm.elements.activityName.value = getPhysicalActivityDisplayLabel(activity);
     renderPhysicalActivityEstimate(physicalActivityForm);
   });
 
@@ -2826,6 +3315,7 @@ function startNutriTrackCore() {
 
   nutritrackCoreRuntime.started = true;
 
+  loadPhysicalActivityCatalog().then(refreshPhysicalActivityCatalogUi);
   syncNutritionGoalsFromProfile();
   setupBarcodeScanner();
   setupNutritionSection();
