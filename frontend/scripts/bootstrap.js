@@ -19,6 +19,7 @@ const structuredClone =
 
 const tabs = document.querySelectorAll(".tabs [data-tab-target]");
 const panels = document.querySelectorAll("[data-tab-panel]");
+const brandSubtitle = document.querySelector("[data-brand-subtitle]");
 const homeCards = document.querySelectorAll("[data-home-target]");
 const sectionLinks = document.querySelectorAll("[data-section-link-target]");
 const homeButtons = document.querySelectorAll("[data-go-home]");
