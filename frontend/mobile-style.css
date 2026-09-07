@@ -3275,9 +3275,9 @@ textarea {
   gap: 18px;
   overflow: hidden;
   background:
-    linear-gradient(135deg, rgba(238, 245, 255, 0.95), rgba(246, 255, 250, 0.98)),
-    #f8fbff;
-  border-color: #cfe0ff;
+    linear-gradient(135deg, rgba(255, 250, 240, 0.96), rgba(249, 246, 238, 0.98)),
+    #fbf7ef;
+  border-color: #e7dccb;
 }
 
 .physical-activity-head {
@@ -3290,9 +3290,9 @@ textarea {
 .physical-activity-icon {
   display: inline-grid;
   place-items: center;
-  color: #2f6df6;
-  background: #e3edff;
-  border: 1px solid #c7d9ff;
+  color: #8a5a2b;
+  background: #f4eadb;
+  border: 1px solid #dfcfb8;
 }
 
 .physical-activity-icon {
@@ -3330,7 +3330,7 @@ textarea {
   align-items: center;
   padding: 12px 14px;
   border-radius: 16px;
-  border: 1px solid #d8e6fb;
+  border: 1px solid #e4d8c8;
   background: rgba(255, 255, 255, 0.68);
 }
 
@@ -3381,7 +3381,7 @@ textarea {
   gap: 10px;
   padding: 14px;
   border-radius: 16px;
-  border: 1px solid #d8e6fb;
+  border: 1px solid #e4d8c8;
   background: rgba(255, 255, 255, 0.74);
 }
 
@@ -3392,7 +3392,7 @@ textarea {
 }
 
 .physical-activity-estimate-main strong {
-  color: #2f6df6;
+  color: #8a5a2b;
   font-size: 1.35rem;
   line-height: 1;
 }
