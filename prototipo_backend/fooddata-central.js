@@ -44,6 +44,49 @@ const ITALIAN_FOOD_QUERY_MAP = Object.freeze([
   [/formaggio/i, "cheese"],
 ]);
 
+const RAW_FOOD_PATTERNS = Object.freeze([
+  /\braw\b/i,
+  /\buncooked\b/i,
+  /\bunprepared\b/i,
+  /\bcrudo\b/i,
+  /\bcruda\b/i,
+  /\bcrudi\b/i,
+  /\bcrude\b/i,
+]);
+
+const PREPARED_FOOD_PATTERNS = Object.freeze([
+  /\bcooked\b/i,
+  /\bprepared\b/i,
+  /\bboiled\b/i,
+  /\bsteamed\b/i,
+  /\bgrilled\b/i,
+  /\bfried\b/i,
+  /\broasted\b/i,
+  /\bbaked\b/i,
+  /\bcotto\b/i,
+  /\bcotta\b/i,
+  /\bcotti\b/i,
+  /\bcotte\b/i,
+  /\blesso\b/i,
+  /\blessa\b/i,
+  /\bbollito\b/i,
+  /\bbollita\b/i,
+  /\bvapore\b/i,
+  /\bgrigliato\b/i,
+  /\bgrigliata\b/i,
+  /\bfritto\b/i,
+  /\bfritta\b/i,
+  /\barrosto\b/i,
+  /\bforno\b/i,
+]);
+
+const DATA_TYPE_PRIORITY = Object.freeze({
+  Foundation: 8,
+  "SR Legacy": 6,
+  "Survey (FNDDS)": 2,
+  Branded: -4,
+});
+
 function getFoodDataCentralApiKey() {
   return String(process.env.FOODDATA_CENTRAL_API_KEY || process.env.FDC_API_KEY || "").trim();
 }
@@ -65,6 +108,24 @@ function normalizeFoodDataCentralQuery(value) {
 
   const mappedEntry = ITALIAN_FOOD_QUERY_MAP.find(([pattern]) => pattern.test(rawValue));
   return mappedEntry ? mappedEntry[1] : rawValue;
+}
+
+function hasPatternMatch(value, patterns) {
+  return patterns.some((pattern) => pattern.test(String(value || "")));
+}
+
+function getFoodPreparationPreference(value) {
+  const rawValue = String(value || "");
+
+  if (hasPatternMatch(rawValue, RAW_FOOD_PATTERNS)) {
+    return "raw";
+  }
+
+  if (hasPatternMatch(rawValue, PREPARED_FOOD_PATTERNS)) {
+    return "prepared";
+  }
+
+  return "raw";
 }
 
 function toOptionalNumber(value) {
@@ -119,6 +180,45 @@ function normalizeFoodDataCentralFood(food, query) {
   };
 }
 
+function scoreFoodDataCentralFood(food, options = {}) {
+  const description = String(food?.description || "");
+  const dataType = String(food?.dataType || "");
+  let score = DATA_TYPE_PRIORITY[dataType] ?? 0;
+
+  if (options.preparationPreference === "raw") {
+    if (hasPatternMatch(description, RAW_FOOD_PATTERNS)) {
+      score += 30;
+    }
+
+    if (hasPatternMatch(description, PREPARED_FOOD_PATTERNS)) {
+      score -= 24;
+    }
+  }
+
+  if (options.preparationPreference === "prepared") {
+    if (hasPatternMatch(description, PREPARED_FOOD_PATTERNS)) {
+      score += 18;
+    }
+
+    if (hasPatternMatch(description, RAW_FOOD_PATTERNS)) {
+      score -= 12;
+    }
+  }
+
+  return score;
+}
+
+function sortFoodDataCentralFoods(foods = [], options = {}) {
+  return foods
+    .map((food, index) => ({
+      food,
+      index,
+      score: scoreFoodDataCentralFood(food, options),
+    }))
+    .sort((firstFood, secondFood) => secondFood.score - firstFood.score || firstFood.index - secondFood.index)
+    .map((entry) => entry.food);
+}
+
 async function searchFoodDataCentralFoods(query, options = {}) {
   const normalizedQuery = normalizeFoodDataCentralQuery(query);
 
@@ -162,8 +262,11 @@ async function searchFoodDataCentralFoods(query, options = {}) {
 
   const payload = await response.json();
   const foods = Array.isArray(payload.foods) ? payload.foods : [];
+  const sortedFoods = sortFoodDataCentralFoods(foods, {
+    preparationPreference: options.preparationPreference || getFoodPreparationPreference(query),
+  });
 
-  return foods.map((food) => normalizeFoodDataCentralFood(food, normalizedQuery)).filter(Boolean);
+  return sortedFoods.map((food) => normalizeFoodDataCentralFood(food, normalizedQuery)).filter(Boolean);
 }
 
 async function buildFoodDataCentralReferences(queries = [], options = {}) {
@@ -171,19 +274,41 @@ async function buildFoodDataCentralReferences(queries = [], options = {}) {
     return [];
   }
 
-  const uniqueQueries = [...new Set(queries.map(normalizeFoodDataCentralQuery).filter(Boolean))].slice(0, options.maxQueries || 8);
+  const uniqueQueries = [];
+
+  for (const rawQuery of queries) {
+    const normalizedQuery = normalizeFoodDataCentralQuery(rawQuery);
+
+    if (!normalizedQuery || uniqueQueries.some((entry) => entry.normalizedQuery === normalizedQuery)) {
+      continue;
+    }
+
+    uniqueQueries.push({
+      rawQuery,
+      normalizedQuery,
+      preparationPreference: getFoodPreparationPreference(rawQuery),
+    });
+
+    if (uniqueQueries.length >= (options.maxQueries || 8)) {
+      break;
+    }
+  }
+
   const references = [];
 
   for (const query of uniqueQueries) {
     try {
-      const [bestMatch] = await searchFoodDataCentralFoods(query, { limit: options.limitPerQuery || 3 });
+      const [bestMatch] = await searchFoodDataCentralFoods(query.rawQuery, {
+        limit: options.limitPerQuery || 3,
+        preparationPreference: query.preparationPreference,
+      });
 
       if (bestMatch) {
         references.push(bestMatch);
       }
     } catch (error) {
       console.warn("[FoodDataCentral] Lookup fallito.", {
-        query,
+        query: query.normalizedQuery,
         message: error.message,
       });
     }

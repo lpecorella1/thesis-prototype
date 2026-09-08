@@ -4230,6 +4230,16 @@ textarea {
   margin-top: 18px;
 }
 
+.save-feedback-stack {
+  display: grid;
+  align-items: center;
+  justify-items: end;
+}
+
+.save-feedback-stack .save-confirmation {
+  grid-area: 1 / 1;
+}
+
 .save-confirmation {
   display: inline-flex;
   align-items: center;
@@ -4263,6 +4273,15 @@ textarea {
   border-radius: 999px;
   background: rgba(15, 191, 91, 0.16);
   font-size: 0.82rem;
+}
+
+.save-confirmation-error {
+  background: rgba(255, 51, 64, 0.08);
+  color: #c92a35;
+}
+
+.save-confirmation-error .save-confirmation-icon {
+  background: rgba(255, 51, 64, 0.14);
 }
 
 .save-btn {

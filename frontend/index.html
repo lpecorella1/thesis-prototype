@@ -928,7 +928,7 @@
                 <div class="form-grid">
                   <label class="field"><span>Altezza (cm)</span><input type="number" name="heightCm" min="100" max="250" step="1" placeholder="Es. 175" required /></label>
                   <label class="field"><span>Peso attuale (kg)</span><input type="number" name="currentWeightKg" min="20" max="300" step="0.1" placeholder="Es. 74.7" required /></label>
-                  <label class="field"><span>Peso obiettivo (kg)</span><input type="number" name="targetWeightKg" min="20" max="300" step="0.1" placeholder="Es. 70" required /></label>
+                  <label class="field"><span>Peso obiettivo (kg)</span><input type="number" name="targetWeightKg" min="20" max="300" step="0.1" placeholder="Facoltativo" /></label>
                   <label class="field"><span>Livello di attività</span>
                     <select name="activityLevel" required>
                       <option value="">Seleziona</option>
@@ -1025,9 +1025,15 @@
             </article>
 
             <div class="save-row">
-              <span class="save-confirmation" data-profile-save-confirmation aria-live="polite" aria-hidden="true">
-                <span class="save-confirmation-icon" aria-hidden="true">✓</span>
-                <span>Profilo salvato</span>
+              <span class="save-feedback-stack">
+                <span class="save-confirmation" data-profile-save-confirmation aria-live="polite" aria-hidden="true">
+                  <span class="save-confirmation-icon" aria-hidden="true">✓</span>
+                  <span>Profilo salvato</span>
+                </span>
+                <span class="save-confirmation save-confirmation-error" data-profile-save-error aria-live="polite" aria-hidden="true">
+                  <span class="save-confirmation-icon" aria-hidden="true">×</span>
+                  <span>Completa dati richiesti</span>
+                </span>
               </span>
               <button class="primary-btn primary-btn-blue save-btn" type="button" data-profile-save-button>Salva</button>
             </div>
@@ -1059,9 +1065,15 @@
                 <label class="field"><span>Acqua (bicchieri)</span><input type="number" name="goalWater" min="0" step="1" required /></label>
               </div>
               <div class="save-row" data-daily-goals-save-row>
-                <span class="save-confirmation" data-goals-save-confirmation aria-live="polite" aria-hidden="true">
-                  <span class="save-confirmation-icon" aria-hidden="true">✓</span>
-                  <span>Obiettivi salvati</span>
+                <span class="save-feedback-stack">
+                  <span class="save-confirmation" data-goals-save-confirmation aria-live="polite" aria-hidden="true">
+                    <span class="save-confirmation-icon" aria-hidden="true">✓</span>
+                    <span>Obiettivi salvati</span>
+                  </span>
+                  <span class="save-confirmation save-confirmation-error" data-goals-save-error aria-live="polite" aria-hidden="true">
+                    <span class="save-confirmation-icon" aria-hidden="true">×</span>
+                    <span>Completa dati richiesti</span>
+                  </span>
                 </span>
                 <button class="primary-btn primary-btn-blue save-btn" type="button" data-goals-save-button>Salva</button>
               </div>

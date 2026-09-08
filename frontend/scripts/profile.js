@@ -384,7 +384,9 @@ function toggleHealthFocusField(primaryObjective) {
 }
 
 let profileSaveConfirmationTimeoutId = null;
+let profileSaveErrorTimeoutId = null;
 let goalsSaveConfirmationTimeoutId = null;
+let goalsSaveErrorTimeoutId = null;
 
 function showSaveConfirmation(selector, timeoutKey) {
   document.querySelectorAll(selector).forEach((element) => {
@@ -405,7 +407,27 @@ function showSaveConfirmation(selector, timeoutKey) {
   }, 2600);
 }
 
+function hideSaveConfirmation(selector, timeoutKey) {
+  document.querySelectorAll(selector).forEach((element) => {
+    element.classList.remove("is-visible");
+    element.setAttribute("aria-hidden", "true");
+  });
+
+  if (timeoutKey.id) {
+    clearTimeout(timeoutKey.id);
+    timeoutKey.id = null;
+  }
+}
+
 function showProfileSaveConfirmation() {
+  hideSaveConfirmation("[data-profile-save-error]", {
+    get id() {
+      return profileSaveErrorTimeoutId;
+    },
+    set id(value) {
+      profileSaveErrorTimeoutId = value;
+    },
+  });
   showSaveConfirmation("[data-profile-save-confirmation]", {
     get id() {
       return profileSaveConfirmationTimeoutId;
@@ -416,13 +438,59 @@ function showProfileSaveConfirmation() {
   });
 }
 
+function showProfileSaveError() {
+  hideSaveConfirmation("[data-profile-save-confirmation]", {
+    get id() {
+      return profileSaveConfirmationTimeoutId;
+    },
+    set id(value) {
+      profileSaveConfirmationTimeoutId = value;
+    },
+  });
+  showSaveConfirmation("[data-profile-save-error]", {
+    get id() {
+      return profileSaveErrorTimeoutId;
+    },
+    set id(value) {
+      profileSaveErrorTimeoutId = value;
+    },
+  });
+}
+
 function showGoalsSaveConfirmation() {
+  hideSaveConfirmation("[data-goals-save-error]", {
+    get id() {
+      return goalsSaveErrorTimeoutId;
+    },
+    set id(value) {
+      goalsSaveErrorTimeoutId = value;
+    },
+  });
   showSaveConfirmation("[data-goals-save-confirmation]", {
     get id() {
       return goalsSaveConfirmationTimeoutId;
     },
     set id(value) {
       goalsSaveConfirmationTimeoutId = value;
+    },
+  });
+}
+
+function showGoalsSaveError() {
+  hideSaveConfirmation("[data-goals-save-confirmation]", {
+    get id() {
+      return goalsSaveConfirmationTimeoutId;
+    },
+    set id(value) {
+      goalsSaveConfirmationTimeoutId = value;
+    },
+  });
+  showSaveConfirmation("[data-goals-save-error]", {
+    get id() {
+      return goalsSaveErrorTimeoutId;
+    },
+    set id(value) {
+      goalsSaveErrorTimeoutId = value;
     },
   });
 }
@@ -652,7 +720,6 @@ function setupProfileSection() {
       form.elements.age,
       form.elements.heightCm,
       form.elements.currentWeightKg,
-      form.elements.targetWeightKg,
       form.elements.activityLevel,
     ];
 
@@ -661,6 +728,7 @@ function setupProfileSection() {
     }
 
     if (!validateControlGroup(controls)) {
+      showProfileSaveError();
       return false;
     }
 
@@ -696,6 +764,7 @@ function setupProfileSection() {
     ];
 
     if (!validateControlGroup(controls)) {
+      showGoalsSaveError();
       return false;
     }
 
@@ -708,9 +777,8 @@ function setupProfileSection() {
     };
     syncNutritionGoalsFromProfile();
     saveState();
-    renderProfile();
     renderNutrition();
-    resetFormValidationState(form);
+    controls.forEach((control) => updateControlValidationState(control, false));
     showGoalsSaveConfirmation();
     return true;
   };
