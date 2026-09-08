@@ -5427,7 +5427,53 @@ textarea {
   }
 
   .pantry-item-menu {
-    min-width: 164px;
+    min-width: 142px;
+    padding: 4px;
+    border-radius: 10px;
+  }
+
+  .pantry-item-menu button {
+    min-height: 28px;
+    padding: 0 8px;
+    border-radius: 7px;
+    font-size: 0.66rem;
+    line-height: 1.1;
+  }
+
+  .pantry-item-edit-form {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    padding: 8px;
+    border-radius: 10px;
+  }
+
+  .pantry-item-edit-form label {
+    gap: 4px;
+  }
+
+  .pantry-item-edit-form label span {
+    font-size: 0.58rem;
+    line-height: 1.1;
+  }
+
+  .pantry-item-edit-form input {
+    min-height: 30px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-size: 0.68rem;
+  }
+
+  .pantry-item-edit-actions {
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  .pantry-item-edit-actions .primary-btn,
+  .pantry-item-edit-actions .soft-btn {
+    min-height: 30px;
+    padding: 0 9px;
+    border-radius: 8px;
+    font-size: 0.64rem;
   }
 
   .pantry-item strong,
