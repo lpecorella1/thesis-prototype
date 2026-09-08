@@ -3102,13 +3102,160 @@ textarea {
   font-weight: 700;
 }
 
+.pantry-expiry-action {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #2f7d55;
+  font: inherit;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
 .pantry-item small,
 .empty-pantry p {
   color: var(--text-muted);
 }
 
 .pantry-delete-btn {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
   justify-self: end;
+}
+
+.pantry-item-actions {
+  position: relative;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  justify-self: end;
+}
+
+.pantry-item-menu-wrap {
+  position: relative;
+  display: inline-flex;
+  height: 24px;
+  align-items: center;
+}
+
+.pantry-item-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #5a6678;
+  cursor: pointer;
+}
+
+.pantry-item-menu-btn span {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.pantry-item-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 12;
+  display: grid;
+  min-width: 178px;
+  padding: 6px;
+  border: 1px solid #d9e1ec;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(31, 45, 61, 0.16);
+}
+
+.pantry-item-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pantry-item-menu button:hover {
+  background: #f3f7f5;
+}
+
+.pantry-item-edit-form {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid #cfe4d8;
+  border-radius: 12px;
+  background: #f8fcf9;
+}
+
+.pantry-item-edit-form label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+}
+
+.pantry-item-edit-form label span {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pantry-item-edit-form input {
+  width: 100%;
+  min-height: 38px;
+  padding: 9px 10px;
+  border: 1px solid #d7e2ec;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.pantry-item-edit-form input:focus {
+  border-color: #5ebc83;
+  box-shadow: 0 0 0 3px rgba(94, 188, 131, 0.14);
+  outline: none;
+}
+
+.pantry-item-edit-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.pantry-item-edit-actions .primary-btn,
+.pantry-item-edit-actions .soft-btn {
+  min-height: 38px;
+  padding: 0 12px;
+  font-size: 0.78rem;
 }
 
 /* Progress: cards, forms and charts */
@@ -5243,7 +5390,7 @@ textarea {
   .pantry-item {
     grid-template-columns: minmax(0, 1fr) auto auto;
     grid-template-areas:
-      "name delete delete"
+      "name actions actions"
       "quantity quantity category";
     gap: 3px 8px;
     padding: 6px 8px;
@@ -5265,14 +5412,22 @@ textarea {
     max-width: 100%;
   }
 
-  .pantry-delete-btn {
-    grid-area: delete;
+  .pantry-item-actions {
+    grid-area: actions;
+  }
+
+  .pantry-delete-btn,
+  .pantry-item-menu-btn {
     width: 24px;
     height: 24px;
     min-height: 24px;
     padding: 0;
     justify-self: end;
     align-self: start;
+  }
+
+  .pantry-item-menu {
+    min-width: 164px;
   }
 
   .pantry-item strong,

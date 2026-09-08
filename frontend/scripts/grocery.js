@@ -3,7 +3,7 @@ function upsertPantryItemFromGrocery(item) {
     id: item.id,
     name: item.name,
     quantity: item.quantity,
-    expiryDate: item.expiryDate || "",
+    expiryDate: normalizePantryExpiryDate(item.expiryDate),
     category: item.category,
     barcode: item.barcode || "",
     source: item.source || "manual",
@@ -24,6 +24,62 @@ function upsertPantryItemFromGrocery(item) {
 
 function removePantryItem(groceryItemId) {
   appState.grocery.pantry = appState.grocery.pantry.filter((item) => item.id !== groceryItemId);
+}
+
+function getPantryItemById(itemId) {
+  return appState.grocery.pantry.find((item) => item.id === itemId) || null;
+}
+
+function closePantryItemControls() {
+  pantryListRuntime.activeMenuItemId = "";
+  pantryListRuntime.activeEditItemId = "";
+  pantryListRuntime.activeEditField = "";
+}
+
+function togglePantryItemMenu(itemId) {
+  pantryListRuntime.activeEditItemId = "";
+  pantryListRuntime.activeEditField = "";
+  pantryListRuntime.activeMenuItemId = pantryListRuntime.activeMenuItemId === itemId ? "" : itemId;
+}
+
+function openPantryItemEditor(itemId, fieldName) {
+  pantryListRuntime.activeMenuItemId = "";
+  pantryListRuntime.activeEditItemId = itemId;
+  pantryListRuntime.activeEditField = fieldName;
+}
+
+function normalizePantryExpiryDate(value) {
+  const expiryDate = String(value || "").trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryDate) || expiryDate === "1970-01-01") {
+    return "";
+  }
+
+  return expiryDate;
+}
+
+function savePantryItemEditForm(editForm) {
+  const item = getPantryItemById(editForm?.dataset.pantryEditId);
+  const fieldName = editForm?.dataset.pantryEditField;
+
+  if (!item || !["expiryDate", "quantity"].includes(fieldName)) {
+    closePantryItemControls();
+    renderPantry();
+    return;
+  }
+
+  const rawNextValue = String(new FormData(editForm).get(fieldName) || "").trim();
+  const nextValue = fieldName === "expiryDate" ? normalizePantryExpiryDate(rawNextValue) : rawNextValue;
+
+  if (fieldName === "quantity" && !nextValue) {
+    return;
+  }
+
+  item[fieldName] = nextValue;
+  closePantryItemControls();
+  appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
+  saveState();
+  renderGrocery();
 }
 
 const PANTRY_IMPORT_SOURCE_LABELS = {
@@ -51,6 +107,9 @@ const pantryImportRuntime = {
 
 const pantryListRuntime = {
   isExpanded: false,
+  activeMenuItemId: "",
+  activeEditItemId: "",
+  activeEditField: "",
 };
 
 const groceryListGenerationRuntime = {
@@ -66,7 +125,7 @@ function normalizePantryImportItem(item) {
   return {
     name: String(item?.name || "").trim(),
     quantity: String(item?.quantity || "1 confezione").trim(),
-    expiryDate: String(item?.expiryDate || "").trim(),
+    expiryDate: normalizePantryExpiryDate(item?.expiryDate),
     category: normalizePantryImportCategory(item?.category),
     barcode: sanitizeBarcode(item?.barcode),
     confidence: Number.isFinite(Number(item?.confidence)) ? Math.max(0, Math.min(1, Number(item.confidence))) : null,
@@ -253,7 +312,7 @@ function normalizeGeneratedGroceryListItem(item) {
     id: crypto.randomUUID(),
     name: String(item?.name || "").trim(),
     quantity: String(item?.quantity || "1 confezione").trim(),
-    expiryDate: String(item?.expiryDate || "").trim(),
+    expiryDate: normalizePantryExpiryDate(item?.expiryDate),
     category: normalizePantryImportCategory(item?.category),
     completed: false,
     barcode: sanitizeBarcode(item?.barcode),
@@ -341,7 +400,7 @@ function addPantryImportDraftToPantry(items) {
       id: crypto.randomUUID(),
       name: item.name,
       quantity: item.quantity,
-      expiryDate: item.expiryDate,
+      expiryDate: normalizePantryExpiryDate(item.expiryDate),
       category: item.category,
       barcode: item.barcode,
       source: "ai-image",
@@ -514,16 +573,67 @@ function renderPantry() {
     <div class="pantry-list-body">
       ${visiblePantryItems
         .map(
-          (item) => `
-            <article class="pantry-item">
+          (item) => {
+            const expiryDate = normalizePantryExpiryDate(item.expiryDate);
+
+            return `
+            <article class="pantry-item" data-pantry-item-id="${escapeHtml(item.id)}">
               <strong>${escapeHtml(item.name)}</strong>
-              <span>${escapeHtml(item.quantity)}${item.expiryDate ? ` • Scad. ${escapeHtml(formatExpiryDate(item.expiryDate))}` : ""}</span>
+              <span>
+                ${escapeHtml(item.quantity)}
+                ${
+                  expiryDate
+                    ? ` • Scad. ${escapeHtml(formatExpiryDate(expiryDate))}`
+                    : ` • <button class="pantry-expiry-action" type="button" data-pantry-edit-id="${escapeHtml(item.id)}" data-pantry-edit-field="expiryDate">Aggiungi scadenza</button>`
+                }
+              </span>
               <small>${escapeHtml(item.category)}</small>
-              <button class="delete-btn pantry-delete-btn" type="button" aria-label="Rimuovi ${escapeHtml(item.name)} dalla dispensa" data-pantry-delete-id="${item.id}">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
-              </button>
+              <div class="pantry-item-actions">
+                <div class="pantry-item-menu-wrap">
+                  <button class="pantry-item-menu-btn" type="button" aria-label="Opzioni per ${escapeHtml(item.name)}" aria-haspopup="menu" aria-expanded="${pantryListRuntime.activeMenuItemId === item.id}" data-pantry-menu-toggle="${escapeHtml(item.id)}">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </button>
+                  ${
+                    pantryListRuntime.activeMenuItemId === item.id
+                      ? `
+                        <div class="pantry-item-menu" role="menu">
+                          <button type="button" role="menuitem" data-pantry-edit-id="${escapeHtml(item.id)}" data-pantry-edit-field="expiryDate">${expiryDate ? "Modifica scadenza" : "Inserisci scadenza"}</button>
+                          <button type="button" role="menuitem" data-pantry-edit-id="${escapeHtml(item.id)}" data-pantry-edit-field="quantity">Modifica quantità</button>
+                        </div>
+                      `
+                      : ""
+                  }
+                </div>
+                <button class="delete-btn pantry-delete-btn" type="button" aria-label="Rimuovi ${escapeHtml(item.name)} dalla dispensa" data-pantry-delete-id="${escapeHtml(item.id)}">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6m-9 3h12m-1 0-.63 10.14A2 2 0 0 1 14.37 19H9.63a2 2 0 0 1-1.99-1.86L7 7m3 4v4m4-4v4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" /></svg>
+                </button>
+              </div>
+              ${
+                pantryListRuntime.activeEditItemId === item.id
+                  ? `
+                    <form class="pantry-item-edit-form" data-pantry-item-edit-form data-pantry-edit-id="${escapeHtml(item.id)}" data-pantry-edit-field="${escapeHtml(pantryListRuntime.activeEditField)}" novalidate>
+                      <label>
+                        <span>${pantryListRuntime.activeEditField === "expiryDate" ? "Scadenza" : "Quantità"}</span>
+                        <input
+                          type="${pantryListRuntime.activeEditField === "expiryDate" ? "date" : "text"}"
+                          name="${escapeHtml(pantryListRuntime.activeEditField)}"
+                          value="${escapeHtml(pantryListRuntime.activeEditField === "expiryDate" ? expiryDate : item.quantity || "")}"
+                          ${pantryListRuntime.activeEditField === "quantity" ? "required" : ""}
+                        />
+                      </label>
+                      <div class="pantry-item-edit-actions">
+                        <button class="primary-btn primary-btn-green" type="submit">Salva</button>
+                        <button class="soft-btn" type="button" data-pantry-edit-cancel>Annulla</button>
+                      </div>
+                    </form>
+                  `
+                  : ""
+              }
             </article>
-          `
+          `;
+          }
         )
         .join("")}
     </div>
@@ -828,7 +938,7 @@ function setupGrocerySection() {
       id: crypto.randomUUID(),
       name: String(formData.get("name") || "").trim(),
       quantity: String(formData.get("quantity") || "").trim(),
-      expiryDate: String(formData.get("expiryDate") || "").trim(),
+      expiryDate: normalizePantryExpiryDate(formData.get("expiryDate")),
       category: String(formData.get("category") || "").trim(),
       completed: false,
       barcode: sanitizeBarcode(formData.get("barcode")),
@@ -846,7 +956,7 @@ function setupGrocerySection() {
       id: item.id,
       name: item.name,
       quantity: item.quantity,
-      expiryDate: item.expiryDate,
+      expiryDate: normalizePantryExpiryDate(item.expiryDate),
       category: item.category,
       barcode: item.barcode,
       source: item.source,
@@ -949,7 +1059,42 @@ function setupGrocerySection() {
 
     if (expandButton) {
       pantryListRuntime.isExpanded = !pantryListRuntime.isExpanded;
+      closePantryItemControls();
       renderPantry();
+      return;
+    }
+
+    const menuToggle = event.target.closest("[data-pantry-menu-toggle]");
+
+    if (menuToggle) {
+      event.stopPropagation();
+      togglePantryItemMenu(menuToggle.dataset.pantryMenuToggle);
+      renderPantry();
+      return;
+    }
+
+    const editButton = event.target.closest("button[data-pantry-edit-id][data-pantry-edit-field]");
+
+    if (editButton) {
+      event.stopPropagation();
+      openPantryItemEditor(editButton.dataset.pantryEditId, editButton.dataset.pantryEditField);
+      renderPantry();
+      return;
+    }
+
+    const editCancelButton = event.target.closest("[data-pantry-edit-cancel]");
+
+    if (editCancelButton) {
+      closePantryItemControls();
+      renderPantry();
+      return;
+    }
+
+    const editSubmitButton = event.target.closest("[data-pantry-item-edit-form] button[type='submit']");
+
+    if (editSubmitButton) {
+      event.preventDefault();
+      savePantryItemEditForm(editSubmitButton.closest("[data-pantry-item-edit-form]"));
       return;
     }
 
@@ -963,8 +1108,20 @@ function setupGrocerySection() {
     if (appState.grocery.pantry.length <= 5) {
       pantryListRuntime.isExpanded = false;
     }
+    closePantryItemControls();
     saveState();
     renderPantry();
+  });
+
+  pantryList.addEventListener("submit", (event) => {
+    const editForm = event.target.closest("[data-pantry-item-edit-form]");
+
+    if (!editForm) {
+      return;
+    }
+
+    event.preventDefault();
+    savePantryItemEditForm(editForm);
   });
 
   arToggleButton.addEventListener("click", async () => {
@@ -1041,6 +1198,13 @@ function setupGrocerySection() {
 
     if (regenerateButton && pantryImportRuntime.lastFile) {
       importPantryImageFile(pantryImportRuntime.lastFile, pantryImportRuntime.sourceType || "photo");
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("[data-pantry-list]") && pantryListRuntime.activeMenuItemId) {
+      pantryListRuntime.activeMenuItemId = "";
+      renderPantry();
     }
   });
 

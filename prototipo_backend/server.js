@@ -1999,6 +1999,16 @@ function normalizePantryImportConfidence(value) {
   return Math.max(0, Math.min(1, confidence));
 }
 
+function normalizeGroceryExpiryDate(value) {
+  const expiryDate = String(value || "").trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(expiryDate) || expiryDate === "1970-01-01") {
+    return "";
+  }
+
+  return expiryDate;
+}
+
 function normalizePantryImportItems(payload) {
   const rawItems = Array.isArray(payload?.items) ? payload.items : [];
 
@@ -2007,7 +2017,7 @@ function normalizePantryImportItems(payload) {
       name: String(item?.name || "").trim(),
       quantity: String(item?.quantity || "1 confezione").trim() || "1 confezione",
       category: normalizePantryImportCategory(item?.category),
-      expiryDate: /^\d{4}-\d{2}-\d{2}$/.test(String(item?.expiryDate || "")) ? String(item.expiryDate) : "",
+      expiryDate: normalizeGroceryExpiryDate(item?.expiryDate),
       barcode: sanitizeBarcode(item?.barcode),
       confidence: normalizePantryImportConfidence(item?.confidence),
     }))
@@ -2023,7 +2033,7 @@ function normalizeGeneratedGroceryListItems(payload) {
       name: String(item?.name || "").trim(),
       quantity: String(item?.quantity || "1 confezione").trim() || "1 confezione",
       category: normalizePantryImportCategory(item?.category),
-      expiryDate: /^\d{4}-\d{2}-\d{2}$/.test(String(item?.expiryDate || "")) ? String(item.expiryDate) : "",
+      expiryDate: normalizeGroceryExpiryDate(item?.expiryDate),
       barcode: sanitizeBarcode(item?.barcode),
       reason: String(item?.reason || "").trim(),
     }))
