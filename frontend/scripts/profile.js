@@ -42,6 +42,20 @@ function getActivityLabel(level) {
   return labels[level] || labels.moderate;
 }
 
+function getObjectiveLabel(objective) {
+  const labels = {
+    "weight-loss": "perdita di peso",
+    "weight-maintenance": "mantenimento del peso",
+    "weight-gain": "aumento di peso",
+    "eat-better": "miglioramento della qualita alimentare",
+    "muscle-gain": "aumento della massa muscolare",
+    "energy-wellbeing": "energia e benessere",
+    "health-support": "supporto a un'esigenza di salute",
+  };
+
+  return labels[objective] || "";
+}
+
 const profileMetricRanges = {
   age: { min: 1, max: 120 },
   heightCm: { min: 100, max: 250 },
@@ -523,11 +537,72 @@ function validateControlGroup(controls) {
   return isValid;
 }
 
-function calculateProfileRecommendations(personal) {
+function resolveProfileCalorieStrategy(personal, goals = {}) {
+  const currentWeightKg = normalizeNumber(personal.currentWeightKg);
+  const targetWeightKg = normalizeNumber(personal.targetWeightKg);
+  const primaryObjective = String(goals.primaryObjective || "").trim();
+  const hasValidTargetWeight = isProfileMetricInRange(targetWeightKg, profileMetricRanges.weightKg);
+
+  if (primaryObjective === "weight-loss") {
+    return {
+      type: "loss",
+      calorieDelta: -500,
+      note: "Deficit moderato per supportare la perdita di peso.",
+    };
+  }
+
+  if (primaryObjective === "weight-gain") {
+    return {
+      type: "gain",
+      calorieDelta: 300,
+      note: "Surplus moderato per supportare l'aumento di peso.",
+    };
+  }
+
+  if (primaryObjective === "muscle-gain") {
+    return {
+      type: "muscle-gain",
+      calorieDelta: 250,
+      proteinMultiplier: 2.2,
+      note: "Surplus controllato e quota proteica piu alta per supportare massa muscolare.",
+    };
+  }
+
+  if (primaryObjective === "weight-maintenance") {
+    return {
+      type: "maintenance",
+      calorieDelta: 0,
+      note: "Target di mantenimento basato sull'obiettivo scelto.",
+    };
+  }
+
+  if (hasValidTargetWeight && targetWeightKg < currentWeightKg) {
+    return {
+      type: "loss",
+      calorieDelta: -500,
+      note: "Deficit moderato stimato dal peso obiettivo inserito.",
+    };
+  }
+
+  if (hasValidTargetWeight && targetWeightKg > currentWeightKg) {
+    return {
+      type: "gain",
+      calorieDelta: 300,
+      note: "Surplus moderato stimato dal peso obiettivo inserito.",
+    };
+  }
+
+  return {
+    type: "maintenance",
+    calorieDelta: 0,
+    note: "Target di mantenimento basato sul tuo profilo.",
+  };
+}
+
+function calculateProfileRecommendations(personal, goals = {}) {
   const age = normalizeNumber(personal.age);
   const heightCm = normalizeNumber(personal.heightCm);
   const currentWeightKg = normalizeNumber(personal.currentWeightKg);
-  const targetWeightKg = normalizeNumber(personal.targetWeightKg);
   const gender = personal.gender || "male";
 
   if (
@@ -553,21 +628,14 @@ function calculateProfileRecommendations(personal) {
     (gender === "female" ? -161 : gender === "male" ? 5 : -78);
   const tdee = Math.round(bmrBase * getActivityMultiplier(personal.activityLevel));
 
-  let recommendedCalories = tdee;
-  let calorieNote = "Target di mantenimento basato sul tuo profilo.";
-  const hasValidTargetWeight = isProfileMetricInRange(targetWeightKg, profileMetricRanges.weightKg);
-
-  if (hasValidTargetWeight && targetWeightKg < currentWeightKg) {
-    recommendedCalories = Math.round(tdee - 500);
-    calorieNote = "Deficit moderato per supportare la perdita di peso.";
-  } else if (hasValidTargetWeight && targetWeightKg > currentWeightKg) {
-    recommendedCalories = Math.round(tdee + 250);
-    calorieNote = "Surplus moderato per supportare l'aumento di peso.";
-  }
-
-  const protein = Math.round(currentWeightKg * 2);
+  const calorieStrategy = resolveProfileCalorieStrategy(personal, goals);
+  const minimumCalories = gender === "female" ? 1200 : 1500;
+  const recommendedCalories = Math.max(minimumCalories, Math.round(tdee + calorieStrategy.calorieDelta));
+  const proteinMultiplier = calorieStrategy.proteinMultiplier || (calorieStrategy.type === "loss" ? 2.1 : 2);
+  const protein = Math.round(currentWeightKg * proteinMultiplier);
   const fats = Math.round((recommendedCalories * 0.25) / 9);
   const carbs = Math.max(0, Math.round((recommendedCalories - protein * 4 - fats * 9) / 4));
+  const objectiveLabel = getObjectiveLabel(goals.primaryObjective);
 
   return {
     tdee,
@@ -575,8 +643,10 @@ function calculateProfileRecommendations(personal) {
     protein,
     carbs,
     fats,
-    note: `Basato su un livello di attivita ${getActivityLabel(personal.activityLevel)}.`,
-    calorieNote,
+    note: objectiveLabel
+      ? `Basato su profilo, attivita ${getActivityLabel(personal.activityLevel)} e obiettivo: ${objectiveLabel}.`
+      : `Basato su un livello di attivita ${getActivityLabel(personal.activityLevel)}.`,
+    calorieNote: calorieStrategy.note,
   };
 }
 
@@ -636,7 +706,7 @@ function renderProfile() {
   const bmiDisplay = document.querySelector("[data-bmi-display]");
   renderBmiDisplayValue(bmiDisplay, bmi);
 
-  const recommendations = calculateProfileRecommendations(personal);
+  const recommendations = calculateProfileRecommendations(personal, goals);
 
   const recommendationMap = {
     tdee: recommendations.tdee ? `${recommendations.tdee} kcal` : "--",
@@ -714,6 +784,57 @@ function setupProfileSection() {
     water: normalizeNumber(form.elements.goalWater.value),
   });
 
+  const buildDraftPersonalForRecommendations = () => ({
+    ...appState.profile.personal,
+    age: form.elements.age.value,
+    gender: form.elements.gender.value,
+    heightCm: form.elements.heightCm.value,
+    currentWeightKg: form.elements.currentWeightKg.value,
+    targetWeightKg: form.elements.targetWeightKg.value,
+    activityLevel: form.elements.activityLevel.value,
+  });
+
+  const buildDraftGoalsForRecommendations = () => ({
+    ...appState.profile.goals,
+    primaryObjective: form.elements.primaryObjective.value,
+    secondaryObjective: form.elements.secondaryObjective.value,
+    healthFocus: String(form.elements.healthFocus.value || "").trim(),
+  });
+
+  const renderDraftProfileRecommendations = () => {
+    const recommendations = calculateProfileRecommendations(
+      buildDraftPersonalForRecommendations(),
+      buildDraftGoalsForRecommendations()
+    );
+
+    const recommendationMap = {
+      tdee: recommendations.tdee ? `${recommendations.tdee} kcal` : "--",
+      calories: recommendations.calories ? `${recommendations.calories} kcal` : "--",
+      protein: recommendations.protein ? `${recommendations.protein}g` : "--",
+      carbs: recommendations.carbs ? `${recommendations.carbs}g` : "--",
+      fats: recommendations.fats ? `${recommendations.fats}g` : "--",
+    };
+
+    Object.entries(recommendationMap).forEach(([key, value]) => {
+      const element = document.querySelector(`[data-profile-recommendation="${key}"]`);
+
+      if (element) {
+        element.textContent = value;
+      }
+    });
+
+    const note = document.querySelector("[data-profile-recommendation-note]");
+    const calorieNote = document.querySelector("[data-profile-goal-note]");
+
+    if (note) {
+      note.textContent = recommendations.note;
+    }
+
+    if (calorieNote) {
+      calorieNote.textContent = recommendations.calorieNote;
+    }
+  };
+
   const submitProfileDetails = () => {
     const controls = [
       form.elements.fullName,
@@ -781,6 +902,16 @@ function setupProfileSection() {
     controls.forEach((control) => updateControlValidationState(control, false));
     showGoalsSaveConfirmation();
     return true;
+  };
+
+  const persistDraftProfileObjectives = () => {
+    appState.profile = {
+      ...appState.profile,
+      goals: {
+        ...appState.profile.goals,
+        ...buildDraftGoalsForRecommendations(),
+      },
+    };
   };
 
   const submitFullProfile = () => {
@@ -1051,69 +1182,39 @@ function setupProfileSection() {
   });
 
   form.addEventListener("input", (event) => {
-    const relevantFields = ["age", "gender", "heightCm", "currentWeightKg", "targetWeightKg", "activityLevel"];
+    const relevantFields = [
+      "age",
+      "gender",
+      "heightCm",
+      "currentWeightKg",
+      "targetWeightKg",
+      "activityLevel",
+      "primaryObjective",
+      "secondaryObjective",
+      "healthFocus",
+    ];
 
     if (relevantFields.includes(event.target.name)) {
-      const draftPersonal = {
-        ...appState.profile.personal,
-        age: form.elements.age.value,
-        gender: form.elements.gender.value,
-        heightCm: form.elements.heightCm.value,
-        currentWeightKg: form.elements.currentWeightKg.value,
-        targetWeightKg: form.elements.targetWeightKg.value,
-        activityLevel: form.elements.activityLevel.value,
-      };
+      const draftPersonal = buildDraftPersonalForRecommendations();
 
       const bmi = calculateBmi(normalizeNumber(draftPersonal.heightCm), normalizeNumber(draftPersonal.currentWeightKg));
       const bmiDisplay = document.querySelector("[data-bmi-display]");
       renderBmiDisplayValue(bmiDisplay, bmi);
-
-      const recommendations = calculateProfileRecommendations(draftPersonal);
-
-      const recommendationMap = {
-        tdee: recommendations.tdee ? `${recommendations.tdee} kcal` : "--",
-        calories: recommendations.calories ? `${recommendations.calories} kcal` : "--",
-        protein: recommendations.protein ? `${recommendations.protein}g` : "--",
-        carbs: recommendations.carbs ? `${recommendations.carbs}g` : "--",
-        fats: recommendations.fats ? `${recommendations.fats}g` : "--",
-      };
-
-      Object.entries(recommendationMap).forEach(([key, value]) => {
-        const element = document.querySelector(`[data-profile-recommendation="${key}"]`);
-
-        if (element) {
-          element.textContent = value;
-        }
-      });
-
-      const note = document.querySelector("[data-profile-recommendation-note]");
-      const calorieNote = document.querySelector("[data-profile-goal-note]");
-
-      if (note) {
-        note.textContent = recommendations.note;
-      }
-
-      if (calorieNote) {
-        calorieNote.textContent = recommendations.calorieNote;
-      }
+      renderDraftProfileRecommendations();
     }
   });
 
   form.elements.primaryObjective.addEventListener("change", () => {
     toggleHealthFocusField(form.elements.primaryObjective.value);
     updateFormValidationStyles(form);
+    renderDraftProfileRecommendations();
   });
 
   applyButton.addEventListener("click", () => {
-    const recommendations = calculateProfileRecommendations({
-      ...appState.profile.personal,
-      age: form.elements.age.value,
-      gender: form.elements.gender.value,
-      heightCm: form.elements.heightCm.value,
-      currentWeightKg: form.elements.currentWeightKg.value,
-      targetWeightKg: form.elements.targetWeightKg.value,
-      activityLevel: form.elements.activityLevel.value,
-    });
+    const recommendations = calculateProfileRecommendations(
+      buildDraftPersonalForRecommendations(),
+      buildDraftGoalsForRecommendations()
+    );
 
     if (!recommendations.calories) {
       return;
@@ -1124,6 +1225,7 @@ function setupProfileSection() {
     form.elements.goalCarbs.value = recommendations.carbs;
     form.elements.goalFats.value = recommendations.fats;
 
+    persistDraftProfileObjectives();
     submitDailyGoals();
   });
 
