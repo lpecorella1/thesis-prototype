@@ -8,6 +8,7 @@
     "pg": "^8.13.1"
   },
   "scripts": {
+    "migrate:postgres-state": "node scripts/migrate-postgres-state.js",
     "bootstrap:postgres-state": "node scripts/bootstrap-postgres-state.js",
     "start": "node server.js",
     "start:mobile": "node start-mobile.js",

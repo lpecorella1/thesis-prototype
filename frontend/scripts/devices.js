@@ -133,7 +133,7 @@ async function hydrateDevicesState() {
     }
 
     applyDevicesState(devicesState);
-    saveState();
+    saveNutriTrackStateToLocalCache();
     renderDevices();
   } catch (error) {
     console.warn("Unable to hydrate devices state.", error);
@@ -143,7 +143,7 @@ async function hydrateDevicesState() {
 }
 
 function persistAndRenderDevices() {
-  saveState();
+  saveNutriTrackStateToLocalCache();
   renderDevices();
 }
 
@@ -372,7 +372,7 @@ async function updateScalePermissions(nextPermissions) {
   }
 
   applyScaleState(payload?.scale || {});
-  saveState();
+  saveNutriTrackStateToLocalCache();
   renderDevicesGrid();
   renderDevicesPermissionsPanel();
   return true;
@@ -650,7 +650,7 @@ function setupDevicesSection() {
     }
 
     deviceState.permissions[permissionKey] = permissionToggle.checked;
-    saveState();
+    saveNutriTrackStateToLocalCache();
     renderDevicesGrid();
   });
 

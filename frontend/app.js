@@ -17,7 +17,6 @@ const requiredBootstrapKeys = [
   "recipePanels",
   "NUTRITRACK_LOCAL_STATE_CACHE_KEY",
   "NUTRITRACK_STATE_API_PATH",
-  "NUTRITRACK_SYNC_DEBOUNCE_MS",
   "defaultRecipeTimestamp",
   "RECIPE_NUTRITION_SOURCE_LABEL",
   "PHYSICAL_ACTIVITY_DATASET_SOURCE",
@@ -1263,19 +1262,28 @@ function shouldIncludeBurnedCaloriesInGoal() {
   return appState.profile?.goals?.includeBurnedCaloriesInGoal === true;
 }
 
-function setIncludeBurnedCaloriesInGoal(shouldInclude) {
+async function setIncludeBurnedCaloriesInGoal(shouldInclude) {
   appState.profile = appState.profile && typeof appState.profile === "object" ? appState.profile : {};
   appState.profile.goals = appState.profile.goals && typeof appState.profile.goals === "object" ? appState.profile.goals : {};
   appState.profile.goals.includeBurnedCaloriesInGoal = Boolean(shouldInclude);
 
-  saveState();
-  renderNutrition();
-  setPhysicalActivityStatus(
-    shouldInclude
-      ? "Le kcal spese aumentano l'obiettivo della giornata."
-      : "Le kcal spese restano registrate senza aumentare l'obiettivo.",
-    "success"
-  );
+  try {
+    await saveProfilePatchToServer({
+      goals: {
+        includeBurnedCaloriesInGoal: Boolean(shouldInclude),
+      },
+    });
+    renderNutrition();
+    setPhysicalActivityStatus(
+      shouldInclude
+        ? "Le kcal spese aumentano l'obiettivo della giornata."
+        : "Le kcal spese restano registrate senza aumentare l'obiettivo.",
+      "success"
+    );
+  } catch (error) {
+    console.error("Impossibile salvare la preferenza calorie bruciate.", error);
+    setPhysicalActivityStatus(error.message || "Salvataggio non sincronizzato.", "error");
+  }
 }
 
 function getMealDateKey(meal) {
@@ -1885,7 +1893,7 @@ async function fetchOpenFoodFactsProduct(barcode) {
   }
 
   cacheOpenFoodFactsProduct(normalizedProduct);
-  saveState();
+  saveNutriTrackStateToLocalCache();
   return normalizedProduct;
 }
 
@@ -2425,9 +2433,19 @@ function persistWaterGoal(goalValue) {
     profileWaterGoalInput.value = waterGoal;
   }
 
-  saveState();
-  renderNutrition();
-  setNutritionWaterStatus(formatWaterGoalSummary(waterGoal));
+  saveProfilePatchToServer({
+    goals: {
+      water: waterGoal,
+    },
+  })
+    .then(() => {
+      renderNutrition();
+      setNutritionWaterStatus(formatWaterGoalSummary(waterGoal));
+    })
+    .catch((error) => {
+      console.error("Impossibile salvare l'obiettivo acqua.", error);
+      setNutritionWaterStatus(error.message || "Salvataggio non sincronizzato.");
+    });
 }
 
 function setNutritionWaterStatus(message) {
@@ -2439,7 +2457,7 @@ function setNutritionWaterStatus(message) {
   }
 }
 
-function persistNutritionWaterForDate(dateKey, rawValue) {
+async function persistNutritionWaterForDate(dateKey, rawValue) {
   if (!isValidDateKey(dateKey)) {
     return;
   }
@@ -2448,9 +2466,14 @@ function persistNutritionWaterForDate(dateKey, rawValue) {
   const waterGlasses = normalizedWater == null ? null : Math.max(0, Math.round(normalizedWater));
 
   setProgressLogValuesForDate(dateKey, { waterGlasses });
-  saveState();
-  renderProgress();
-  renderNutritionWaterControl();
+  try {
+    await saveProgressStateToServer({ autoSnapshots: false, selectedRange: false });
+    renderProgress();
+    renderNutritionWaterControl();
+  } catch (error) {
+    console.error("Impossibile salvare l'acqua.", error);
+    setNutritionWaterStatus(error.message || "Salvataggio non sincronizzato.");
+  }
 
   if (dateKey === getSelectedNutritionDateKey()) {
     setNutritionWaterStatus(formatWaterGoalSummary(getWaterGoal()));
@@ -2671,7 +2694,7 @@ function buildPhysicalActivityFromForm(form, dateKey) {
   };
 }
 
-function persistPhysicalActivitiesForDate(dateKey, activities) {
+async function persistPhysicalActivitiesForDate(dateKey, activities) {
   const normalizedActivities = (Array.isArray(activities) ? activities : [])
     .map(normalizePhysicalActivityEntry)
     .filter(Boolean);
@@ -2680,16 +2703,21 @@ function persistPhysicalActivitiesForDate(dateKey, activities) {
     physicalActivities: normalizedActivities,
     burnedCalories: normalizedActivities.length > 0 ? sumPhysicalActivityCalories(normalizedActivities) : null,
   });
-  saveState();
-  renderNutrition();
+  try {
+    await saveProgressStateToServer({ autoSnapshots: false, selectedRange: false });
+    renderNutrition();
+  } catch (error) {
+    console.error("Impossibile salvare l'attivita fisica.", error);
+    setPhysicalActivityStatus(error.message || "Salvataggio non sincronizzato.", "error");
+  }
 }
 
 function addPhysicalActivityForDate(dateKey, activity) {
-  persistPhysicalActivitiesForDate(dateKey, [...getPhysicalActivitiesForDate(dateKey), activity]);
+  return persistPhysicalActivitiesForDate(dateKey, [...getPhysicalActivitiesForDate(dateKey), activity]);
 }
 
 function removePhysicalActivityForDate(dateKey, activityId) {
-  persistPhysicalActivitiesForDate(
+  return persistPhysicalActivitiesForDate(
     dateKey,
     getPhysicalActivitiesForDate(dateKey).filter((activity) => activity.id !== activityId)
   );
@@ -3184,22 +3212,47 @@ function isNutritionMealValid(meal) {
   return Boolean(meal.name && meal.time && !hasInvalidNumber);
 }
 
-function persistNutritionMealChanges(dateKey) {
-  captureProgressSnapshotForDate(dateKey);
-  saveState();
+async function saveNutritionMealToServer(meal, method = "POST") {
+  const apiPath = method === "POST"
+    ? "/api/nutrition/meals"
+    : `/api/nutrition/meals/${encodeURIComponent(meal.id)}`;
+  const payload = await commitNutriTrackStateMutation(apiPath, {
+    method,
+    body: {
+      meal,
+    },
+  });
+
+  const savedMeal = payload?.meal || meal;
+  captureProgressSnapshotForDate(getMealDateKey(savedMeal));
+  await saveProgressStateToServer({ selectedRange: false });
+  renderNutrition();
+  return savedMeal;
+}
+
+async function deleteNutritionMealFromServer(mealId) {
+  const payload = await commitNutriTrackStateMutation(`/api/nutrition/meals/${encodeURIComponent(mealId)}`, {
+    method: "DELETE",
+  });
+  const deletedMeal = payload?.meal || null;
+
+  captureProgressSnapshotForDate(deletedMeal ? getMealDateKey(deletedMeal) : getSelectedNutritionDateKey());
+  await saveProgressStateToServer({ selectedRange: false });
   renderNutrition();
 }
 
-function applyManualNutritionCorrection(meal, updatedValues) {
-  Object.assign(meal, updatedValues, {
+async function applyManualNutritionCorrection(meal, updatedValues) {
+  const updatedMeal = {
+    ...meal,
+    ...updatedValues,
     nutritionSource: "manual-correction",
     nutritionSourceLabel: "Corretto manualmente",
-  });
+  };
 
-  persistNutritionMealChanges(getMealDateKey(meal));
+  await saveNutritionMealToServer(updatedMeal, "PUT");
 }
 
-function removeNutritionMeal(mealId) {
+async function removeNutritionMeal(mealId) {
   const mealToDelete = appState.nutrition.meals.find((meal) => meal.id === mealId);
   const mealDateKey = mealToDelete ? getMealDateKey(mealToDelete) : getTodayDateKey();
 
@@ -3207,8 +3260,8 @@ function removeNutritionMeal(mealId) {
     nutritionEditorRuntime.mealId = "";
   }
 
-  appState.nutrition.meals = appState.nutrition.meals.filter((meal) => meal.id !== mealId);
-  persistNutritionMealChanges(mealDateKey);
+  await deleteNutritionMealFromServer(mealId);
+  captureProgressSnapshotForDate(mealDateKey);
 }
 
 function setSelectedNutritionDate(dateKey) {
@@ -3232,7 +3285,10 @@ function setSelectedNutritionDate(dateKey) {
     nutritionEditorRuntime.mealId = "";
   }
 
-  saveState();
+  saveNutriTrackStateToLocalCache();
+  saveProgressStateToServer({ selectedRange: false }).catch((error) => {
+    console.warn("Impossibile salvare lo snapshot progressi al cambio data.", error);
+  });
   renderNutrition();
 }
 
@@ -3379,7 +3435,7 @@ function setupNutritionSection() {
     renderPhysicalActivityEstimate(physicalActivityForm);
   });
 
-  physicalActivityForm?.addEventListener("submit", (event) => {
+  physicalActivityForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     markFormValidationAttempt(physicalActivityForm);
 
@@ -3390,7 +3446,7 @@ function setupNutritionSection() {
     try {
       const selectedDateKey = getSelectedNutritionDateKey();
       const activity = buildPhysicalActivityFromForm(physicalActivityForm, selectedDateKey);
-      addPhysicalActivityForDate(selectedDateKey, activity);
+      await addPhysicalActivityForDate(selectedDateKey, activity);
       physicalActivityForm.reset();
       resetFormValidationState(physicalActivityForm);
       renderPhysicalActivityEstimate(physicalActivityForm);
@@ -3400,14 +3456,14 @@ function setupNutritionSection() {
     }
   });
 
-  physicalActivityList?.addEventListener("click", (event) => {
+  physicalActivityList?.addEventListener("click", async (event) => {
     const deleteButton = event.target.closest("[data-delete-physical-activity-id]");
 
     if (!deleteButton) {
       return;
     }
 
-    removePhysicalActivityForDate(getSelectedNutritionDateKey(), deleteButton.dataset.deletePhysicalActivityId);
+    await removePhysicalActivityForDate(getSelectedNutritionDateKey(), deleteButton.dataset.deletePhysicalActivityId);
     setPhysicalActivityStatus("Attività rimossa.", "success");
   });
 
@@ -3503,10 +3559,9 @@ function setupNutritionSection() {
         return;
       }
 
-      appState.nutrition.meals.push(meal);
-      persistNutritionMealChanges(getMealDateKey(meal));
+      await saveNutritionMealToServer(meal, "POST");
       resetNutritionFormAfterSubmit(form);
-      setNutritionAnalysisStatus("");
+      setNutritionAnalysisStatus("Pasto salvato sul server.");
     } catch (error) {
       console.error("Impossibile aggiungere il pasto.", error);
       setNutritionAnalysisStatus(error.message || "Impossibile analizzare il pasto.");
@@ -3515,7 +3570,7 @@ function setupNutritionSection() {
     }
   });
 
-  mealsList.addEventListener("click", (event) => {
+  mealsList.addEventListener("click", async (event) => {
     const editButton = event.target.closest("[data-edit-meal-id]");
     const button = event.target.closest("[data-delete-meal-id]");
 
@@ -3535,7 +3590,13 @@ function setupNutritionSection() {
       return;
     }
 
-    removeNutritionMeal(button.dataset.deleteMealId);
+    try {
+      await removeNutritionMeal(button.dataset.deleteMealId);
+      setNutritionAnalysisStatus("Pasto rimosso dal server.");
+    } catch (error) {
+      console.error("Impossibile rimuovere il pasto.", error);
+      setNutritionAnalysisStatus(error.message || "Salvataggio non sincronizzato.");
+    }
   });
 
   editForm.addEventListener("input", (event) => {
@@ -3546,7 +3607,7 @@ function setupNutritionSection() {
     syncNutritionEditTotalsFromItems(editForm, event.target);
   });
 
-  editForm.addEventListener("submit", (event) => {
+  editForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     markFormValidationAttempt(editForm);
 
@@ -3583,8 +3644,14 @@ function setupNutritionSection() {
       updatedValues.name = buildMealNameFromEditedItems(meal, itemResult.items, nutritionEditorRuntime.itemBaselines);
     }
 
-    applyManualNutritionCorrection(meal, updatedValues);
-    closeNutritionEditForm();
+    try {
+      await applyManualNutritionCorrection(meal, updatedValues);
+      closeNutritionEditForm();
+      setNutritionAnalysisStatus("Pasto aggiornato sul server.");
+    } catch (error) {
+      console.error("Impossibile aggiornare il pasto.", error);
+      setNutritionAnalysisStatus(error.message || "Salvataggio non sincronizzato.");
+    }
   });
 
   editCancelButton.addEventListener("click", () => {
@@ -3611,13 +3678,15 @@ function startNutriTrackCore() {
     .then(() => {
       syncNutritionGoalsFromProfile();
       captureTodayProgressSnapshot();
-      saveState();
+      saveProgressStateToServer({ selectedRange: false }).catch((error) => {
+        console.warn("Impossibile salvare lo snapshot progressi iniziale.", error);
+      });
       renderNutrition();
     })
     .catch(() => {
       syncNutritionGoalsFromProfile();
       captureTodayProgressSnapshot();
-      saveState();
+      saveNutriTrackStateToLocalCache();
       renderNutrition();
     });
 }

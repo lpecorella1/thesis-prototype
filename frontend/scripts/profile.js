@@ -784,6 +784,22 @@ function setupProfileSection() {
     water: normalizeNumber(form.elements.goalWater.value),
   });
 
+  const saveProfilePatchToServer = async (profilePatch) => {
+    const payload = await commitNutriTrackStateMutation("/api/profile", {
+      method: "PUT",
+      body: {
+        profile: profilePatch,
+      },
+    });
+
+    syncNutritionGoalsFromProfile();
+    saveNutriTrackStateToLocalCache();
+    renderProfile();
+    renderNutrition();
+    renderProgress();
+    return payload?.profile || appState.profile;
+  };
+
   const buildDraftPersonalForRecommendations = () => ({
     ...appState.profile.personal,
     age: form.elements.age.value,
@@ -835,7 +851,32 @@ function setupProfileSection() {
     }
   };
 
-  const submitProfileDetails = () => {
+  const submitDailyGoals = async () => {
+    const controls = [
+      form.elements.goalCalories,
+      form.elements.goalProtein,
+      form.elements.goalCarbs,
+      form.elements.goalFats,
+      form.elements.goalWater,
+    ];
+
+    if (!validateControlGroup(controls)) {
+      showGoalsSaveError();
+      return false;
+    }
+
+    await saveProfilePatchToServer({
+      goals: buildDailyGoalsPayload(),
+    });
+    syncNutritionGoalsFromProfile();
+    saveNutriTrackStateToLocalCache();
+    renderNutrition();
+    controls.forEach((control) => updateControlValidationState(control, false));
+    showGoalsSaveConfirmation();
+    return true;
+  };
+
+  const submitFullProfile = async () => {
     const controls = [
       form.elements.fullName,
       form.elements.age,
@@ -855,91 +896,24 @@ function setupProfileSection() {
 
     const nextSections = buildProfileSectionPayload();
 
-    appState.profile = {
-      ...appState.profile,
+    const dailyGoals = buildDailyGoalsPayload();
+    const hasValidDailyGoals = Object.values(dailyGoals).every((value) => value !== null && value >= 0);
+    const profilePatch = {
       personal: nextSections.personal,
       medical: nextSections.medical,
       goals: {
-        ...appState.profile.goals,
         ...nextSections.goals,
+        ...(hasValidDailyGoals ? dailyGoals : {}),
       },
     };
+
+    await saveProfilePatchToServer(profilePatch);
     captureTodayProgressSnapshot({
       weightKg: nextSections.personal.currentWeightKg,
     });
-    saveState();
-    renderProfile();
-    renderProgress();
+    await saveProgressStateToServer({ selectedRange: false });
     resetFormValidationState(form);
     showProfileSaveConfirmation();
-    return true;
-  };
-
-  const submitDailyGoals = () => {
-    const controls = [
-      form.elements.goalCalories,
-      form.elements.goalProtein,
-      form.elements.goalCarbs,
-      form.elements.goalFats,
-      form.elements.goalWater,
-    ];
-
-    if (!validateControlGroup(controls)) {
-      showGoalsSaveError();
-      return false;
-    }
-
-    appState.profile = {
-      ...appState.profile,
-      goals: {
-        ...appState.profile.goals,
-        ...buildDailyGoalsPayload(),
-      },
-    };
-    syncNutritionGoalsFromProfile();
-    saveState();
-    renderNutrition();
-    controls.forEach((control) => updateControlValidationState(control, false));
-    showGoalsSaveConfirmation();
-    return true;
-  };
-
-  const persistDraftProfileObjectives = () => {
-    appState.profile = {
-      ...appState.profile,
-      goals: {
-        ...appState.profile.goals,
-        ...buildDraftGoalsForRecommendations(),
-      },
-    };
-  };
-
-  const submitFullProfile = () => {
-    const didSaveProfile = submitProfileDetails();
-
-    if (!didSaveProfile) {
-      return false;
-    }
-
-    const dailyGoals = buildDailyGoalsPayload();
-    const hasValidDailyGoals = Object.values(dailyGoals).every((value) => value !== null && value >= 0);
-
-    if (hasValidDailyGoals) {
-      appState.profile = {
-        ...appState.profile,
-        goals: {
-          ...appState.profile.goals,
-          ...dailyGoals,
-        },
-      };
-      syncNutritionGoalsFromProfile();
-      captureTodayProgressSnapshot({
-        weightKg: appState.profile.personal.currentWeightKg,
-      });
-      saveState();
-      renderProfile();
-      renderNutrition();
-    }
 
     return true;
   };
@@ -961,7 +935,7 @@ function setupProfileSection() {
     }
   };
 
-  const applyMedicalDocumentAnalysis = () => {
+  const applyMedicalDocumentAnalysis = async () => {
     const metrics = normalizeMedicalLabMetrics(latestMedicalDocumentAnalysis?.metrics).map((metric) => ({
       ...metric,
       sourceName: latestMedicalDocumentAnalysis?.documentType || "Documento medico",
@@ -986,29 +960,36 @@ function setupProfileSection() {
       form.elements.healthFocus.value = healthFocus;
     }
 
-    appState.profile = {
-      ...appState.profile,
-      medical: {
-        ...appState.profile.medical,
-        allergies: String(form.elements.allergies.value).trim(),
-        medications: String(form.elements.medications.value).trim(),
-        medicalConditions: nextConditions,
-        dietaryPreferences: String(form.elements.dietaryPreferences.value).trim(),
-        labMetrics: nextLabMetrics,
-      },
-      goals: {
-        ...appState.profile.goals,
-        primaryObjective: form.elements.primaryObjective.value,
-        secondaryObjective: form.elements.secondaryObjective.value,
-        healthFocus: String(form.elements.healthFocus.value || "").trim(),
-      },
+    const medicalPatch = {
+      ...appState.profile.medical,
+      allergies: String(form.elements.allergies.value).trim(),
+      medications: String(form.elements.medications.value).trim(),
+      medicalConditions: nextConditions,
+      dietaryPreferences: String(form.elements.dietaryPreferences.value).trim(),
+      labMetrics: nextLabMetrics,
+    };
+    const goalsPatch = {
+      primaryObjective: form.elements.primaryObjective.value,
+      secondaryObjective: form.elements.secondaryObjective.value,
+      healthFocus: String(form.elements.healthFocus.value || "").trim(),
     };
 
-    saveState();
-    renderProfile();
-    clearMedicalDocumentReview();
-    showProfileSaveConfirmation();
-    setMedicalDocumentStatus("Valori applicati al profilo.", "success");
+    try {
+      medicalDocumentApplyButton.disabled = true;
+      await saveProfilePatchToServer({
+        medical: medicalPatch,
+        goals: goalsPatch,
+      });
+      clearMedicalDocumentReview();
+      showProfileSaveConfirmation();
+      setMedicalDocumentStatus("Valori applicati al profilo.", "success");
+    } catch (error) {
+      console.error("Impossibile applicare i valori clinici al profilo.", error);
+      showProfileSaveError();
+      setMedicalDocumentStatus(error.message || "Salvataggio non sincronizzato.", "error");
+    } finally {
+      medicalDocumentApplyButton.disabled = false;
+    }
   };
 
   const setSavedMedicalMetricEditMode = (index, isEditing) => {
@@ -1047,24 +1028,21 @@ function setupProfileSection() {
     ])[0];
   };
 
-  const persistLabMetricsFromCards = (metrics, message) => {
+  const persistLabMetricsFromCards = async (metrics, message) => {
     const nextMetrics = normalizeMedicalLabMetrics(metrics);
     const nextConditions = syncMedicalConditionsFieldFromLabMetrics(form, nextMetrics);
-
-    appState.profile = {
-      ...appState.profile,
-      medical: {
-        ...appState.profile.medical,
-        allergies: String(form.elements.allergies.value).trim(),
-        medications: String(form.elements.medications.value).trim(),
-        medicalConditions: nextConditions,
-        dietaryPreferences: String(form.elements.dietaryPreferences.value).trim(),
-        labMetrics: nextMetrics,
-      },
+    const medicalPatch = {
+      ...appState.profile.medical,
+      allergies: String(form.elements.allergies.value).trim(),
+      medications: String(form.elements.medications.value).trim(),
+      medicalConditions: nextConditions,
+      dietaryPreferences: String(form.elements.dietaryPreferences.value).trim(),
+      labMetrics: nextMetrics,
     };
 
-    saveState();
-    renderProfile();
+    await saveProfilePatchToServer({
+      medical: medicalPatch,
+    });
     setMedicalDocumentStatus(message, "success");
   };
 
@@ -1136,7 +1114,7 @@ function setupProfileSection() {
     setMedicalDocumentStatus(metrics.length ? "Valore rimosso dalla proposta." : "Nessun valore rimasto nella proposta.", metrics.length ? "success" : "");
   });
 
-  medicalMetricsList?.addEventListener("click", (event) => {
+  medicalMetricsList?.addEventListener("click", async (event) => {
     const editButton = event.target.closest("[data-medical-metric-edit]");
     const saveButton = event.target.closest("[data-medical-metric-save]");
     const cancelButton = event.target.closest("[data-medical-metric-cancel]");
@@ -1163,14 +1141,32 @@ function setupProfileSection() {
       }
 
       metrics[index] = editedMetric;
-      persistLabMetricsFromCards(metrics, "Valore aggiornato.");
+
+      try {
+        saveButton.disabled = true;
+        await persistLabMetricsFromCards(metrics, "Valore aggiornato.");
+      } catch (error) {
+        console.error("Impossibile aggiornare il valore clinico.", error);
+        setMedicalDocumentStatus(error.message || "Salvataggio non sincronizzato.", "error");
+      } finally {
+        saveButton.disabled = false;
+      }
       return;
     }
 
     if (deleteButton) {
       const index = Number(deleteButton.dataset.medicalMetricDelete);
       const metrics = normalizeMedicalLabMetrics(appState.profile.medical.labMetrics).filter((_, metricIndex) => metricIndex !== index);
-      persistLabMetricsFromCards(metrics, "Valore eliminato dal profilo.");
+
+      try {
+        deleteButton.disabled = true;
+        await persistLabMetricsFromCards(metrics, "Valore eliminato dal profilo.");
+      } catch (error) {
+        console.error("Impossibile eliminare il valore clinico.", error);
+        setMedicalDocumentStatus(error.message || "Salvataggio non sincronizzato.", "error");
+      } finally {
+        deleteButton.disabled = false;
+      }
     }
   });
 
@@ -1225,8 +1221,27 @@ function setupProfileSection() {
     form.elements.goalCarbs.value = recommendations.carbs;
     form.elements.goalFats.value = recommendations.fats;
 
-    persistDraftProfileObjectives();
-    submitDailyGoals();
+    const saveRecommendedGoals = async () => {
+      applyButton.disabled = true;
+
+      try {
+        await saveProfilePatchToServer({
+          goals: {
+            ...buildDraftGoalsForRecommendations(),
+            ...buildDailyGoalsPayload(),
+          },
+        });
+        saveNutriTrackStateToLocalCache();
+        showGoalsSaveConfirmation();
+      } catch (error) {
+        console.error("Impossibile salvare le raccomandazioni profilo.", error);
+        showGoalsSaveError();
+      } finally {
+        applyButton.disabled = false;
+      }
+    };
+
+    saveRecommendedGoals();
   });
 
   medicalDocumentAnalyzeButton?.addEventListener("click", async () => {
@@ -1254,12 +1269,35 @@ function setupProfileSection() {
     setMedicalDocumentStatus("Documento scartato.", "");
   });
 
-  profileSaveButton.addEventListener("click", submitFullProfile);
-  goalsSaveButton.addEventListener("click", submitDailyGoals);
+  profileSaveButton.addEventListener("click", async () => {
+    profileSaveButton.disabled = true;
+
+    try {
+      await submitFullProfile();
+    } catch (error) {
+      console.error("Impossibile salvare il profilo.", error);
+      showProfileSaveError();
+    } finally {
+      profileSaveButton.disabled = false;
+    }
+  });
+
+  goalsSaveButton.addEventListener("click", async () => {
+    goalsSaveButton.disabled = true;
+
+    try {
+      await submitDailyGoals();
+    } catch (error) {
+      console.error("Impossibile salvare gli obiettivi.", error);
+      showGoalsSaveError();
+    } finally {
+      goalsSaveButton.disabled = false;
+    }
+  });
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
-    submitFullProfile();
+    profileSaveButton.click();
   });
 
   renderProfile();

@@ -90,7 +90,7 @@ function sendJson(response, statusCode, payload, extraHeaders = {}) {
   response.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     ...extraHeaders,
   });
@@ -137,6 +137,201 @@ function resolveRequestPath(urlPath) {
 
 function cloneJson(value) {
   return value === undefined ? undefined : JSON.parse(JSON.stringify(value));
+}
+
+function createNutriTrackAppId(prefix) {
+  return globalThis.crypto?.randomUUID
+    ? globalThis.crypto.randomUUID()
+    : `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function normalizeNonNegativeNumber(value, fallback = 0) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : fallback;
+}
+
+function normalizeSavedNutritionMeal(rawMeal = {}) {
+  const mealId = String(rawMeal.id || rawMeal.appMealId || "").trim() || createNutriTrackAppId("meal");
+  const mealName = String(rawMeal.name || rawMeal.mealName || "").trim();
+  const mealTime = String(rawMeal.time || "").trim();
+
+  if (!mealName) {
+    const error = new Error("Nome pasto obbligatorio.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!mealTime) {
+    const error = new Error("Orario pasto obbligatorio.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return {
+    ...cloneJson(rawMeal),
+    id: mealId,
+    name: mealName,
+    date: /^\d{4}-\d{2}-\d{2}$/.test(String(rawMeal.date || "")) ? String(rawMeal.date) : new Date().toISOString().slice(0, 10),
+    time: mealTime,
+    calories: normalizeNonNegativeNumber(rawMeal.calories),
+    protein: normalizeNonNegativeNumber(rawMeal.protein),
+    carbs: normalizeNonNegativeNumber(rawMeal.carbs),
+    fats: normalizeNonNegativeNumber(rawMeal.fats),
+    barcode: String(rawMeal.barcode || "").trim(),
+    source: String(rawMeal.source || "manual").trim(),
+    brand: String(rawMeal.brand || "").trim(),
+    nutriscoreGrade: String(rawMeal.nutriscoreGrade || "").trim(),
+    nutritionSource: String(rawMeal.nutritionSource || "").trim(),
+    nutritionSourceLabel: String(rawMeal.nutritionSourceLabel || rawMeal.nutritionSource || "").trim(),
+    sourceNote: String(rawMeal.sourceNote || "").trim(),
+    entryMode: String(rawMeal.entryMode || "").trim(),
+    entryMethod: String(rawMeal.entryMethod || "").trim(),
+  };
+}
+
+async function commitNutriTrackStateMutation(userContext, mutateState, options = {}) {
+  let lastConflictError = null;
+  const clientRevision = typeof options.clientRevision === "string" ? options.clientRevision.trim() : "";
+  const allowStaleClientRevision = options.allowStaleClientRevision !== false;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const snapshot = await getNutriTrackStateSnapshot(userContext);
+
+    if (!allowStaleClientRevision && clientRevision && snapshot.revision && clientRevision !== snapshot.revision) {
+      const error = new Error("Lo stato NutriTrack e' stato aggiornato da un'altra sessione. Ricarica i dati prima di salvare di nuovo.");
+      error.statusCode = 409;
+      error.snapshot = snapshot;
+      throw error;
+    }
+
+    const baseState = snapshot.state && typeof snapshot.state === "object" ? cloneJson(snapshot.state) : {};
+    const mutationResult = mutateState(baseState) || {};
+
+    try {
+      const savedState = await saveNutriTrackState(userContext, baseState, {
+        expectedRevision: snapshot.revision,
+      });
+      const savedSnapshot = await getNutriTrackStateSnapshot(userContext);
+
+      return {
+        ...mutationResult,
+        state: savedState,
+        revision: savedSnapshot.revision,
+        storage: savedSnapshot.storage,
+      };
+    } catch (error) {
+      if (error.statusCode === 409) {
+        lastConflictError = error;
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastConflictError || new Error("Impossibile completare il salvataggio concorrente.");
+}
+
+function ensureNutritionState(state) {
+  state.nutrition = state.nutrition && typeof state.nutrition === "object" ? state.nutrition : {};
+  state.nutrition.meals = Array.isArray(state.nutrition.meals) ? state.nutrition.meals : [];
+  return state.nutrition;
+}
+
+function normalizeOptionalNonNegativeNumber(value) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : null;
+}
+
+function normalizeProfileText(value) {
+  return String(value || "").trim();
+}
+
+function normalizeProfileLabMetrics(metrics) {
+  return Array.isArray(metrics)
+    ? cloneJson(metrics)
+        .filter((metric) => metric && typeof metric === "object")
+        .slice(0, 40)
+    : [];
+}
+
+function normalizeProfilePatch(profile = {}) {
+  const patch = {};
+
+  if (profile.personal && typeof profile.personal === "object") {
+    patch.personal = {};
+    if ("fullName" in profile.personal) patch.personal.fullName = normalizeProfileText(profile.personal.fullName);
+    if ("age" in profile.personal) patch.personal.age = normalizeOptionalNonNegativeNumber(profile.personal.age);
+    if ("gender" in profile.personal) patch.personal.gender = normalizeProfileText(profile.personal.gender);
+    if ("heightCm" in profile.personal) patch.personal.heightCm = normalizeOptionalNonNegativeNumber(profile.personal.heightCm);
+    if ("currentWeightKg" in profile.personal) patch.personal.currentWeightKg = normalizeOptionalNonNegativeNumber(profile.personal.currentWeightKg);
+    if ("targetWeightKg" in profile.personal) patch.personal.targetWeightKg = normalizeOptionalNonNegativeNumber(profile.personal.targetWeightKg);
+    if ("activityLevel" in profile.personal) patch.personal.activityLevel = normalizeProfileText(profile.personal.activityLevel);
+    if ("dietType" in profile.personal) patch.personal.dietType = normalizeProfileText(profile.personal.dietType);
+  }
+
+  if (profile.medical && typeof profile.medical === "object") {
+    patch.medical = {};
+    if ("allergies" in profile.medical) patch.medical.allergies = normalizeProfileText(profile.medical.allergies);
+    if ("medications" in profile.medical) patch.medical.medications = normalizeProfileText(profile.medical.medications);
+    if ("medicalConditions" in profile.medical) patch.medical.medicalConditions = normalizeProfileText(profile.medical.medicalConditions);
+    if ("dietaryPreferences" in profile.medical) patch.medical.dietaryPreferences = normalizeProfileText(profile.medical.dietaryPreferences);
+    if ("labMetrics" in profile.medical) patch.medical.labMetrics = normalizeProfileLabMetrics(profile.medical.labMetrics);
+  }
+
+  if (profile.goals && typeof profile.goals === "object") {
+    patch.goals = {};
+    if ("primaryObjective" in profile.goals) patch.goals.primaryObjective = normalizeProfileText(profile.goals.primaryObjective);
+    if ("secondaryObjective" in profile.goals) patch.goals.secondaryObjective = normalizeProfileText(profile.goals.secondaryObjective);
+    if ("healthFocus" in profile.goals) patch.goals.healthFocus = normalizeProfileText(profile.goals.healthFocus);
+    if ("calories" in profile.goals) patch.goals.calories = normalizeOptionalNonNegativeNumber(profile.goals.calories);
+    if ("protein" in profile.goals) patch.goals.protein = normalizeOptionalNonNegativeNumber(profile.goals.protein);
+    if ("carbs" in profile.goals) patch.goals.carbs = normalizeOptionalNonNegativeNumber(profile.goals.carbs);
+    if ("fats" in profile.goals) patch.goals.fats = normalizeOptionalNonNegativeNumber(profile.goals.fats);
+    if ("water" in profile.goals) patch.goals.water = normalizeOptionalNonNegativeNumber(profile.goals.water);
+    if ("includeBurnedCaloriesInGoal" in profile.goals) patch.goals.includeBurnedCaloriesInGoal = profile.goals.includeBurnedCaloriesInGoal === true;
+  }
+
+  return patch;
+}
+
+function ensureProfileState(state) {
+  state.profile = state.profile && typeof state.profile === "object" ? state.profile : {};
+  state.profile.personal = state.profile.personal && typeof state.profile.personal === "object" ? state.profile.personal : {};
+  state.profile.medical = state.profile.medical && typeof state.profile.medical === "object" ? state.profile.medical : {};
+  state.profile.goals = state.profile.goals && typeof state.profile.goals === "object" ? state.profile.goals : {};
+  return state.profile;
+}
+
+function normalizeArrayPatch(value) {
+  return Array.isArray(value) ? cloneJson(value) : undefined;
+}
+
+function normalizeObjectPatch(value) {
+  return value && typeof value === "object" && !Array.isArray(value) ? cloneJson(value) : undefined;
+}
+
+function ensureGroceryState(state) {
+  state.grocery = state.grocery && typeof state.grocery === "object" ? state.grocery : {};
+  state.grocery.items = Array.isArray(state.grocery.items) ? state.grocery.items : [];
+  state.grocery.pantry = Array.isArray(state.grocery.pantry) ? state.grocery.pantry : [];
+  return state.grocery;
+}
+
+function ensureProgressState(state) {
+  state.progress = state.progress && typeof state.progress === "object" ? state.progress : {};
+  state.progress.dailyLogs = Array.isArray(state.progress.dailyLogs) ? state.progress.dailyLogs : [];
+  state.progress.autoSnapshots = state.progress.autoSnapshots && typeof state.progress.autoSnapshots === "object" ? state.progress.autoSnapshots : {};
+  return state.progress;
+}
+
+function ensureRecipesState(state) {
+  state.recipes = state.recipes && typeof state.recipes === "object" ? state.recipes : {};
+  return state.recipes;
 }
 
 function normalizeDeviceIntegration(baseIntegration, savedIntegration = {}) {
@@ -2476,20 +2671,353 @@ async function handleApplyRecipeToDiet(request, response) {
     }
 
     const userContext = await resolveRequestUserContext(request);
-    const currentState = await getNutriTrackState(userContext);
-    const result = applyRecipeToDietState(currentState, recipe, mealType);
-    const savedState = await saveNutriTrackState(userContext, result.state);
+    const result = await commitNutriTrackStateMutation(userContext, (state) => {
+      const recipeResult = applyRecipeToDietState(state, recipe, mealType);
+      Object.keys(state).forEach((key) => {
+        delete state[key];
+      });
+      Object.assign(state, recipeResult.state);
+
+      return {
+        meal: recipeResult.meal,
+        pantryUpdates: recipeResult.pantryUpdates,
+      };
+    });
 
     sendJson(response, 200, {
       ok: true,
-      state: savedState,
+      savedAt: new Date().toISOString(),
+      state: result.state,
       meal: result.meal,
       pantryUpdates: result.pantryUpdates,
+      revision: result.revision,
+      storage: result.storage,
+      runtime: getRuntimeConfig(),
     });
   } catch (error) {
     console.error("[Server] Errore nella route /api/recipes/apply-to-diet.", error);
     sendJson(response, error.statusCode || 500, {
       error: error.message || "Impossibile applicare la ricetta alla dieta.",
+    });
+  }
+}
+
+async function handleNutritionMealCreate(request, response) {
+  try {
+    const userContext = await resolveRequestUserContext(request);
+    const body = await readJsonBody(request);
+    const meal = normalizeSavedNutritionMeal(body?.meal);
+    const result = await commitNutriTrackStateMutation(userContext, (state) => {
+      const nutrition = ensureNutritionState(state);
+      const existingIndex = nutrition.meals.findIndex((entry) => String(entry.id) === meal.id);
+
+      if (existingIndex >= 0) {
+        nutrition.meals[existingIndex] = meal;
+      } else {
+        nutrition.meals.push(meal);
+      }
+
+      return { meal };
+    });
+
+    sendJson(response, 201, {
+      ok: true,
+      savedAt: new Date().toISOString(),
+      meal: result.meal,
+      state: result.state,
+      revision: result.revision,
+      storage: result.storage,
+      runtime: getRuntimeConfig(),
+    });
+  } catch (error) {
+    console.error("[Server] Errore nel salvataggio del pasto.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile salvare il pasto.",
+    });
+  }
+}
+
+async function handleNutritionMealUpdate(request, response, mealId) {
+  try {
+    const userContext = await resolveRequestUserContext(request);
+    const body = await readJsonBody(request);
+    const normalizedMealId = String(mealId || body?.meal?.id || "").trim();
+
+    if (!normalizedMealId) {
+      sendJson(response, 400, { error: "Identificativo pasto obbligatorio." });
+      return;
+    }
+
+    const meal = normalizeSavedNutritionMeal({
+      ...(body?.meal || {}),
+      id: normalizedMealId,
+    });
+    const result = await commitNutriTrackStateMutation(userContext, (state) => {
+      const nutrition = ensureNutritionState(state);
+      const existingIndex = nutrition.meals.findIndex((entry) => String(entry.id) === normalizedMealId);
+
+      if (existingIndex < 0) {
+        const error = new Error("Pasto non trovato.");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      nutrition.meals[existingIndex] = {
+        ...nutrition.meals[existingIndex],
+        ...meal,
+        id: normalizedMealId,
+      };
+
+      return { meal: nutrition.meals[existingIndex] };
+    });
+
+    sendJson(response, 200, {
+      ok: true,
+      savedAt: new Date().toISOString(),
+      meal: result.meal,
+      state: result.state,
+      revision: result.revision,
+      storage: result.storage,
+      runtime: getRuntimeConfig(),
+    });
+  } catch (error) {
+    console.error("[Server] Errore nell'aggiornamento del pasto.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile aggiornare il pasto.",
+    });
+  }
+}
+
+async function handleNutritionMealDelete(request, response, mealId) {
+  try {
+    const userContext = await resolveRequestUserContext(request);
+    const normalizedMealId = String(mealId || "").trim();
+
+    if (!normalizedMealId) {
+      sendJson(response, 400, { error: "Identificativo pasto obbligatorio." });
+      return;
+    }
+
+    const result = await commitNutriTrackStateMutation(userContext, (state) => {
+      const nutrition = ensureNutritionState(state);
+      const meal = nutrition.meals.find((entry) => String(entry.id) === normalizedMealId) || null;
+      nutrition.meals = nutrition.meals.filter((entry) => String(entry.id) !== normalizedMealId);
+
+      return { meal };
+    });
+
+    sendJson(response, 200, {
+      ok: true,
+      savedAt: new Date().toISOString(),
+      meal: result.meal,
+      state: result.state,
+      revision: result.revision,
+      storage: result.storage,
+      runtime: getRuntimeConfig(),
+    });
+  } catch (error) {
+    console.error("[Server] Errore nella rimozione del pasto.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile rimuovere il pasto.",
+    });
+  }
+}
+
+async function handleProfileUpdate(request, response) {
+  try {
+    const userContext = await resolveRequestUserContext(request);
+    const body = await readJsonBody(request);
+    const profilePatch = normalizeProfilePatch(body?.profile || {});
+
+    if (Object.keys(profilePatch).length === 0) {
+      sendJson(response, 400, { error: "Dati profilo obbligatori." });
+      return;
+    }
+
+    const result = await commitNutriTrackStateMutation(userContext, (state) => {
+      const profile = ensureProfileState(state);
+
+      if (profilePatch.personal) {
+        profile.personal = {
+          ...profile.personal,
+          ...profilePatch.personal,
+        };
+      }
+
+      if (profilePatch.medical) {
+        profile.medical = {
+          ...profile.medical,
+          ...profilePatch.medical,
+        };
+      }
+
+      if (profilePatch.goals) {
+        profile.goals = {
+          ...profile.goals,
+          ...profilePatch.goals,
+        };
+      }
+
+      return { profile };
+    });
+
+    sendJson(response, 200, {
+      ok: true,
+      savedAt: new Date().toISOString(),
+      profile: result.profile,
+      state: result.state,
+      revision: result.revision,
+      storage: result.storage,
+      runtime: getRuntimeConfig(),
+    });
+  } catch (error) {
+    console.error("[Server] Errore nel salvataggio del profilo.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile salvare il profilo.",
+    });
+  }
+}
+
+async function handleGroceryUpdate(request, response) {
+  try {
+    const userContext = await resolveRequestUserContext(request);
+    const body = await readJsonBody(request);
+    const groceryPatch = normalizeObjectPatch(body?.grocery);
+
+    if (!groceryPatch) {
+      sendJson(response, 400, { error: "Dati spesa/dispensa obbligatori." });
+      return;
+    }
+
+    const result = await commitNutriTrackStateMutation(
+      userContext,
+      (state) => {
+        const grocery = ensureGroceryState(state);
+        const items = normalizeArrayPatch(groceryPatch.items);
+        const pantry = normalizeArrayPatch(groceryPatch.pantry);
+
+        if (items) {
+          grocery.items = items;
+        }
+
+        if (pantry) {
+          grocery.pantry = pantry;
+        }
+
+        return { grocery };
+      },
+      { clientRevision: body?.revision, allowStaleClientRevision: false }
+    );
+
+    sendJson(response, 200, {
+      ok: true,
+      savedAt: new Date().toISOString(),
+      grocery: result.grocery,
+      state: result.state,
+      revision: result.revision,
+      storage: result.storage,
+      runtime: getRuntimeConfig(),
+    });
+  } catch (error) {
+    console.error("[Server] Errore nel salvataggio di spesa/dispensa.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile salvare spesa o dispensa.",
+      ...(error.snapshot ? { state: error.snapshot.state, revision: error.snapshot.revision, storage: error.snapshot.storage } : {}),
+    });
+  }
+}
+
+async function handleProgressUpdate(request, response) {
+  try {
+    const userContext = await resolveRequestUserContext(request);
+    const body = await readJsonBody(request);
+    const progressPatch = normalizeObjectPatch(body?.progress);
+
+    if (!progressPatch) {
+      sendJson(response, 400, { error: "Dati progressi obbligatori." });
+      return;
+    }
+
+    const result = await commitNutriTrackStateMutation(
+      userContext,
+      (state) => {
+        const progress = ensureProgressState(state);
+        const dailyLogs = normalizeArrayPatch(progressPatch.dailyLogs);
+        const autoSnapshots = normalizeObjectPatch(progressPatch.autoSnapshots);
+
+        if (dailyLogs) {
+          progress.dailyLogs = dailyLogs;
+        }
+
+        if (autoSnapshots) {
+          progress.autoSnapshots = autoSnapshots;
+        }
+
+        if (typeof progressPatch.selectedRange === "string") {
+          progress.selectedRange = progressPatch.selectedRange === "month" ? "month" : "week";
+        }
+
+        return { progress };
+      },
+      { clientRevision: body?.revision, allowStaleClientRevision: false }
+    );
+
+    sendJson(response, 200, {
+      ok: true,
+      savedAt: new Date().toISOString(),
+      progress: result.progress,
+      state: result.state,
+      revision: result.revision,
+      storage: result.storage,
+      runtime: getRuntimeConfig(),
+    });
+  } catch (error) {
+    console.error("[Server] Errore nel salvataggio dei progressi.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile salvare i progressi.",
+      ...(error.snapshot ? { state: error.snapshot.state, revision: error.snapshot.revision, storage: error.snapshot.storage } : {}),
+    });
+  }
+}
+
+async function handleRecipesStateUpdate(request, response) {
+  try {
+    const userContext = await resolveRequestUserContext(request);
+    const body = await readJsonBody(request);
+    const recipesPatch = normalizeObjectPatch(body?.recipes);
+
+    if (!recipesPatch) {
+      sendJson(response, 400, { error: "Dati ricette obbligatori." });
+      return;
+    }
+
+    const result = await commitNutriTrackStateMutation(
+      userContext,
+      (state) => {
+        state.recipes = {
+          ...ensureRecipesState(state),
+          ...recipesPatch,
+        };
+
+        return { recipes: state.recipes };
+      },
+      { clientRevision: body?.revision, allowStaleClientRevision: false }
+    );
+
+    sendJson(response, 200, {
+      ok: true,
+      savedAt: new Date().toISOString(),
+      recipes: result.recipes,
+      state: result.state,
+      revision: result.revision,
+      storage: result.storage,
+      runtime: getRuntimeConfig(),
+    });
+  } catch (error) {
+    console.error("[Server] Errore nel salvataggio delle ricette.", error);
+    sendJson(response, error.statusCode || 500, {
+      error: error.message || "Impossibile salvare le ricette.",
+      ...(error.snapshot ? { state: error.snapshot.state, revision: error.snapshot.revision, storage: error.snapshot.storage } : {}),
     });
   }
 }
@@ -2505,34 +3033,6 @@ async function handleNutriTrackStateRead(request, response) {
   } catch (error) {
     console.error("[Server] Errore nella lettura dello stato NutriTrack.", error);
     sendJson(response, error.statusCode || 500, { error: error.message || "Impossibile leggere lo stato NutriTrack." });
-  }
-}
-
-async function handleNutriTrackStateWrite(request, response) {
-  try {
-    const userContext = await resolveRequestUserContext(request);
-    const payload = await readJsonBody(request);
-    const savedState = await saveNutriTrackState(userContext, payload?.state, {
-      expectedRevision: payload?.revision,
-    });
-    const snapshot = await getNutriTrackStateSnapshot(userContext);
-    const database = getNutriTrackDatabaseStatus();
-    sendJson(response, 200, {
-      ok: true,
-      savedAt: new Date().toISOString(),
-      state: savedState,
-      revision: snapshot.revision,
-      database,
-      storage: snapshot.storage,
-      runtime: getRuntimeConfig(),
-    });
-  } catch (error) {
-    console.error("[Server] Errore nel salvataggio dello stato NutriTrack.", error);
-    const statusCode = error.statusCode || (error.message === "Lo stato NutriTrack deve essere un oggetto JSON." ? 400 : 500);
-    sendJson(response, statusCode, {
-      error: error.message || "Impossibile salvare lo stato NutriTrack.",
-      ...(error.snapshot ? { state: error.snapshot.state, revision: error.snapshot.revision, storage: error.snapshot.storage } : {}),
-    });
   }
 }
 
@@ -2948,6 +3448,43 @@ const requestHandler = async (request, response) => {
     return;
   }
 
+  if (request.method === "POST" && requestPath === "/api/nutrition/meals") {
+    await handleNutritionMealCreate(request, response);
+    return;
+  }
+
+  const nutritionMealMatch = requestPath.match(/^\/api\/nutrition\/meals\/([^/]+)$/);
+
+  if (nutritionMealMatch && request.method === "PUT") {
+    await handleNutritionMealUpdate(request, response, decodeURIComponent(nutritionMealMatch[1]));
+    return;
+  }
+
+  if (nutritionMealMatch && request.method === "DELETE") {
+    await handleNutritionMealDelete(request, response, decodeURIComponent(nutritionMealMatch[1]));
+    return;
+  }
+
+  if (request.method === "PUT" && requestPath === "/api/profile") {
+    await handleProfileUpdate(request, response);
+    return;
+  }
+
+  if (request.method === "PUT" && requestPath === "/api/grocery") {
+    await handleGroceryUpdate(request, response);
+    return;
+  }
+
+  if (request.method === "PUT" && requestPath === "/api/progress") {
+    await handleProgressUpdate(request, response);
+    return;
+  }
+
+  if (request.method === "PUT" && requestPath === "/api/recipes/state") {
+    await handleRecipesStateUpdate(request, response);
+    return;
+  }
+
   if (request.method === "POST" && requestPath === "/api/nutrition/analyze-meal") {
     await handleMealNutritionAnalysis(request, response);
     return;
@@ -2969,7 +3506,9 @@ const requestHandler = async (request, response) => {
   }
 
   if (request.method === "PUT" && requestPath === "/api/nutritrack/state") {
-    await handleNutriTrackStateWrite(request, response);
+    sendJson(response, 410, {
+      error: "Il salvataggio globale NutriTrack e' disabilitato. Usa gli endpoint di dominio.",
+    });
     return;
   }
 

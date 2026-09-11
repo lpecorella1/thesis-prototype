@@ -100,6 +100,16 @@ async function main() {
     const indexMarkup = await fetchText(buildAppUrl(baseUrl, "/"));
     const bootstrapScript = await fetchText(buildAppUrl(baseUrl, "/scripts/bootstrap.js"));
     const statePayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutritrack/state"));
+    const legacyStateWriteResponse = await fetch(buildApiUrl(baseUrl, "/api/nutritrack/state"), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        revision: statePayload.revision,
+        state: {},
+      }),
+    });
     const devicesPayload = await fetchJson(buildApiUrl(baseUrl, "/api/devices/state"));
     const mealAnalysisPayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutrition/analyze-meal"), {
       method: "POST",
@@ -131,34 +141,186 @@ async function main() {
         },
       }),
     });
-    const writePayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutritrack/state"), {
+    const profilePayload = await fetchJson(buildApiUrl(baseUrl, "/api/profile"), {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        state: {
-          profile: {
-            personal: {
-              fullName: "Smoke Test User",
-            },
+        revision: statePayload.revision,
+        profile: {
+          personal: {
+            fullName: "Smoke Profile Atomic",
+            age: 38,
+            gender: "female",
+            heightCm: 168,
+            currentWeightKg: 64,
+            targetWeightKg: 62,
+            activityLevel: "moderate",
+            dietType: "balanced",
           },
-          nutrition: {
-            meals: [],
+          medical: {
+            allergies: "Nessuna",
+            medications: "",
+            medicalConditions: "",
+            dietaryPreferences: "Mediterranea",
+            labMetrics: [
+              {
+                id: "smoke-metric-1",
+                key: "glucose",
+                label: "Glicemia",
+                value: "92",
+                unit: "mg/dL",
+                status: "normal",
+              },
+            ],
           },
-          grocery: {
-            items: [],
-            pantry: [],
+          goals: {
+            primaryObjective: "weight-maintenance",
+            calories: 1900,
+            protein: 95,
+            carbs: 220,
+            fats: 65,
+            water: 8,
           },
-          progress: {
-            dailyLogs: [],
-          },
-          recipes: {},
-          datasets: {},
         },
       }),
     });
-    const readBackPayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutritrack/state"));
+    const groceryPayload = await fetchJson(buildApiUrl(baseUrl, "/api/grocery"), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        revision: profilePayload.revision,
+        grocery: {
+          items: [
+            {
+              id: "smoke-grocery-1",
+              name: "Riso",
+              quantity: "1 kg",
+              category: "Cereali",
+              completed: false,
+            },
+          ],
+          pantry: [
+            {
+              id: "smoke-pantry-1",
+              name: "Olio",
+              quantity: "1 bottiglia",
+              category: "Dispensa",
+              expiryDate: "2026-12-31",
+            },
+          ],
+        },
+      }),
+    });
+    const progressPayload = await fetchJson(buildApiUrl(baseUrl, "/api/progress"), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        revision: groceryPayload.revision,
+        progress: {
+          dailyLogs: [
+            {
+              date: "2026-07-25",
+              weightKg: 72.4,
+              waterGlasses: 7,
+              burnedCalories: 220,
+            },
+          ],
+          autoSnapshots: {
+            "2026-07-25": {
+              date: "2026-07-25",
+              calories: 1800,
+              protein: 90,
+            },
+          },
+          selectedRange: "month",
+        },
+      }),
+    });
+    const recipesPayload = await fetchJson(buildApiUrl(baseUrl, "/api/recipes/state"), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        revision: progressPayload.revision,
+        recipes: {
+          generator: {
+            dietType: "balanced",
+            caloriesTarget: "650",
+            mealType: "lunch",
+            prompt: "smoke",
+          },
+          currentRecipe: null,
+          history: [
+            {
+              id: "smoke-recipe-1",
+              title: "Smoke recipe",
+              generatedAt: "2026-07-25T12:00:00.000Z",
+              signature: "smoke-recipe-1",
+            },
+          ],
+          savedRecipeIds: ["smoke-recipe-1"],
+          generatedRecipesById: {},
+          chatMessages: [
+            {
+              role: "user",
+              content: "Ciao",
+            },
+          ],
+        },
+      }),
+    });
+    const createMealPayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutrition/meals"), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        revision: recipesPayload.revision,
+        meal: {
+          id: "smoke-meal-1",
+          name: "Smoke meal",
+          date: "2026-07-25",
+          time: "12:30",
+          calories: 420,
+          protein: 18,
+          carbs: 52,
+          fats: 14,
+          nutritionSource: "manual",
+          nutritionSourceLabel: "Manuale",
+          entryMode: "manual",
+          entryMethod: "manual-meal-form",
+        },
+      }),
+    });
+    const updateMealPayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutrition/meals/smoke-meal-1"), {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        revision: createMealPayload.revision,
+        meal: {
+          ...createMealPayload.meal,
+          calories: 455,
+        },
+      }),
+    });
+    const deleteMealPayload = await fetchJson(buildApiUrl(baseUrl, "/api/nutrition/meals/smoke-meal-1"), {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        revision: updateMealPayload.revision,
+      }),
+    });
 
     assert(databaseStatusPayload.database?.mode === "file_only", "Expected file_only mode during smoke test.");
     assert(indexMarkup.includes("window.NUTRITRACK_BASE_PATH"), "Expected prefixed app shell markup.");
@@ -178,10 +340,31 @@ async function main() {
     );
     assert(clientScalePayload.scale?.providerMode === "standard_ble", "Client scale measurement did not use BLE mode.");
     assert(clientScalePayload.scale?.latestData?.weightKg === 72.4, "Client scale measurement did not persist weight.");
-    assert(writePayload.ok === true, "State write did not succeed.");
     assert(
-      readBackPayload.state?.profile?.personal?.fullName === "Smoke Test User",
-      "State round-trip did not persist expected profile data."
+      legacyStateWriteResponse.status === 410,
+      "Legacy global state write should be disabled."
+    );
+    assert(profilePayload.profile?.personal?.fullName === "Smoke Profile Atomic", "Profile update did not persist personal data.");
+    assert(profilePayload.profile?.goals?.calories === 1900, "Profile update did not persist goals.");
+    assert(
+      profilePayload.profile?.medical?.labMetrics?.[0]?.id === "smoke-metric-1",
+      "Profile update did not persist lab metrics."
+    );
+    assert(groceryPayload.grocery?.items?.[0]?.id === "smoke-grocery-1", "Grocery update did not persist list item.");
+    assert(groceryPayload.grocery?.pantry?.[0]?.id === "smoke-pantry-1", "Grocery update did not persist pantry item.");
+    assert(progressPayload.progress?.dailyLogs?.[0]?.waterGlasses === 7, "Progress update did not persist daily log.");
+    assert(progressPayload.progress?.selectedRange === "month", "Progress update did not persist selected range.");
+    assert(recipesPayload.recipes?.savedRecipeIds?.[0] === "smoke-recipe-1", "Recipes update did not persist saved ids.");
+    assert(recipesPayload.recipes?.chatMessages?.[0]?.content === "Ciao", "Recipes update did not persist chat messages.");
+    assert(createMealPayload.meal?.id === "smoke-meal-1", "Meal create did not echo stable meal id.");
+    assert(
+      createMealPayload.state?.nutrition?.meals?.some((meal) => meal.id === "smoke-meal-1"),
+      "Meal create did not persist the meal."
+    );
+    assert(updateMealPayload.meal?.calories === 455, "Meal update did not persist calories.");
+    assert(
+      !deleteMealPayload.state?.nutrition?.meals?.some((meal) => meal.id === "smoke-meal-1"),
+      "Meal delete did not remove the meal."
     );
 
     console.log(

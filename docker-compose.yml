@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: nutritrack-app:local
-    command: sh -c "npm run bootstrap:postgres-state && node server.js"
+    command: sh -c "npm run migrate:postgres-state && npm run bootstrap:postgres-state && node server.js"
     depends_on:
       db:
         condition: service_healthy

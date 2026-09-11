@@ -189,51 +189,147 @@ function renderNutriTrackState() {
   renderProfile();
 }
 
-async function persistNutriTrackStateToApi() {
-  if (nutritrackSyncRuntime.isSaving) {
-    nutritrackSyncRuntime.hasPendingWrite = true;
-    return;
-  }
+function setNutriTrackSyncStatus(message = "", tone = "neutral") {
+  document.querySelectorAll("[data-nutritrack-sync-status]").forEach((element) => {
+    element.textContent = message;
+    element.hidden = !message;
+    element.dataset.syncTone = tone;
+  });
+}
 
-  nutritrackSyncRuntime.isSaving = true;
-
+async function readNutriTrackApiJson(response) {
   try {
-    const response = await fetch(NUTRITRACK_STATE_API_PATH, {
-      method: "PUT",
-      credentials: "same-origin",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ state: buildServerNutriTrackState(appState) }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        window.handleNutriTrackUnauthorized?.();
-      }
-      throw new Error(`Salvataggio NutriTrack fallito (${response.status}).`);
-    }
+    return await response.json();
   } catch (error) {
-    console.warn("Unable to persist NutriTrack state to API.", error);
-  } finally {
-    nutritrackSyncRuntime.isSaving = false;
-
-    if (nutritrackSyncRuntime.hasPendingWrite) {
-      nutritrackSyncRuntime.hasPendingWrite = false;
-      queueNutriTrackStateSync();
-    }
+    return {};
   }
 }
 
-function queueNutriTrackStateSync() {
-  if (nutritrackSyncRuntime.saveTimeoutId) {
-    clearTimeout(nutritrackSyncRuntime.saveTimeoutId);
+function rememberNutriTrackServerRevision(payload = {}) {
+  if (typeof payload.revision === "string") {
+    nutritrackSyncRuntime.revision = payload.revision;
   }
 
-  nutritrackSyncRuntime.saveTimeoutId = window.setTimeout(() => {
-    nutritrackSyncRuntime.saveTimeoutId = null;
-    persistNutriTrackStateToApi();
-  }, NUTRITRACK_SYNC_DEBOUNCE_MS);
+  if (payload.savedAt) {
+    nutritrackSyncRuntime.lastSavedAt = payload.savedAt;
+  }
+}
+
+function buildNutriTrackMutationBody(payload = {}) {
+  return {
+    ...payload,
+    revision: nutritrackSyncRuntime.revision || "",
+  };
+}
+
+async function commitNutriTrackStateMutation(apiPath, options = {}) {
+  const method = options.method || "POST";
+  const body = options.body && typeof options.body === "object" ? options.body : {};
+
+  setNutriTrackSyncStatus("Salvataggio in corso...", "saving");
+
+  const response = await fetch(window.NutriTrackBootstrap.buildNutriTrackApiPath(apiPath), {
+    method,
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(buildNutriTrackMutationBody(body)),
+  });
+  const payload = await readNutriTrackApiJson(response);
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      window.handleNutriTrackUnauthorized?.();
+    }
+
+    rememberNutriTrackServerRevision(payload);
+    nutritrackSyncRuntime.lastError = payload?.error || `Salvataggio fallito (${response.status}).`;
+    setNutriTrackSyncStatus("Salvataggio non sincronizzato", "error");
+    const error = new Error(nutritrackSyncRuntime.lastError);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+
+  rememberNutriTrackServerRevision(payload);
+  nutritrackSyncRuntime.lastError = "";
+
+  if (payload?.state) {
+    replaceNutriTrackState(payload.state);
+  } else {
+    saveNutriTrackStateToLocalCache();
+    renderNutriTrackState();
+  }
+
+  setNutriTrackSyncStatus("Salvato sul server", "success");
+  return payload;
+}
+
+async function saveGroceryStateToServer(options = {}) {
+  const includeItems = options.items !== false;
+  const includePantry = options.pantry !== false;
+  const grocery = {};
+
+  if (includeItems) {
+    grocery.items = Array.isArray(appState.grocery?.items) ? appState.grocery.items : [];
+  }
+
+  if (includePantry) {
+    grocery.pantry = Array.isArray(appState.grocery?.pantry) ? appState.grocery.pantry : [];
+  }
+
+  return commitNutriTrackStateMutation("/api/grocery", {
+    method: "PUT",
+    body: {
+      grocery,
+    },
+  });
+}
+
+async function saveProfilePatchToServer(profilePatch) {
+  return commitNutriTrackStateMutation("/api/profile", {
+    method: "PUT",
+    body: {
+      profile: profilePatch,
+    },
+  });
+}
+
+async function saveProgressStateToServer(options = {}) {
+  const progress = {};
+
+  if (options.dailyLogs !== false) {
+    progress.dailyLogs = Array.isArray(appState.progress?.dailyLogs) ? appState.progress.dailyLogs : [];
+  }
+
+  if (options.autoSnapshots !== false) {
+    progress.autoSnapshots =
+      appState.progress?.autoSnapshots && typeof appState.progress.autoSnapshots === "object"
+        ? appState.progress.autoSnapshots
+        : {};
+  }
+
+  if (options.selectedRange !== false) {
+    progress.selectedRange = appState.progress?.selectedRange || "week";
+  }
+
+  return commitNutriTrackStateMutation("/api/progress", {
+    method: "PUT",
+    body: {
+      progress,
+    },
+  });
+}
+
+async function saveRecipesStateToServer() {
+  return commitNutriTrackStateMutation("/api/recipes/state", {
+    method: "PUT",
+    body: {
+      recipes: appState.recipes && typeof appState.recipes === "object" ? appState.recipes : {},
+    },
+  });
 }
 
 async function hydrateNutriTrackStateFromApi() {
@@ -261,6 +357,7 @@ async function hydrateNutriTrackStateFromApi() {
     }
 
     const payload = await response.json();
+    rememberNutriTrackServerRevision(payload);
 
     if (!payload?.state) {
       if (payload?.runtime?.identityMode === "authenticated_user") {
@@ -268,7 +365,6 @@ async function hydrateNutriTrackStateFromApi() {
         return;
       }
 
-      queueNutriTrackStateSync();
       return;
     }
 
@@ -277,13 +373,5 @@ async function hydrateNutriTrackStateFromApi() {
     console.warn("Unable to hydrate NutriTrack state from API.", error);
   } finally {
     nutritrackSyncRuntime.isHydrating = false;
-  }
-}
-
-function saveState() {
-  saveNutriTrackStateToLocalCache();
-
-  if (!nutritrackSyncRuntime.isHydrating) {
-    queueNutriTrackStateSync();
   }
 }

@@ -310,7 +310,7 @@ function renderRecipeHistory() {
     .join("");
 }
 
-function clearRecipeHistory() {
+async function clearRecipeHistory() {
   if (appState.recipes.history.length === 0) {
     return;
   }
@@ -351,8 +351,13 @@ function clearRecipeHistory() {
   }
 
   appState.recipes.history = [];
-  saveState();
-  renderRecipes();
+
+  try {
+    await saveRecipesStateToServer();
+    renderRecipes();
+  } catch (error) {
+    console.error("Impossibile cancellare la cronologia ricette.", error);
+  }
 }
 
 function renderSavedRecipes() {
@@ -464,12 +469,6 @@ function syncNutriTrackStateFromBackend(nextState) {
     return;
   }
 
-  if (nutritrackSyncRuntime.saveTimeoutId) {
-    clearTimeout(nutritrackSyncRuntime.saveTimeoutId);
-    nutritrackSyncRuntime.saveTimeoutId = null;
-  }
-
-  nutritrackSyncRuntime.hasPendingWrite = false;
   const normalizedState = normalizeNutriTrackState(nextState);
   Object.keys(appState).forEach((key) => {
     delete appState[key];
@@ -547,6 +546,7 @@ function applyRecipeToNutrition(recipe, mealType) {
         throw error;
       }
 
+      rememberNutriTrackServerRevision(payload);
       syncNutriTrackStateFromBackend(payload.state);
       const appliedMealDateKey = getMealDateKey(payload.meal);
 
@@ -556,7 +556,7 @@ function applyRecipeToNutrition(recipe, mealType) {
 
       clearNutritionDraft();
       resetFormValidationState(form);
-      saveState();
+      await saveProgressStateToServer({ selectedRange: false });
       switchToTab("nutrition");
       renderNutrition();
       renderGrocery();
@@ -583,15 +583,19 @@ function setCurrentRecipeWithContext(recipe, pantryFallbackNote, personalFallbac
   return true;
 }
 
-function restoreRecipeFromCollection(recipeId, pantryFallbackNote, personalFallbackNote) {
+async function restoreRecipeFromCollection(recipeId, pantryFallbackNote, personalFallbackNote) {
   const recipe = getRecipeById(recipeId);
 
   if (!setCurrentRecipeWithContext(recipe, pantryFallbackNote, personalFallbackNote)) {
     return;
   }
 
-  saveState();
-  renderRecipes();
+  try {
+    await saveRecipesStateToServer();
+    renderRecipes();
+  } catch (error) {
+    console.error("Impossibile aprire la ricetta.", error);
+  }
 }
 
 function appendRecipeChatMessage(role, content) {
@@ -649,7 +653,7 @@ function setupRecipeGeneratorForm(generatorForm) {
     try {
       appState.recipes.currentRecipe = await generateRecipeWithAi(nextFilters);
       saveRecipeToHistory(appState.recipes.currentRecipe);
-      saveState();
+      await saveRecipesStateToServer();
       renderRecipes();
     } catch (error) {
       renderRecipeGenerationError(error);
@@ -698,8 +702,12 @@ function setupRecipeResultActions(recipeResult) {
       ? appState.recipes.savedRecipeIds.filter((id) => id !== recipeId)
       : [recipeId, ...appState.recipes.savedRecipeIds];
 
-    saveState();
-    renderRecipes();
+    try {
+      await saveRecipesStateToServer();
+      renderRecipes();
+    } catch (error) {
+      console.error("Impossibile salvare la ricetta.", error);
+    }
   });
 }
 
@@ -750,7 +758,7 @@ async function handleRecipeChatSubmit(chatForm) {
 
   appendRecipeChatMessage("user", message);
 
-  saveState();
+  await saveRecipesStateToServer();
   renderRecipeChat();
   chatForm.elements.message.value = "";
   setRecipeChatPendingState(chatForm, true);
@@ -761,7 +769,7 @@ async function handleRecipeChatSubmit(chatForm) {
     const finalReply = actionResult?.message || assistantPayload.reply;
 
     appendRecipeChatMessage("assistant", finalReply);
-    saveState();
+    await saveRecipesStateToServer();
     renderRecipeChat();
     chatForm.reset();
   } catch (error) {
@@ -769,7 +777,7 @@ async function handleRecipeChatSubmit(chatForm) {
       "assistant",
       "Non riesco a rispondere in questo momento dal backend AI. Riprova tra poco."
     );
-    saveState();
+    await saveRecipesStateToServer();
     renderRecipeChat();
   } finally {
     setRecipeChatPendingState(chatForm, false);
@@ -782,10 +790,14 @@ function setupRecipeChat(chatForm, chatResetButton) {
     await handleRecipeChatSubmit(chatForm);
   });
 
-  chatResetButton?.addEventListener("click", () => {
+  chatResetButton?.addEventListener("click", async () => {
     appState.recipes.chatMessages = [];
-    saveState();
-    renderRecipeChat();
+    try {
+      await saveRecipesStateToServer();
+      renderRecipeChat();
+    } catch (error) {
+      console.error("Impossibile cancellare la chat ricette.", error);
+    }
   });
 }
 

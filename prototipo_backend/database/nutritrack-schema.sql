@@ -118,6 +118,7 @@ CREATE TABLE recipes (
 CREATE TABLE nutrition_meals (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    app_meal_id VARCHAR(120),
     recipe_id BIGINT REFERENCES recipes(id) ON DELETE SET NULL,
     meal_name VARCHAR(255) NOT NULL,
     meal_type VARCHAR(50),
@@ -299,6 +300,9 @@ CREATE UNIQUE INDEX idx_recipes_app_recipe_id ON recipes(created_by_user_id, app
 CREATE INDEX idx_recipes_meal_type ON recipes(meal_type);
 CREATE INDEX idx_recipes_diet_type ON recipes(diet_type);
 CREATE INDEX idx_nutrition_meals_user_id ON nutrition_meals(user_id);
+CREATE UNIQUE INDEX idx_nutrition_meals_user_app_meal_id
+    ON nutrition_meals(user_id, app_meal_id)
+    WHERE app_meal_id IS NOT NULL;
 CREATE INDEX idx_nutrition_meals_recipe_id ON nutrition_meals(recipe_id);
 CREATE INDEX idx_nutrition_meals_consumed_at ON nutrition_meals(consumed_at);
 CREATE INDEX idx_nutrition_meals_entry_mode ON nutrition_meals(user_id, entry_mode, consumed_at DESC);

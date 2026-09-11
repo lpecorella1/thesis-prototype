@@ -58,7 +58,7 @@ function normalizePantryExpiryDate(value) {
   return expiryDate;
 }
 
-function savePantryItemEditForm(editForm) {
+async function savePantryItemEditForm(editForm) {
   const item = getPantryItemById(editForm?.dataset.pantryEditId);
   const fieldName = editForm?.dataset.pantryEditField;
 
@@ -78,8 +78,14 @@ function savePantryItemEditForm(editForm) {
   item[fieldName] = nextValue;
   closePantryItemControls();
   appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
-  saveState();
-  renderGrocery();
+
+  try {
+    await saveGroceryStateToServer({ items: false });
+    renderGrocery();
+  } catch (error) {
+    console.error("Impossibile salvare la dispensa.", error);
+    setPantryImportStatus(error.message || "Salvataggio non sincronizzato.");
+  }
 }
 
 const PANTRY_IMPORT_SOURCE_LABELS = {
@@ -413,7 +419,7 @@ function addPantryImportDraftToPantry(items) {
   appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
 }
 
-function addScannedGroceryLookupToPantry() {
+async function addScannedGroceryLookupToPantry() {
   const product = openFoodFactsRuntime.groceryLookup;
 
   if (!product?.name) {
@@ -436,10 +442,17 @@ function addScannedGroceryLookupToPantry() {
   appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
   openFoodFactsRuntime.groceryLookup = null;
   renderLookupResult("[data-off-grocery-result]", null, "");
-  setPantryImportStatus(`${product.name} aggiunto alla dispensa.`);
-  saveState();
-  renderGrocery();
-  return true;
+
+  try {
+    await saveGroceryStateToServer({ items: false });
+    setPantryImportStatus(`${product.name} aggiunto alla dispensa.`);
+    renderGrocery();
+    return true;
+  } catch (error) {
+    console.error("Impossibile salvare il prodotto scansionato in dispensa.", error);
+    setPantryImportStatus(error.message || "Salvataggio non sincronizzato.");
+    return false;
+  }
 }
 
 function dismissScannedGroceryLookup() {
@@ -817,7 +830,7 @@ async function handleGroceryScannedBarcode(rawBarcode) {
   const pinResult = pinGroceryComparisonProduct(getComparableProductKey(matchedProduct));
 
   if (pinResult.added) {
-    saveState();
+    saveNutriTrackStateToLocalCache();
     renderGroceryArOverlay();
     renderGroceryArComparison();
   }
@@ -929,7 +942,7 @@ function setupGrocerySection() {
       .forEach((item) => upsertPantryItemFromGrocery(item));
   }
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     markFormValidationAttempt(form);
 
@@ -965,15 +978,21 @@ function setupGrocerySection() {
       entryMethod: item.entryMethod,
     });
     appState.grocery.pantry.sort((firstItem, secondItem) => firstItem.name.localeCompare(secondItem.name));
-    saveState();
-    renderGrocery();
-    form.reset();
-    resetFormValidationState(form);
-    form.elements.category.value = "Frutta e verdura";
-    form.elements.barcode.value = "";
+
+    try {
+      await saveGroceryStateToServer({ items: false });
+      renderGrocery();
+      form.reset();
+      resetFormValidationState(form);
+      form.elements.category.value = "Frutta e verdura";
+      form.elements.barcode.value = "";
+    } catch (error) {
+      console.error("Impossibile salvare la dispensa.", error);
+      setPantryImportStatus(error.message || "Salvataggio non sincronizzato.");
+    }
   });
 
-  list.addEventListener("click", (event) => {
+  list.addEventListener("click", async (event) => {
     const arCompareButton = event.target.closest("[data-grocery-ar-item-id]");
 
     if (arCompareButton) {
@@ -986,7 +1005,7 @@ function setupGrocerySection() {
       const pinResult = pinGroceryComparisonProduct(getComparableProductKey(matchedProduct));
 
       if (pinResult.added) {
-        saveState();
+        saveNutriTrackStateToLocalCache();
         renderGroceryArOverlay();
         renderGroceryArComparison();
       }
@@ -998,8 +1017,14 @@ function setupGrocerySection() {
     if (deleteButton) {
       const { groceryDeleteId } = deleteButton.dataset;
       appState.grocery.items = appState.grocery.items.filter((item) => item.id !== groceryDeleteId);
-      saveState();
-      renderGrocery();
+
+      try {
+        await saveGroceryStateToServer({ pantry: false });
+        renderGrocery();
+      } catch (error) {
+        console.error("Impossibile eliminare il prodotto dalla lista.", error);
+        setGroceryGenerationStatus(error.message || "Salvataggio non sincronizzato.");
+      }
       return;
     }
 
@@ -1022,8 +1047,13 @@ function setupGrocerySection() {
         removePantryItem(updatedItem.id);
       }
 
-      saveState();
-      renderGrocery();
+      try {
+        await saveGroceryStateToServer();
+        renderGrocery();
+      } catch (error) {
+        console.error("Impossibile aggiornare la lista della spesa.", error);
+        setGroceryGenerationStatus(error.message || "Salvataggio non sincronizzato.");
+      }
     }
   });
 
@@ -1044,7 +1074,7 @@ function setupGrocerySection() {
       }
 
       appState.grocery.items = items;
-      saveState();
+      await saveGroceryStateToServer({ pantry: false });
       renderGrocery();
       setGroceryGenerationStatus(`${items.length} prodotti aggiunti alla lista della spesa.`);
     } catch (error) {
@@ -1054,7 +1084,7 @@ function setupGrocerySection() {
     }
   });
 
-  pantryList.addEventListener("click", (event) => {
+  pantryList.addEventListener("click", async (event) => {
     const expandButton = event.target.closest("[data-pantry-toggle-expanded]");
 
     if (expandButton) {
@@ -1094,7 +1124,7 @@ function setupGrocerySection() {
 
     if (editSubmitButton) {
       event.preventDefault();
-      savePantryItemEditForm(editSubmitButton.closest("[data-pantry-item-edit-form]"));
+      await savePantryItemEditForm(editSubmitButton.closest("[data-pantry-item-edit-form]"));
       return;
     }
 
@@ -1109,11 +1139,17 @@ function setupGrocerySection() {
       pantryListRuntime.isExpanded = false;
     }
     closePantryItemControls();
-    saveState();
-    renderPantry();
+
+    try {
+      await saveGroceryStateToServer({ items: false });
+      renderPantry();
+    } catch (error) {
+      console.error("Impossibile eliminare il prodotto dalla dispensa.", error);
+      setPantryImportStatus(error.message || "Salvataggio non sincronizzato.");
+    }
   });
 
-  pantryList.addEventListener("submit", (event) => {
+  pantryList.addEventListener("submit", async (event) => {
     const editForm = event.target.closest("[data-pantry-item-edit-form]");
 
     if (!editForm) {
@@ -1121,7 +1157,7 @@ function setupGrocerySection() {
     }
 
     event.preventDefault();
-    savePantryItemEditForm(editForm);
+    await savePantryItemEditForm(editForm);
   });
 
   arToggleButton.addEventListener("click", async () => {
@@ -1137,7 +1173,7 @@ function setupGrocerySection() {
     ensureGroceryArState();
     appState.grocery.ar.pinnedProductIds = [];
     appState.grocery.ar.lastDetectedBarcode = "";
-    saveState();
+    saveNutriTrackStateToLocalCache();
     renderGroceryArOverlay();
     renderGroceryArComparison();
   });
@@ -1152,7 +1188,7 @@ function setupGrocerySection() {
     }
 
     unpinGroceryComparisonProduct(removeButton.dataset.groceryArRemoveId);
-    saveState();
+    saveNutriTrackStateToLocalCache();
     renderGroceryArOverlay();
     renderGroceryArComparison();
   });
@@ -1218,7 +1254,7 @@ function setupGrocerySection() {
     event.target.value = "";
   });
 
-  pantryImportPanel?.addEventListener("submit", (event) => {
+  pantryImportPanel?.addEventListener("submit", async (event) => {
     const reviewForm = event.target.closest("[data-pantry-import-review-form]");
 
     if (!reviewForm) {
@@ -1235,12 +1271,18 @@ function setupGrocerySection() {
 
     addPantryImportDraftToPantry(items);
     pantryImportRuntime.draftItems = [];
-    saveState();
-    renderGrocery();
-    setPantryImportStatus(`${items.length} prodotti aggiunti alla dispensa.`);
+
+    try {
+      await saveGroceryStateToServer({ items: false });
+      renderGrocery();
+      setPantryImportStatus(`${items.length} prodotti aggiunti alla dispensa.`);
+    } catch (error) {
+      console.error("Impossibile salvare l'import dispensa.", error);
+      setPantryImportStatus(error.message || "Salvataggio non sincronizzato.");
+    }
   });
 
-  clearCompletedButton.addEventListener("click", () => {
+  clearCompletedButton.addEventListener("click", async () => {
     const completedCount = appState.grocery.items.filter((item) => item.completed).length;
 
     if (completedCount === 0) {
@@ -1248,8 +1290,14 @@ function setupGrocerySection() {
     }
 
     appState.grocery.items = appState.grocery.items.filter((item) => !item.completed);
-    saveState();
-    renderGrocery();
+
+    try {
+      await saveGroceryStateToServer({ pantry: false });
+      renderGrocery();
+    } catch (error) {
+      console.error("Impossibile pulire la lista della spesa.", error);
+      setGroceryGenerationStatus(error.message || "Salvataggio non sincronizzato.");
+    }
   });
 
   window.addEventListener("beforeunload", stopGroceryArCamera);

@@ -31,7 +31,6 @@ const recipePanels = document.querySelectorAll("[data-recipe-panel]");
 const NUTRITRACK_LOCAL_STATE_CACHE_KEY = "nutriTrackPrototypeState";
 const NUTRITRACK_BASE_PATH = normalizeNutriTrackBasePath(window.NUTRITRACK_BASE_PATH || "");
 const NUTRITRACK_STATE_API_PATH = buildNutriTrackApiPath("/api/nutritrack/state");
-const NUTRITRACK_SYNC_DEBOUNCE_MS = 450;
 const groceryArStartIcon = `
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path d="M4.5 7.5h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8" />
@@ -59,9 +58,9 @@ function setGroceryArToggleButtonState(isActive) {
 const nutritrackSyncRuntime = {
   hydrationStarted: false,
   isHydrating: false,
-  isSaving: false,
-  hasPendingWrite: false,
-  saveTimeoutId: null,
+  revision: "",
+  lastSavedAt: "",
+  lastError: "",
 };
 
 const groceryArRuntime = {
@@ -124,7 +123,6 @@ window.NutriTrackBootstrap = Object.freeze({
   NUTRITRACK_LOCAL_STATE_CACHE_KEY,
   NUTRITRACK_BASE_PATH,
   NUTRITRACK_STATE_API_PATH,
-  NUTRITRACK_SYNC_DEBOUNCE_MS,
   buildNutriTrackApiPath,
   defaultRecipeTimestamp,
   RECIPE_NUTRITION_SOURCE_LABEL,

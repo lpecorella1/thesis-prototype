@@ -474,10 +474,16 @@ function setupProgressSection() {
   }
 
   document.querySelectorAll("[data-progress-range]").forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       appState.progress.selectedRange = button.dataset.progressRange;
-      saveState();
-      renderProgress();
+
+      try {
+        await saveProgressStateToServer({ dailyLogs: false, autoSnapshots: false });
+        renderProgress();
+      } catch (error) {
+        console.error("Impossibile salvare l'intervallo progressi.", error);
+        renderProgress();
+      }
     });
   });
 
@@ -487,7 +493,7 @@ function setupProgressSection() {
     }
   });
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     markFormValidationAttempt(form);
 
@@ -507,13 +513,17 @@ function setupProgressSection() {
 
     setProgressLogValuesForDate(date, nextLog);
 
-    saveState();
-    renderProgress();
-    populateProgressForm(date);
-    resetFormValidationState(form);
+    try {
+      await saveProgressStateToServer({ autoSnapshots: false, selectedRange: false });
+      renderProgress();
+      populateProgressForm(date);
+      resetFormValidationState(form);
+    } catch (error) {
+      console.error("Impossibile salvare il progresso.", error);
+    }
   });
 
-  deleteButton.addEventListener("click", () => {
+  deleteButton.addEventListener("click", async () => {
     const date = String(form.elements.date.value || "").trim();
 
     if (!date) {
@@ -527,9 +537,14 @@ function setupProgressSection() {
     }
 
     setProgressLogValuesForDate(date, { weightKg: null });
-    saveState();
-    renderProgress();
-    populateProgressForm(date);
+
+    try {
+      await saveProgressStateToServer({ autoSnapshots: false, selectedRange: false });
+      renderProgress();
+      populateProgressForm(date);
+    } catch (error) {
+      console.error("Impossibile eliminare il progresso.", error);
+    }
   });
 
   populateProgressForm(getTodayDateKey());

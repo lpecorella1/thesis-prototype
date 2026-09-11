@@ -448,6 +448,10 @@ async function replaceNutritionMeals(client, userId, meals = []) {
       ["source_note", normalizeString(meal.sourceNote)],
     ];
 
+    if (availableColumns.has("app_meal_id")) {
+      mealEntries.push(["app_meal_id", normalizeString(meal.id)]);
+    }
+
     if (availableColumns.has("entry_mode")) {
       mealEntries.push(["entry_mode", inferUserEntryMode(meal)]);
     }
@@ -875,6 +879,7 @@ async function readNutritionMeals(client, userId) {
         fats_g,
         nutrition_source,
         source_note,
+        ${availableColumns.has("app_meal_id") ? "app_meal_id" : "NULL"} AS app_meal_id,
         ${availableColumns.has("entry_mode") ? "entry_mode" : "NULL"} AS entry_mode,
         ${availableColumns.has("entry_method") ? "entry_method" : "NULL"} AS entry_method
       FROM nutrition_meals
@@ -894,7 +899,7 @@ async function readNutritionMeals(client, userId) {
       fats: normalizeDbNumber(userProfile?.goals?.fats),
     },
     meals: result.rows.map((row) => ({
-      id: String(row.id),
+      id: row.app_meal_id || String(row.id),
       name: row.meal_name || "Pasto",
       type: row.meal_type || "",
       date: formatDateKeyLocal(row.consumed_at),

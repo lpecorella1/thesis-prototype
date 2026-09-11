@@ -383,6 +383,35 @@ textarea {
   padding: 0 14px;
 }
 
+.sync-status {
+  width: min(100%, 405px);
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(40, 96, 235, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #435363;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.sync-status[data-sync-tone="saving"] {
+  border-color: rgba(40, 96, 235, 0.2);
+  color: #2855bd;
+}
+
+.sync-status[data-sync-tone="success"] {
+  border-color: rgba(73, 141, 96, 0.24);
+  color: #3c7d53;
+}
+
+.sync-status[data-sync-tone="error"] {
+  border-color: rgba(198, 59, 47, 0.26);
+  color: #b23b33;
+}
+
 .tabs {
   display: none;
 }
