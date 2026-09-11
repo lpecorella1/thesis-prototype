@@ -469,7 +469,15 @@ function syncNutriTrackStateFromBackend(nextState) {
     return;
   }
 
+  const selectedNutritionDate = isValidDateKey(appState?.nutrition?.selectedDate)
+    ? appState.nutrition.selectedDate
+    : "";
   const normalizedState = normalizeNutriTrackState(nextState);
+
+  if (selectedNutritionDate) {
+    normalizedState.nutrition.selectedDate = selectedNutritionDate;
+  }
+
   Object.keys(appState).forEach((key) => {
     delete appState[key];
   });

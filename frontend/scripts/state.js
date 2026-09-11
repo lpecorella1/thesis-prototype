@@ -171,8 +171,17 @@ function saveNutriTrackStateToLocalCache() {
   );
 }
 
-function replaceNutriTrackState(nextState) {
+function replaceNutriTrackState(nextState, options = {}) {
+  const selectedNutritionDate =
+    options.preserveSelectedNutritionDate === true && isValidDateKey(appState?.nutrition?.selectedDate)
+      ? appState.nutrition.selectedDate
+      : "";
   const normalizedState = normalizeNutriTrackState(nextState);
+
+  if (selectedNutritionDate) {
+    normalizedState.nutrition.selectedDate = selectedNutritionDate;
+  }
+
   Object.keys(appState).forEach((key) => {
     delete appState[key];
   });
@@ -257,7 +266,7 @@ async function commitNutriTrackStateMutation(apiPath, options = {}) {
   nutritrackSyncRuntime.lastError = "";
 
   if (payload?.state) {
-    replaceNutriTrackState(payload.state);
+    replaceNutriTrackState(payload.state, { preserveSelectedNutritionDate: true });
   } else {
     saveNutriTrackStateToLocalCache();
     renderNutriTrackState();
